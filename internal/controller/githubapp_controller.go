@@ -76,6 +76,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
 	}
 	log.Log.Info("privateKey found in Secret", "PK", privateKeyEncoded)
+	fmt.Printf("Type: %T\n", privateKeyEncoded)
 
 	// Decode the private key
 	privateKey, err := base64.StdEncoding.DecodeString(string(privateKeyEncoded))
@@ -84,6 +85,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		os.Exit(1)
 		return ctrl.Result{}, err
 	}
+	os.Exit(1)
 
 	// Generate or renew access token
 	accessToken, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
