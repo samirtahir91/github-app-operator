@@ -70,15 +70,15 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	privateKeyEncoded := secret.Data["privateKey"]
+	privateKeyEncoded, ok := secret.Data["privateKey"]
 	if !ok {
 		l.Error(err, "privateKey not found in Secret")
-		return ctrl.Result{}
+		return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
 	}
 	log.Log.Info("privateKey found in Secret", "PK", privateKeyEncoded)
 
 	// Decode the private key
-	privateKey, err := base64.StdEncoding.DecodeString(privateKeyEncoded)
+	privateKey, err := base64.StdEncoding.DecodeString(string(privateKeyEncoded))
 	if err != nil {
 		l.Error(err, "Failed to decode privateKey")
 		os.Exit(1)
