@@ -79,7 +79,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Remove surrounding quotes if present and convert to byte slice
-	privateKeyTrim := []byte(strings.Trim(string(privateKeyEncoded), `"`))
+	privateKeyTrim := strings.Trim(string(privateKeyEncoded), `"`)
 	log.Log.Info("private key trim", "PK:", privateKeyTrim)
     // Decode the private key
     privateKey, err := base64.StdEncoding.DecodeString(privateKeyTrim)
