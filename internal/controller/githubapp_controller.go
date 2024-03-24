@@ -18,13 +18,11 @@ package controller
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 	"github.com/golang-jwt/jwt/v4"
-	"os"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,22 +68,11 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	privateKeyEncoded, ok := secret.Data["privateKey"]
+	privateKey, ok := secret.Data["privateKey"]
 	if !ok {
 		l.Error(err, "privateKey not found in Secret")
 		return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
 	}
-	log.Log.Info("privateKeyEncoded found in Secret", "PK", privateKeyEncoded)
-
-	privateKey, err := base64.StdEncoding.DecodeString(string(privateKeyEncoded))
-	if err != nil {
-		l.Error(err, "Failed to decode privateKey")
-		os.Exit(1)
-		return ctrl.Result{}, err
-	}
-	log.Log.Info("privateKey found in Secret", "PK", privateKey)
-
-	os.Exit(1)
 
 	// Generate or renew access token
 	accessToken, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
