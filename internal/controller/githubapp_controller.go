@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"time"
 	"github.com/golang-jwt/jwt/v4"
+	"os"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -82,6 +83,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	privateKey, err := base64.StdEncoding.DecodeString(string(privateKeyEncoded))
 	if err != nil {
 		l.Error(err, "Failed to decode privateKey")
+		os.Exit(1)
 		return ctrl.Result{}, err
 	}
 
