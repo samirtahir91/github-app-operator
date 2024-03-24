@@ -81,20 +81,38 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	// Create a new Secret with the access token
-	newSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "github-app-access-token",
-			Namespace: githubApp.Namespace,
-		},
-		StringData: map[string]string{
-			"accessToken": accessToken,
-		},
-	}
-	if err := r.Create(ctx, newSecret); err != nil {
-		l.Error(err, "Failed to create Secret for access token")
+	// Create a new Secret with the access token or update an existing one
+	existingSecret := &corev1.Secret{}
+	err = r.Get(ctx, client.ObjectKey{Namespace: githubApp.Namespace, Name: "github-app-access-token"}, existingSecret)
+	if err != nil && client.IgnoreNotFound(err) != nil {
+		l.Error(err, "Failed to get existing Secret")
 		return ctrl.Result{}, err
 	}
+
+	if existingSecret.Name == "" {
+		// Secret doesn't exist, create a new one
+		newSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "github-app-access-token",
+				Namespace: githubApp.Namespace,
+			},
+			StringData: map[string]string{
+				"accessToken": accessToken,
+			},
+		}
+		if err := r.Create(ctx, newSecret); err != nil {
+			l.Error(err, "Failed to create Secret for access token")
+			return ctrl.Result{}, err
+		}
+
+		l.Info("Access token generated and stored in a new Secret successfully")
+	} else {
+		// Secret exists, update its data
+		existingSecret.StringData["accessToken"] = accessToken
+		if err := r.Update(ctx, existingSecret); err != nil {
+			l.Error(err, "Failed to update existing Secret")
+			return ctrl.Result{}, err
+		}
 
 	l.Info("Access token generated and stored in Secret successfully")
 	return ctrl.Result{}, nil
