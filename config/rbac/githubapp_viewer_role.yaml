@@ -1,0 +1,27 @@
+# permissions for end users to view githubapps.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: githubapp-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: github-app-operator
+    app.kubernetes.io/part-of: github-app-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: githubapp-viewer-role
+rules:
+- apiGroups:
+  - githubapp.samir.io
+  resources:
+  - githubapps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - githubapp.samir.io
+  resources:
+  - githubapps/status
+  verbs:
+  - get

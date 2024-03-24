@@ -1,0 +1,12 @@
+apiVersion: githubapp.samir.io/v1
+kind: GithubApp
+metadata:
+  labels:
+    app.kubernetes.io/name: githubapp
+    app.kubernetes.io/instance: githubapp-sample
+    app.kubernetes.io/part-of: github-app-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: github-app-operator
+  name: githubapp-sample
+spec:
+  # TODO(user): Add fields here
