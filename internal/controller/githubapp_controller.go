@@ -77,7 +77,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 	log.Log.Info("privateKeyEncoded found in Secret", "PK", privateKeyEncoded)
 
-	privateKey, err := base64.StdEncoding.DecodeString(privateKeyEncoded)
+	privateKey, err := base64.StdEncoding.DecodeString(string privateKeyEncoded)
 	if err != nil {
 		l.Error(err, "Failed to decode privateKey")
 		os.Exit(1)
