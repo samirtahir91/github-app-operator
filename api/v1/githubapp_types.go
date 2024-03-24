@@ -24,6 +24,7 @@ import (
 type GithubAppSpec struct {
 	AppId int `json:"appId"`
 	InstallId int `json:"installId"`
+	PrivateKeySecret String `json:"privateKeySecret"`
 }
 
 // GithubAppStatus defines the observed state of GithubApp
