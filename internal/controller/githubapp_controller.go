@@ -73,23 +73,23 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
     privateKeyEncoded, ok := secret.Data["privateKey"]
     if !ok {
-        log.Error(nil, "privateKey not found in Secret")
-        return reconcile.Result{}, fmt.Errorf("privateKey not found in Secret")
+        l.Error(nil, "privateKey not found in Secret")
+        return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
     }
 
     // Unquote the string if necessary
     privateKeyString := string(privateKeyEncoded)
     unquotedPrivateKey, err := strconv.Unquote(`"` + privateKeyString + `"`)
     if err != nil {
-        log.Error(err, "Failed to unquote privateKey")
-        return reconcile.Result{}, err
+        l.Error(err, "Failed to unquote privateKey")
+        return ctrl.Result{}, err
     }
 
     // Decode the private key
     privateKey, err := base64.StdEncoding.DecodeString(unquotedPrivateKey)
     if err != nil {
-        log.Error(err, "Failed to decode privateKey")
-        return reconcile.Result{}, err
+        l.Error(err, "Failed to decode privateKey")
+        return ctrl.Result{}, err
     }
 	os.Exit(1)
 
