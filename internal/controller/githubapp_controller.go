@@ -25,7 +25,7 @@ import (
 	"time"
 	"github.com/golang-jwt/jwt/v4"
 	"os"
-	"strings"
+	"strconv"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,22 +71,26 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	privateKeyEncoded, ok := secret.Data["privateKey"]
-	if !ok {
-		l.Error(err, "privateKey not found in Secret")
-		return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
-	}
-	log.Log.Info("privateKey found in Secret", "PK", privateKeyEncoded)
-	fmt.Printf("Type: %T\n", privateKeyEncoded)
-	trimmedPrivateKeyEncoded := strings.Trim(string(privateKeyEncoded), "\"")
-	log.Log.Info("trimmed key", "PK", trimmedPrivateKeyEncoded)
+    privateKeyEncoded, ok := secret.Data["privateKey"]
+    if !ok {
+        log.Error(nil, "privateKey not found in Secret")
+        return reconcile.Result{}, fmt.Errorf("privateKey not found in Secret")
+    }
 
-	privateKey, err := base64.StdEncoding.DecodeString(trimmedPrivateKeyEncoded)
-	if err != nil {
-		l.Error(err, "Failed to decode privateKey")
-		os.Exit(1)
-		return ctrl.Result{}, err
-	}
+    // Unquote the string if necessary
+    privateKeyString := string(privateKeyEncoded)
+    unquotedPrivateKey, err := strconv.Unquote(`"` + privateKeyString + `"`)
+    if err != nil {
+        log.Error(err, "Failed to unquote privateKey")
+        return reconcile.Result{}, err
+    }
+
+    // Decode the private key
+    privateKey, err := base64.StdEncoding.DecodeString(unquotedPrivateKey)
+    if err != nil {
+        log.Error(err, "Failed to decode privateKey")
+        return reconcile.Result{}, err
+    }
 	os.Exit(1)
 
 	// Generate or renew access token
