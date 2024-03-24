@@ -1,0 +1,10 @@
+apiVersion: githubapp.samir.io/v1
+kind: GithubApp
+metadata:
+  name: gh-app
+  namespace: default
+spec:
+  appId: 857468
+  installId: 48531286
+  privateKeySecret: gh-app-secret
+
