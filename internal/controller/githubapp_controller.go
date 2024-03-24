@@ -69,7 +69,8 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	privateKeyEncoded := secret.Data["privateKey"]
+	//privateKeyEncoded := secret.Data["privateKey"]
+	privateKeyEncoded := "99=="
 	//privateKeyEncoded := base64.StdEncoding.EncodeToString([]byte("Hello, playground"))
 	//if !ok {
 	//	l.Error(err, "privateKey not found in Secret")
