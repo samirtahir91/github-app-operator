@@ -78,8 +78,14 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Remove surrounding quotes if present and convert to byte slice
-	privateKey := []byte(strings.Trim(string(privateKeyEncoded), `"`))
-	log.Log.Info("private key trim", "PK:", privateKey)
+	privateKeyTrim := []byte(strings.Trim(string(privateKeyEncoded), `"`))
+	log.Log.Info("private key trim", "PK:", privateKeyTrim)
+    // Decode the private key
+    privateKey, err := base64.StdEncoding.DecodeString(privateKeyTrim)
+    if err != nil {
+        l.Error(err, "Failed to decode privateKey")
+        return ctrl.Result{}, err
+    }
 	os.Exit(1)
 
 	// Generate or renew access token
