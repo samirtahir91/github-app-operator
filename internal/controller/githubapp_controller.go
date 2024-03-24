@@ -113,7 +113,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			l.Error(err, "Failed to update existing Secret")
 			return ctrl.Result{}, err
 		}
-
+	}
 	l.Info("Access token generated and stored in Secret successfully")
 	return ctrl.Result{}, nil
 }
