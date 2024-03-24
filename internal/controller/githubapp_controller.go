@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"time"
 	"github.com/golang-jwt/jwt/v4"
-	"os"
 	"strings"
 
 	ctrl "sigs.k8s.io/controller-runtime"
