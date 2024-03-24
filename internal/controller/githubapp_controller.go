@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"time"
