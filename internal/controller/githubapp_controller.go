@@ -23,7 +23,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/go-github/v38/github"
+	"github.com/google/go-github/v60/github"
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
