@@ -20,9 +20,10 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"time"
+	"github.com/golang-jwt/jwt/v4"
 
-	"github.com/google/go-github/v60/github"
-	"golang.org/x/oauth2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -106,27 +107,59 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
-func generateOrRenewAccessToken(appID, installationID string, privateKey []byte) (string, error) {
-	ctx := context.Background()
-
-	// Create a new GitHub App client
-	appPrivateKey, err := github.ParsePEMKeyFile(privateKey)
+func generateAccessToken(appID int, installationID int, privateKey []byte) (string, error) {
+	// Parse private key
+	parsedKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse private key: %v", err)
 	}
-	transport := &oauth2.Transport{
-		Source: oauth2.StaticTokenSource(&oauth2.Token{}),
-		Base:   http.DefaultTransport,
+
+	// Generate JWT
+	now := time.Now()
+	claims := jwt.StandardClaims{
+		Issuer:    fmt.Sprintf("%d", appID),
+		IssuedAt:  now.Unix(),
+		ExpiresAt: now.Add(10 * time.Minute).Unix(), // Expiry time is 10 minutes from now
 	}
-	httpClient := transport.Client()
-	client := github.NewClient(httpClient)
-	clientApps := client.Apps
-	instToken, _, err := clientApps.CreateInstallationToken(ctx, installationID, nil)
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	signedToken, err := token.SignedString(parsedKey)
 	if err != nil {
-		return "", fmt.Errorf("failed to create installation token: %v", err)
+		return "", fmt.Errorf("failed to sign JWT: %v", err)
 	}
 
-	return instToken.GetToken(), nil
+	// Create HTTP client and perform request to get installation token
+	httpClient := &http.Client{}
+	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installationID)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create HTTP request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+signedToken)
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to perform HTTP request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	// Parse response
+	var responseBody map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
+		return "", fmt.Errorf("failed to parse response body: %v", err)
+	}
+
+	// Extract access token from response
+	accessToken, ok := responseBody["token"].(string)
+	if !ok {
+		return "", fmt.Errorf("failed to extract access token from response")
+	}
+
+	return accessToken, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
