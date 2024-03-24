@@ -20,22 +20,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // GithubAppSpec defines the desired state of GithubApp
 type GithubAppSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of GithubApp. Edit githubapp_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	AppId int `json:"appId"`
+	InstallId int `json:"installId"`
 }
 
 // GithubAppStatus defines the observed state of GithubApp
 type GithubAppStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Synced will be set to true if secrets reconciled
+	Synced bool `json:"synced,omitempty"`
 }
 
 //+kubebuilder:object:root=true
