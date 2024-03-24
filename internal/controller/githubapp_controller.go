@@ -46,44 +46,44 @@ type GithubAppReconciler struct {
 
 // Reconcile fucntion
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
-	_.Info("Reconciling GithubApp")
+	l := log.FromContext(ctx)
+	l.Info("Reconciling GithubApp")
 
 	// Fetch the GithubApp resource
 	githubApp := &githubappv1.GithubApp{}
 	err := r.Get(ctx, req.NamespacedName, githubApp)
 	if err != nil {
-		_.Error(err, "Failed to get GithubApp")
+		l.Error(err, "Failed to get GithubApp")
 		return ctrl.Result{}, err
 	}
 
 	// Get the private key from the Secret
-	secretName := githubApp.Spec.SecretName
+	secretName := githubApp.Spec.PrivateKeySecret
 	secretNamespace := githubApp.Namespace
 	secret := &corev1.Secret{}
 	err = r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, secret)
 	if err != nil {
-		_.Error(err, "Failed to get Secret")
+		l.Error(err, "Failed to get Secret")
 		return ctrl.Result{}, err
 	}
 
 	privateKeyEncoded, ok := secret.Data["privateKey"]
 	if !ok {
-		_.Error(err, "privateKey not found in Secret")
+		l.Error(err, "privateKey not found in Secret")
 		return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
 	}
 
 	// Decode the private key
 	privateKey, err := base64.StdEncoding.DecodeString(string(privateKeyEncoded))
 	if err != nil {
-		_.Error(err, "Failed to decode privateKey")
+		l.Error(err, "Failed to decode privateKey")
 		return ctrl.Result{}, err
 	}
 
 	// Generate or renew access token
-	accessToken, err := generateOrRenewAccessToken(githubApp.Spec.AppID, githubApp.Spec.InstallationID, privateKey)
+	accessToken, err := generateOrRenewAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
 	if err != nil {
-		_.Error(err, "Failed to generate or renew access token")
+		l.Error(err, "Failed to generate or renew access token")
 		return ctrl.Result{}, err
 	}
 
@@ -98,11 +98,11 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		},
 	}
 	if err := r.Create(ctx, newSecret); err != nil {
-		_.Error(err, "Failed to create Secret for access token")
+		l.Error(err, "Failed to create Secret for access token")
 		return ctrl.Result{}, err
 	}
 
-	_.Info("Access token generated and stored in Secret successfully")
+	l.Info("Access token generated and stored in Secret successfully")
 	return ctrl.Result{}, nil
 }
 
