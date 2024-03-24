@@ -20,14 +20,13 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"log"
-	"time"
 
 	"github.com/google/go-github/v60/github"
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -106,7 +105,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
-func generateOrRenewAccessToken(appID, installationID string, privateKey []byte) (string, error) {
+func generateOrRenewAccessToken(appID int, installationID int, privateKey []byte) (string, error) {
 	ctx := context.Background()
 
 	// Create a new GitHub App client
@@ -120,7 +119,7 @@ func generateOrRenewAccessToken(appID, installationID string, privateKey []byte)
 	}
 
 	// Create a JWT token for authentication
-	token, err := github.NewJWTClient(ctx, tr, int(appID), privateKey)
+	token, err := github.NewJWTClient(ctx, tr, appID, privateKey)
 	if err != nil {
 		return "", fmt.Errorf("error creating JWT client: %s", err)
 	}
