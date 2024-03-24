@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"time"
@@ -79,15 +78,8 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Remove surrounding quotes if present and convert to byte slice
-	privateKeyTrim := strings.Trim(string(privateKeyEncoded), `"`)
-	log.Log.Info("private key trim", "PK:", privateKeyTrim)
-    // Decode the private key
-    privateKey, err := base64.StdEncoding.DecodeString(privateKeyTrim)
-    if err != nil {
-        l.Error(err, "Failed to decode privateKey")
-        return ctrl.Result{}, err
-    }
-	os.Exit(1)
+	privateKey := []byte(strings.Trim(string(privateKeyEncoded), `"`))
+	log.Log.Info("private key trim", "PK:", privateKey)
 
 	// Generate or renew access token
 	accessToken, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
