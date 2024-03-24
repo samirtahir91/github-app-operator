@@ -43,9 +43,12 @@ spec:
                 type: integer
               installId:
                 type: integer
+              privateKeySecret:
+                type: string
             required:
             - appId
             - installId
+            - privateKeySecret
             type: object
           status:
             description: GithubAppStatus defines the observed state of GithubApp
