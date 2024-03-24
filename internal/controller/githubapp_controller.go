@@ -86,6 +86,9 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		os.Exit(1)
 		return ctrl.Result{}, err
 	}
+	log.Log.Info("privateKey DECODED", "PK", privateKey)
+
+	os.Exit(1)
 
 	// Generate or renew access token
 	accessToken, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
