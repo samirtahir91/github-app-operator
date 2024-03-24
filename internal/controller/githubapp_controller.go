@@ -106,29 +106,24 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
-func generateOrRenewAccessToken(appID int, installationID int, privateKey []byte) (string, error) {
+func generateOrRenewAccessToken(appID, installationID string, privateKey []byte) (string, error) {
 	ctx := context.Background()
 
 	// Create a new GitHub App client
-	tr := oauth2.NewClient(ctx, oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: "", TokenType: "Bearer"},
-	))
-
-	client, err := github.NewEnterpriseClient("https://api.github.com", "https://<YOUR_HOSTNAME>/api/v3", tr)
+	appPrivateKey, err := github.ParsePEMKeyFile(privateKey)
 	if err != nil {
-		return "", fmt.Errorf("error creating GitHub client: %s", err)
+		return "", fmt.Errorf("failed to parse private key: %v", err)
 	}
-
-	// Create a JWT token for authentication
-	token, err := github.NewJWTClient(ctx, tr, appID, privateKey)
-	if err != nil {
-		return "", fmt.Errorf("error creating JWT client: %s", err)
+	transport := &oauth2.Transport{
+		Source: oauth2.StaticTokenSource(&oauth2.Token{}),
+		Base:   http.DefaultTransport,
 	}
-
-	// Get installation token
-	instToken, _, err := token.InstallationToken(ctx, installationID, nil)
+	httpClient := transport.Client()
+	client := github.NewClient(httpClient)
+	clientApps := client.Apps
+	instToken, _, err := clientApps.CreateInstallationToken(ctx, installationID, nil)
 	if err != nil {
-		return "", fmt.Errorf("error getting installation token: %s", err)
+		return "", fmt.Errorf("failed to create installation token: %v", err)
 	}
 
 	return instToken.GetToken(), nil
