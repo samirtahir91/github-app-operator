@@ -71,14 +71,15 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-    privateKeyEncoded, ok := secret.Data["privateKey"]
-    if !ok {
-        l.Error(nil, "privateKey not found in Secret")
-        return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
-    }
+	// Retrieve privateKeyEncoded from the Secret
+	privateKeyEncoded, ok := secret.Data["privateKey"]
+	if !ok {
+		l.Error(nil, "privateKey not found in Secret")
+		return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
+	}
 
-	// Remove surrounding quotes if present
-	privateKey := strings.Trim(string(privateKeyEncoded), "\"")
+	// Remove surrounding quotes if present and convert to byte slice
+	privateKey := []byte(strings.Trim(string(privateKeyEncoded), `"`))
 	log.Log.Info("private key trim", "PK:", privateKey)
 	os.Exit(1)
 
