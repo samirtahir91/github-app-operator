@@ -106,6 +106,8 @@ var _ = Describe("GithubApp controller", func() {
 			
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
+			// Add a sleep to allow the controller to trigger requeue
+			time.Sleep(120 * time.Second)
 		})
 	})
 })
