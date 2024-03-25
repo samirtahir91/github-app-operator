@@ -4,7 +4,7 @@ This is a Kubernetes operator that will generate an access token for a GithubApp
 ## Description
 Key features:
 - Uses a custom resource `GithubApp` in your destination namespace.
-- Reads `appId`, `installId` and `privateKeySecret` defined in a `GithubApp` resource in a namespace and requests n access token from Github for the Github App.
+- Reads `appId`, `installId` and `privateKeySecret` defined in a `GithubApp` resource and requests an access token from Github for the Github App.
 - The `privateKeySecret` referes to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
   - It expects the field `data.privateKey` in the secret to pull the private key from.
 - Deleting the `GithubApp` object will also delete the access token secret it owns.
