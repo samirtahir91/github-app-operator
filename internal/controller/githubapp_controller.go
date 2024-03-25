@@ -207,13 +207,14 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	if !ok {
 		return "", metav1.Time{}, fmt.Errorf("failed to extract expire time from response")
 	}
-    // Parse expires_at to time.Time
-    expiresAt, err := time.Parse(time.RFC3339, expiresAtString)
+    // Parse expires_at to metav1.Time
+    expiresAtTime, err := time.Parse(time.RFC3339, expiresAtString)
     if err != nil {
         return "", metav1.Time{}, fmt.Errorf("failed to parse expires_at: %v", err)
     }
+    expiresAt.Time = expiresAtTime
 
-    return accessToken, metav1.NewTime(expiresAt), nil
+    return accessToken, expiresAt, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
