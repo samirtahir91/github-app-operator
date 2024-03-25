@@ -97,7 +97,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Secret doesn't exist, reconcile straight away
-			r.generateOrUpdateAccessToken(ctx, githubApp)
+			return r.generateOrUpdateAccessToken(ctx, githubApp)
 		}
 		// Error other than NotFound, return error
 		return ctrl.Result{}, err
