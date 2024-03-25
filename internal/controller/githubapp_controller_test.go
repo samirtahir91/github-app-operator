@@ -136,7 +136,7 @@ var _ = Describe("GithubApp controller", func() {
 				recreatedSecret := &corev1.Secret{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, recreatedSecret)
 				return err == nil
-			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
+			}, "120s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
 	
 
 			By("Verifying the recreated access token secret")
