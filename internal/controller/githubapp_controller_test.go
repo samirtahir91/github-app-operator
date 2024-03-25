@@ -39,8 +39,8 @@ var _ = Describe("GithubApp controller", func() {
 	const (
 		privateKeySecret     = "gh-app-key-test"
 		sourceNamespace      = "default"
-		appId				 = "857468"
-		installId			 = "48531286"
+		appId				 = 857468
+		installId			 = 48531286
 		githubAppName		 = "gh-app-test"
 	)
 
