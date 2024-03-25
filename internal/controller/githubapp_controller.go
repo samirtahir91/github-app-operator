@@ -294,8 +294,9 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
+		// Watch GithubApps
 		For(&githubappv1.GithubApp{}).
-		// Watch secrets owned by GithubApps.
+		// Watch access token secrets owned by GithubApps.
 		Owns(&corev1.Secret{}).
 		Complete(r)
 }
