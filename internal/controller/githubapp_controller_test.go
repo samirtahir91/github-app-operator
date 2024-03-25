@@ -22,7 +22,6 @@ import (
 	"os"
 	"fmt"
 	"bytes"
-	"log"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,25 +33,6 @@ import (
 	githubappv1 "github-app-operator/api/v1"
 )
 
-// Define a buffer to capture logs
-var logBuffer bytes.Buffer
-
-// Redirect controller logs to the buffer
-func redirectLogs() {
-    log.SetOutput(&logBuffer)
-}
-
-// Print controller logs captured in the buffer
-func printControllerLogs() {
-    fmt.Println("Controller Logs:")
-    fmt.Println(logBuffer.String())
-}
-
-// Redirect logs before running tests
-BeforeSuite(redirectLogs)
-
-// Print logs after running tests
-AfterSuite(printControllerLogs)
 
 var _ = Describe("GithubApp controller", func() {
 
