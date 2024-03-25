@@ -202,7 +202,7 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
     accessToken := responseBody["token"].(string)
     expiresAt := responseBody["expires_at"].(string)
 
-    return accessToken, expiresAt
+    return accessToken, expiresAt, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
