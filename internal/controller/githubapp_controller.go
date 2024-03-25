@@ -114,7 +114,9 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     // Log the next expiry time
     log.Log.Info("Next expiry time:", "expiresAt", expiresAt)
 
-    // Return result with no error and request reconciliation after 1 minute
+    // Return result with no error and request reconciliation after x minutes
+	log.Log.Info("Expiry threshold:", "minutes", timeBeforeExpiry)
+	log.Log.Info("Requeue after:", "minutes", reconcileInterval)
 	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
 }
 
