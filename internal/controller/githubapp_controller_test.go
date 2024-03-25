@@ -49,6 +49,9 @@ var _ = Describe("GithubApp controller", func() {
 	Context("When setting up the test environment", func() {
 		It("Should create GithubApp custom resources", func() {
 			By("Creating the privateKeySecret in the sourceNamespace")
+
+			ctx := context.Background()
+
 			secret1Obj := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:		privateKeySecret,
