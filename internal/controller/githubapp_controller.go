@@ -43,8 +43,8 @@ type GithubAppReconciler struct {
 }
 
 var (
-	defaultRequeueAfter    = 15 // Default requeue interval
-	defaultTimeBeforeExpiry = 5  // Default time before expiry
+	defaultRequeueAfter    = 5 // Default requeue interval
+	defaultTimeBeforeExpiry = 15  // Default time before expiry
 	reconcileInterval int // Requeue interval (from env var)
 	timeBeforeExpiry  int // Expiry threshold (from env var)
 )
@@ -106,7 +106,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     durationUntilExpiry := expiresAt.Sub(time.Now())
 
     // If the expiry is within the next x minutes, generate or renew access token
-    if durationUntilExpiry <= timeBeforeExpiryEnv*time.Minute {
+    if durationUntilExpiry <= timeBeforeExpiry * time.Minute {
         return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
 
@@ -114,7 +114,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     log.Log.Info("Next expiry time:", "expiresAt", expiresAt)
 
     // Return result with no error and request reconciliation after 1 minute
-    return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+    return ctrl.Result{RequeueAfter: reconcileInterval * time.Minute}, nil
 }
 
 // Function to generate or update access token
