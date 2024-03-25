@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"time"
 	"github.com/golang-jwt/jwt/v4"
-	"os"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -205,7 +204,6 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
     }
 
 	l.Info("Access token updated in the existing Secret successfully")
-	os.Exit(1)
 	return ctrl.Result{}, nil
 
     // Update the status with the new expiresAt time
