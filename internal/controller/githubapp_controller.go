@@ -92,24 +92,20 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			"accessToken": accessToken,
 		},
 	}
+	accessTokenSecretKey := client.ObjectKey{
+		Namespace: githubApp.Namespace,
+		Name:      accessTokenSecret,
+	}
 
 	// Attempt to retrieve the existing Secret
 	existingSecret := &corev1.Secret{}
-	err = r.Get(ctx, client.ObjectKey{Namespace: githubApp.Namespace, Name: accessTokenSecret}, existingSecret)
-	if err != nil {
-		if !client.IgnoreNotFound(err) {
-			l.Error(err, "Failed to get existing Secret")
-			return ctrl.Result{}, err
+	if err := r.Get(ctx, accessTokenSecretKey, existingSecret); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Create the destination secret
+			return r.createDestinationSecret(ctx, secretSync, sourceSecret)
 		}
-
-		// Secret doesn't exist, create a new one
-		if err := r.Create(ctx, newSecret); err != nil {
-			l.Error(err, "Failed to create Secret for access token")
-			return ctrl.Result{}, err
-		}
-
-		l.Info("Access token generated and stored in a new Secret successfully")
-		return ctrl.Result{}, nil
+		logctx.Error(err, "Failed to get access token secret", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
+		return err
 	}
 
 	// Secret exists, update its data
