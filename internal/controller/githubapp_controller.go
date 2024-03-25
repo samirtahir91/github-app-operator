@@ -76,7 +76,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
     // Generate or renew access token
-    accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
+    accessToken, expiresAtString, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
     if err != nil {
 		l.Error(err, "Failed to generate or renew access token")
         return ctrl.Result{}, err
@@ -201,21 +201,12 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
     if !ok {
         return "", metav1.Time{}, fmt.Errorf("failed to extract access token from response")
     }
-
     expiresAtString, ok := responseBody["expires_at"].(string)
     if !ok {
         return "", metav1.Time{}, fmt.Errorf("failed to extract expire time from response")
     }
 
-    // Parse expires_at to metav1.Time
-    expiresAtTime, err := time.Parse(time.RFC3339, expiresAtString)
-    if err != nil {
-        return "", metav1.Time{}, fmt.Errorf("failed to parse expires_at: %v", err)
-    }
-
-    expiresAt := metav1.NewTime(expiresAtTime)
-
-    return accessToken, expiresAt, nil
+    return accessToken, expiresAtString, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
