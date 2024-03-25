@@ -27,8 +27,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,14 +39,13 @@ var logBuffer bytes.Buffer
 
 // Redirect controller logs to the buffer
 func redirectLogs() {
-	ctrlLogger := log.New(&logBuffer, "[Controller] ", log.LstdFlags)
-	ctrl.SetLogger(ctrlLogger)
+    log.SetOutput(&logBuffer)
 }
 
 // Print controller logs captured in the buffer
 func printControllerLogs() {
-	fmt.Println("Controller Logs:")
-	fmt.Println(logBuffer.String())
+    fmt.Println("Controller Logs:")
+    fmt.Println(logBuffer.String())
 }
 
 var _ = Describe("GithubApp controller", func() {
