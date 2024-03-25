@@ -55,7 +55,7 @@ var _ = Describe("GithubApp controller", func() {
 					Name:		privateKeySecret,
 					Namespace: 	sourceNamespace,
 				},
-				Data: map[string][]byte{"privateKey": []byte(privateKey)},
+				Data: map[string][]byte{"privateKey": privateKey},
 			}
 			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 			fmt.Println("Private Key:", privateKey)
