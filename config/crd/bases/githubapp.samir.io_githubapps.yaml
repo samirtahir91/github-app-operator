@@ -53,9 +53,10 @@ spec:
           status:
             description: GithubAppStatus defines the observed state of GithubApp
             properties:
-              synced:
-                description: Synced will be set to true if secrets reconciled
-                type: boolean
+              expiresAt:
+                description: Expiry of access token
+                format: date-time
+                type: string
             type: object
         type: object
     served: true
