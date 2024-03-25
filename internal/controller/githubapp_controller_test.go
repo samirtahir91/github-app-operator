@@ -22,7 +22,6 @@ import (
 	"os"
 	"fmt"
 	"encoding/base64"
-	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -109,9 +108,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
 			// Add a sleep to allow the controller to trigger requeue
-			time.Sleep(30 * time.Second)
-
-
+			time.Sleep(90 * time.Second)
 		})
 	})
 })
