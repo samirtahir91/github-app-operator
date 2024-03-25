@@ -196,23 +196,24 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 		return "", fmt.Errorf("failed to parse response body: %v", err)
 	}
 
-	// Extract access token from response
-	accessToken, ok := responseBody["token"].(string)
-	if !ok {
-		return "", fmt.Errorf("failed to extract access token from response")
-	}
-	// Extract expiry time from response
-	var expiresAtString string
-	expiresAtString, ok = responseBody["expires_at"].(string)
-	if !ok {
-		return "", metav1.Time{}, fmt.Errorf("failed to extract expire time from response")
-	}
+    // Extract access token and expires_at from response
+    accessToken, ok := responseBody["token"].(string)
+    if !ok {
+        return "", metav1.Time{}, fmt.Errorf("failed to extract access token from response")
+    }
+
+    expiresAtString, ok := responseBody["expires_at"].(string)
+    if !ok {
+        return "", metav1.Time{}, fmt.Errorf("failed to extract expire time from response")
+    }
+
     // Parse expires_at to metav1.Time
     expiresAtTime, err := time.Parse(time.RFC3339, expiresAtString)
     if err != nil {
         return "", metav1.Time{}, fmt.Errorf("failed to parse expires_at: %v", err)
     }
-    expiresAt.Time = expiresAtTime
+
+    expiresAt := metav1.NewTime(expiresAtTime)
 
     return accessToken, expiresAt, nil
 }
