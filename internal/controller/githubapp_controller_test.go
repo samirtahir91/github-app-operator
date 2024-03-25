@@ -77,6 +77,8 @@ var _ = Describe("GithubApp controller", func() {
 
 	Context("When reconciling a GithubApp", func() {
 		It("Should retrieve the private key from the secret", func() {
+			ctx := context.Background()
+
 			// Retrieve the privateKeySecret from the cluster
 			secretKey := types.NamespacedName{Name: privateKeySecret, Namespace: sourceNamespace}
 			secret := &corev1.Secret{}
