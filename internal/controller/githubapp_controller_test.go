@@ -144,6 +144,7 @@ var _ = Describe("GithubApp controller", func() {
 				if err := k8sClient.Get(ctx, key, retrievedGithubApp); err != nil {
 					return false
 				}
+				fmt.Println("GithubApp Status:", retrievedGithubApp)
 				fmt.Println("GithubApp Status:", retrievedGithubApp.Status.ExpiresAt.Time)
 
 				// Check if the expiresAt field is not zero or empty
