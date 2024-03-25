@@ -42,6 +42,13 @@ type GithubAppReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+var (
+	defaultRequeueAfter    = 15 // Default requeue interval
+	defaultTimeBeforeExpiry = 5  // Default time before expiry
+	reconcileInterval int // Requeue interval (from env var)
+	timeBeforeExpiry  int // Expiry threshold (from env var)
+)
+
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps/finalizers,verbs=update
@@ -94,12 +101,12 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
         // Error other than NotFound, return error
         return ctrl.Result{}, err
     }
-	
+
     // Calculate the duration until expiry
     durationUntilExpiry := expiresAt.Sub(time.Now())
 
-    // If the expiry is within the next 10 minutes, generate or renew access token
-    if durationUntilExpiry <= 15*time.Minute {
+    // If the expiry is within the next x minutes, generate or renew access token
+    if durationUntilExpiry <= timeBeforeExpiryEnv*time.Minute {
         return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
 
@@ -262,8 +269,22 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Get reconcile interval from environment variable or use default value
+	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
+	reconcileInterval, err := strconv.Atoi(reconcileIntervalStr)
+	if err != nil {
+		reconcileInterval = defaultRequeueAfter
+	}
+	// Get time before expiry from environment variable or use default value
+	timeBeforeExpiryStr := os.Getenv("EXPIRY_THRESHOLD")
+	timeBeforeExpiry, err := strconv.Atoi(timeBeforeExpiryStr)
+	if err != nil {
+		timeBeforeExpiry = defaultTimeBeforeExpiry
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&githubappv1.GithubApp{}).
 		// Watch secrets owned by GithubApps.
