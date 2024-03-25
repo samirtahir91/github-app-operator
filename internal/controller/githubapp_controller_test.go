@@ -88,9 +88,10 @@ var _ = Describe("GithubApp controller", func() {
 				if err := k8sClient.Get(ctx, key, retrievedGithubApp); err != nil {
 					return false
 				}
-				// Check if the Secrets field matches the expected value
-				return reflect.DeepEqual(retrievedGithubApp.Status.ExpiresAt, true)
-			}, timeout, interval).Should(BeTrue(), "GithubApp status didn't change to the right status")
+				// Check if the expiresAt field is not zero or empty
+				return !retrievedGithubApp.Status.ExpiresAt.Time.IsZero()
+			}, timeout, interval).Should(BeTrue(), "GithubApp expiresAt status not set or invalid")
 		})
 	})
+
 })
