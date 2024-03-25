@@ -139,7 +139,7 @@ var _ = Describe("GithubApp controller", func() {
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
 				return err == nil
-			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not created", sourceNamespace, secretName))
+			}, "10s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not created", sourceNamespace, secretName))
 
 			// Retrieve the access token from the Secret
 			retrievedAccessToken, found := retrievedSecret.StringData["accessToken"]
@@ -156,7 +156,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Retrieve the GithubApp object to check its status
 			key := types.NamespacedName{Name: githubAppName, Namespace: sourceNamespace}
 			retrievedGithubApp := &githubappv1.GithubApp{}
-			timeout := 60 * time.Second
+			timeout := 10 * time.Second
 			interval := 5 * time.Second
 			Eventually(func() bool {
 				if err := k8sClient.Get(ctx, key, retrievedGithubApp); err != nil {
