@@ -67,7 +67,7 @@ var _ = BeforeSuite(func() {
 	var logBuffer bytes.Buffer
 
 	// Redirect logs before running tests
-	redirectLogs
+	redirectLogs()
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -103,7 +103,7 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	
 	// Print logs after running tests
-	printControllerLogs
+	printControllerLogs()
 
 	By("tearing down the test environment")
 	err := testEnv.Stop()
