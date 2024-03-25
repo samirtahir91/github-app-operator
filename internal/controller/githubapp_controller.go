@@ -278,6 +278,7 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	reconcileInterval, err = time.ParseDuration(reconcileIntervalStr)
 	if err != nil {
 		// Handle case where environment variable is not set or invalid
+		log.Log.Error(err, "Failed to set reconcileInterval, defaulting")
 		reconcileInterval = defaultRequeueAfter
 	}
 
@@ -286,6 +287,7 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	timeBeforeExpiry, err = time.ParseDuration(timeBeforeExpiryStr)
 	if err != nil {
 		// Handle case where environment variable is not set or invalid
+		log.Log.Error(err, "Failed to set timeBeforeExpiry, defaulting")
 		timeBeforeExpiry = defaultTimeBeforeExpiry
 	}
 
