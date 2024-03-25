@@ -2,7 +2,7 @@ name: Tests
 
 # Trigger the workflow on pull requests and direct pushes to any branch
 on:
-  push:
+  #push:
   pull_request:
 
 jobs:
