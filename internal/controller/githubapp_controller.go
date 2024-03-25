@@ -85,7 +85,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If expiresAt status field is not present or expiry time has already passed, generate or renew access token
 	if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
-		r.generateOrUpdateAccessToken(ctx, githubApp)
+		return r.generateOrUpdateAccessToken(ctx, githubApp)
 	}
 
 	// Check if the access token secret exists if not reconcile immediately
@@ -108,7 +108,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If the expiry is within the next x minutes, generate or renew access token
 	if durationUntilExpiry <= timeBeforeExpiry {
-		r.generateOrUpdateAccessToken(ctx, githubApp)
+		return r.generateOrUpdateAccessToken(ctx, githubApp)
 	}
 
 	// Log the next expiry time
