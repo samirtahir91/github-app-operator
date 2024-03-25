@@ -140,7 +140,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-    githubApp.Status.ExpiresAt = expiresAt
+    githubApp.Status.ExpiresAt = &expiresAt
 
     // Update GithubApp resource status
     if err := r.Status().Update(ctx, githubApp); err != nil {
