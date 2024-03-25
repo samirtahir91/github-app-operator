@@ -274,7 +274,7 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Get reconcile interval from environment variable or use default value
-	var err
+	var err error
 	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
 	reconcileInterval, err = time.ParseDuration(reconcileIntervalStr)
 	if err != nil {
