@@ -67,7 +67,7 @@ var _ = Describe("GithubApp controller", func() {
 					Name:      githubAppName,
 					Namespace: sourceNamespace,
 				},
-				Spec: syncv1.GithubAppSpec{
+				Spec: githubappv1.GithubAppSpec{
 					AppId: appId,
 					InstallId: installId,
 					PrivateKeySecret: privateKeySecret,
