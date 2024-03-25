@@ -97,13 +97,36 @@ var _ = Describe("GithubApp controller", func() {
 	})
 
 	Context("When reconciling a GithubApp", func() {
+		It("Should create a Secret with the access token", func() {
+			ctx := context.Background()
+
+			// Define the expected secret name
+			secretName := fmt.Sprintf("github-app-access-token-%s", appId)
+
+			var retrievedSecret corev1.Secret
+
+			// Wait for the Secret to be created
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
+				return err == nil
+			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not created", sourceNamespace, secretName))
+
+			// Retrieve the access token from the Secret
+			retrievedAccessToken, found := retrievedSecret.StringData["accessToken"]
+			Expect(found).To(BeTrue(), fmt.Sprintf("Expected access token not found in Secret %s/%s", sourceNamespace, secretName))
+			Expect(retrievedAccessToken).NotTo(BeEmpty(), fmt.Sprintf("Retrieved access token from Secret %s/%s is empty", sourceNamespace, secretName))
+			fmt.Println("Access Token:", retrievedAccessToken)
+		})
+	})
+
+	Context("When reconciling a GithubApp", func() {
 		It("Should write the access token to a secret and set the GithubApp expiresAt status", func() {
 			By("Checking if the GithubApp status has changed to the right status")
 			ctx := context.Background()
 			// Retrieve the GithubApp object to check its status
 			key := types.NamespacedName{Name: githubAppName, Namespace: sourceNamespace}
 			retrievedGithubApp := &githubappv1.GithubApp{}
-			timeout := 120 * time.Second
+			timeout := 60 * time.Second
 			interval := 5 * time.Second
 			Eventually(func() bool {
 				if err := k8sClient.Get(ctx, key, retrievedGithubApp); err != nil {
