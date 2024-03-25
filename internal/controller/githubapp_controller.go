@@ -107,6 +107,8 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				l.Error(err, "Failed to create Secret for access token")
 				return ctrl.Result{}, err
 			}
+			log.Log.Info("Secret created for access token", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
+			return ctrl.Result{}, nil
 		}
 		l.Error(err, "Failed to get access token secret", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
 		return err
