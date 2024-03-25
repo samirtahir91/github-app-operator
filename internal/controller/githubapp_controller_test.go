@@ -79,6 +79,8 @@ var _ = Describe("GithubApp controller", func() {
 	Context("When reconciling a GithubApp", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
+			ctx := context.Background()
+
 			controllerReconciler := &GithubAppReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
