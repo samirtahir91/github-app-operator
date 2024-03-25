@@ -21,6 +21,8 @@ import (
 	"time"
 	"os"
 	"fmt"
+	"bytes"
+	"log"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,7 +34,28 @@ import (
 	githubappv1 "github-app-operator/api/v1"
 )
 
+// Define a buffer to capture logs
+var logBuffer bytes.Buffer
+
+// Redirect controller logs to the buffer
+func redirectLogs() {
+	ctrlLogger := log.New(&logBuffer, "[Controller] ", log.LstdFlags)
+	ctrl.SetLogger(ctrlLogger)
+}
+
+// Print controller logs captured in the buffer
+func printControllerLogs() {
+	fmt.Println("Controller Logs:")
+	fmt.Println(logBuffer.String())
+}
+
 var _ = Describe("GithubApp controller", func() {
+
+    // Redirect logs before running tests
+    BeforeSuite(redirectLogs)
+
+    // Print logs after running tests
+    AfterSuite(printControllerLogs)
 
 	const (
 		privateKeySecret     = "gh-app-key-test"
