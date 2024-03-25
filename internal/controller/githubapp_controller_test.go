@@ -109,12 +109,12 @@ var _ = Describe("GithubApp controller", func() {
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
 			// Add a sleep to allow the controller to trigger requeue
-			time.Sleep(90 * time.Second)
+			time.Sleep(30 * time.Second)
 
 			By("Deleting the access token secret")
 
 			// Define the secret name
-			secretName := fmt.Sprintf("github-app-access-token-857468")
+			secretName := fmt.Sprintf("github-app-access-token-857468aa")
 
 			// Delete the access token secret
 			Expect(k8sClient.Delete(ctx, &corev1.Secret{
@@ -131,7 +131,7 @@ var _ = Describe("GithubApp controller", func() {
 				recreatedSecret := &corev1.Secret{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, recreatedSecret)
 				return err == nil
-			}, "120s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
+			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
 	
 
 			By("Verifying the recreated access token secret")
