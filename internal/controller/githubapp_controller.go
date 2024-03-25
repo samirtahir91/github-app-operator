@@ -274,16 +274,16 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Get reconcile interval from environment variable or use default value
-	reconcileIntervalStr = os.Getenv("CHECK_INTERVAL")
-	if reconcileInterval == "" {
+	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
+	if reconcileIntervalStr == "" {
 		// Handle case where environment variable is not set
 		reconcileInterval = defaultRequeueAfter
 	} else {
 		reconcileInterval = time.ParseDuration(reconcileIntervalStr)
 	}
 	// Get reconcile interval from environment variable or use default value
-	timeBeforeExpiryStr = os.Getenv("EXPIRY_THRESHOLD")
-	if timeBeforeExpiry == "" {
+	timeBeforeExpiryStr := os.Getenv("EXPIRY_THRESHOLD")
+	if timeBeforeExpiryStr == "" {
 		// Handle case where environment variable is not set
 		timeBeforeExpiry = defaultTimeBeforeExpiry
 	} else {
