@@ -106,7 +106,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Set owner reference to GithubApp object
 	if err := controllerutil.SetControllerReference(githubApp, newSecret, r.Scheme); err != nil {
 		l.Error(err, "Failed to set owner reference for access token secret")
-		return ctrl.Result{}, err // Return both error and ctrl.Result{}
+		return ctrl.Result{}, err
 	}
 
 	// Attempt to retrieve the existing Secret
@@ -126,6 +126,11 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Secret exists, update its data
+	// Set owner reference to GithubApp object
+	if err := controllerutil.SetControllerReference(githubApp, existingSecret, r.Scheme); err != nil {
+		l.Error(err, "Failed to set owner reference for access token secret")
+		return ctrl.Result{}, err
+	}
 	existingSecret.StringData = newSecret.StringData
 	if err := r.Update(ctx, existingSecret); err != nil {
 		l.Error(err, "Failed to update existing Secret")
