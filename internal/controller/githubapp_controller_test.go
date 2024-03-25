@@ -124,11 +124,8 @@ var _ = Describe("GithubApp controller", func() {
 				return err == nil
 			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not created", sourceNamespace, secretName))
 
-			// Retrieve the access token from the Secret
-			fmt.Println("Access Token Secret Data:", retrievedSecret.StringData)
-
 			retrievedAccessToken, found := retrievedSecret.StringData["accessToken"]
-			Expect(found).To(BeTrue(), fmt.Sprintf("Expected access token not found in Secret %s/%s", sourceNamespace, secretName))
+			Expect(found).To(BeTrue(), fmt.Sprintf("Expected access token not found in Secret %s/%s/%s", sourceNamespace, secretName, retrievedSecret.StringData))
 			Expect(retrievedAccessToken).NotTo(BeEmpty(), fmt.Sprintf("Retrieved access token from Secret %s/%s is empty", sourceNamespace, secretName))
 			fmt.Println("Access Token:", retrievedAccessToken)
 		})
