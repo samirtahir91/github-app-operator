@@ -76,7 +76,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
     // Generate or renew access token
-    accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, githubApp.Spec.PrivateKeySecret)
+    accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
     if err != nil {
 		l.Error(err, "Failed to generate or renew access token")
         return ctrl.Result{}, err
