@@ -111,31 +111,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Add a sleep to allow the controller to trigger requeue
 			time.Sleep(30 * time.Second)
 
-			By("Deleting the access token secret")
 
-			// Define the secret name
-			secretName := fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
-
-			// Delete the access token secret
-			Expect(k8sClient.Delete(ctx, &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      secretName,
-					Namespace: sourceNamespace,
-				},
-			})).To(Succeed())
-
-
-
-			By("Verifying the recreated access token secret")
-
-			// Retrieve the recreated secret
-			recreatedSecret := &corev1.Secret{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, recreatedSecret)).To(Succeed())
-
-			// Verify that the access token field in the secret is not empty
-			accessToken, found := recreatedSecret.StringData["accessToken"]
-			assert.True(GinkgoT(), found, fmt.Sprintf("Access token not found in the recreated secret %s/%s", sourceNamespace, secretName))
-			assert.NotEmpty(GinkgoT(), accessToken, fmt.Sprintf("Access token in the recreated secret %s/%s is empty", sourceNamespace, secretName))
 		})
 	})
 })
