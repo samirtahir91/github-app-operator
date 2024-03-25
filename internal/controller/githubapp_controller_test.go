@@ -21,6 +21,7 @@ import (
 	"time"
 	"os"
 	"fmt"
+	"encoding/base64"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -52,12 +53,17 @@ var _ = Describe("GithubApp controller", func() {
 
 			ctx := context.Background()
 
+			// Decode base64-encoded private key
+			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
+			if err != nil {
+				// Handle error
+			}
 			secret1Obj := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:		privateKeySecret,
 					Namespace: 	sourceNamespace,
 				},
-				Data: map[string][]byte{"privateKey": []byte(privateKey)},
+				Data: map[string][]byte{"privateKey": []byte(decodedPrivateKey)},
 			}
 			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 
