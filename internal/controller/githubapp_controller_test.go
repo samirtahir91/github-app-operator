@@ -30,7 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	githubappv1 "secret-sync-operator/api/v1"
+	githubappv1 "github-app-operator/api/v1"
 )
 
 var _ = Describe("GithubApp controller", func() {
