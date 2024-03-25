@@ -43,6 +43,8 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+// Define a buffer to capture logs
+var logBuffer bytes.Buffer
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
