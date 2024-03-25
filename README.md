@@ -38,7 +38,7 @@ data:
   privateKey: BASE64_ENCODED_PRIVATE_KEY
 ```
 ## Example GithubApp object
-Below example will setup a 
+Below example will setup a GithubApp and reconcile an access token in the `team-1` namespace, the access token will be available to use in the secret `github-app-access-token-123123`
 ```sh
 kubectl apply -f - <<EOF
 apiVersion: sync.samir.io/v1
