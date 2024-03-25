@@ -77,6 +77,32 @@ var _ = Describe("GithubApp controller", func() {
 	})
 
 	Context("When reconciling a GithubApp", func() {
+		It("should successfully reconcile the resource", func() {
+			By("Reconciling the created resource")
+			controllerReconciler := &GithubAppReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+	
+			// Perform reconciliation for the resource
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: sourceNamespace,
+					Name:      githubAppName,
+				},
+			})
+	
+			// Verify if reconciliation was successful
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
+			// You can add more specific assertions here depending on your controller's reconciliation logic
+			
+			// Print the result
+			fmt.Println("Reconciliation result:", result)
+		})
+	})
+	
+
+	Context("When reconciling a GithubApp", func() {
 		It("Should retrieve the private key from the secret", func() {
 			ctx := context.Background()
 
