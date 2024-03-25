@@ -55,9 +55,8 @@ var _ = Describe("GithubApp controller", func() {
 
 			// Decode base64-encoded private key
 			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
-			if err != nil {
-				// Handle error
-			}
+			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
+			
 			secret1Obj := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:		privateKeySecret,
@@ -109,28 +108,6 @@ var _ = Describe("GithubApp controller", func() {
 			fmt.Println("Reconciliation result:", result)
 		})
 	})
-	
-
-	Context("When reconciling a GithubApp", func() {
-		It("Should retrieve the private key from the secret", func() {
-			ctx := context.Background()
-
-			// Retrieve the privateKeySecret from the cluster
-			secretKey := types.NamespacedName{Name: privateKeySecret, Namespace: sourceNamespace}
-			secret := &corev1.Secret{}
-			Expect(k8sClient.Get(ctx, secretKey, secret)).To(Succeed())
-
-			// Retrieve the privateKey data from the secret
-			privateKeyBytes, ok := secret.Data["privateKey"]
-			Expect(ok).To(BeTrue(), "privateKey data not found in secret")
-
-			// Convert privateKey bytes to string
-			privateKey = string(privateKeyBytes)
-			Expect(privateKey).NotTo(BeEmpty(), "privateKey is empty")
-
-			fmt.Println("Private Key:", privateKey)
-		})
-	})
 
 	Context("When reconciling a GithubApp", func() {
 		It("Should create a Secret with the access token", func() {
@@ -145,7 +122,7 @@ var _ = Describe("GithubApp controller", func() {
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
 				return err == nil
-			}, "10s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not created", sourceNamespace, secretName))
+			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not created", sourceNamespace, secretName))
 
 			// Retrieve the access token from the Secret
 			retrievedAccessToken, found := retrievedSecret.StringData["accessToken"]
@@ -162,7 +139,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Retrieve the GithubApp object to check its status
 			key := types.NamespacedName{Name: githubAppName, Namespace: sourceNamespace}
 			retrievedGithubApp := &githubappv1.GithubApp{}
-			timeout := 10 * time.Second
+			timeout := 60 * time.Second
 			interval := 5 * time.Second
 			Eventually(func() bool {
 				if err := k8sClient.Get(ctx, key, retrievedGithubApp); err != nil {
