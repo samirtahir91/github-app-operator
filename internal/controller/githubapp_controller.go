@@ -77,12 +77,12 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
     // Generate or renew access token
-    accessToken, expiry, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
+    accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
     if err != nil {
 		l.Error(err, "Failed to generate or renew access token")
         return ctrl.Result{}, err
     }
-	fmt.Sprintf("github-expiry", expiry)
+	fmt.Sprintf("github-expiry", expiresAt)
 	os.Exit(1)
 
 	// Create a new Secret with the access token
@@ -141,19 +141,19 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-    //githubApp.Status.ExpiresAt = expiresAt
+    githubApp.Status.ExpiresAt = expiresAt
 
     // Update GithubApp resource status
-    //if err := r.Status().Update(ctx, githubApp); err != nil {
-	//	l.Error(err, "Failed to update status of GithubApp")
-    //    return ctrl.Result{}, err
-    //}
+    if err := r.Status().Update(ctx, githubApp); err != nil {
+		l.Error(err, "Failed to update status of GithubApp")
+        return ctrl.Result{}, err
+    }
 
 	l.Info("Access token updated in the existing Secret successfully")
 	return ctrl.Result{}, nil
 }
 
-func generateAccessToken(appID int, installationID int, privateKey []byte) (string, error) {
+func generateAccessToken(appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
 	// Parse private key
 	parsedKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
 	if err != nil {
@@ -201,9 +201,13 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 
 	// Extract access token and expires_at from response
 	accessToken := responseBody["token"].(string)
-	//expiresAt := responseBody["expires_at"].(string)
+	expiresAtString := responseBody["expires_at"].(string)
+	expiresAt, err := time.Parse(time.RFC3339, expiresAtString)
+	if err != nil {
+		return "", metav1.Time{}, fmt.Errorf("failed to parse expire time: %v", err)
+	}
 
-	return accessToken, "bla", nil
+	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
