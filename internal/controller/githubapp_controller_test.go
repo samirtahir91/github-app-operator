@@ -110,13 +110,8 @@ var _ = Describe("GithubApp controller", func() {
 			fmt.Println("Reconciliation result:", result)
 			// Add a sleep to allow the controller to trigger requeue
 			time.Sleep(90 * time.Second)
-		})
-	})
 
-	Context("When the access token secret is deleted", func() {
-		It("should be recreated with the access token field", func() {
 			By("Deleting the access token secret")
-			ctx := context.Background()
 
 			// Define the secret name
 			secretName := fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
