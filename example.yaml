@@ -6,4 +6,4 @@ metadata:
 spec:
   appId: 857468
   installId: 48531286
-  privateKeySecret: gh-app-secret
+  privateKeySecret: github-app-secret
