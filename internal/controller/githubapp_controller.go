@@ -196,43 +196,12 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	return accessToken, nil
 }
 
-// Define a predicate function to filter out reconciles for unchanged secrets
-func (r *GithubAppReconciler) destinationNamespacePredicate(ctx context.Context) predicate.Predicate {
-	return predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			logctx := log.FromContext(ctx)
-
-			// Fetch objects
-			newSecret := &corev1.Secret{}
-			oldSecret := &corev1.Secret{}
-			if err := r.Get(ctx, client.ObjectKey{Namespace: e.ObjectNew.GetNamespace(), Name: e.ObjectNew.GetName()}, newSecret); err != nil {
-				logctx.Error(err, "Failed to get new secret", "Namespace", e.ObjectNew.GetNamespace(), "Name", e.ObjectNew.GetName())
-				return false
-			}
-			if err := r.Get(ctx, client.ObjectKey{Namespace: e.ObjectOld.GetNamespace(), Name: e.ObjectOld.GetName()}, oldSecret); err != nil {
-				logctx.Error(err, "Failed to get old secret", "Namespace", e.ObjectOld.GetNamespace(), "Name", e.ObjectOld.GetName())
-				return false
-			}
-
-			// Ignore update events where the oldSecret secret data and newSecret secret data are identical
-			log.Log.Info("Old secret data", "data", oldSecret.Data)
-			log.Log.Info("New secret data", "data", newSecret.Data)
-
-			if reflect.DeepEqual(oldSecret.Data, newSecret.Data) {
-				return false
-			} else {
-				return true
-			}
-		},
-	}
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	ctx := context.Background()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&githubappv1.GithubApp{}).
 		// Watch secrets owned by GithubApps.
-		Owns(&corev1.Secret{}, builder.WithPredicates(r.destinationNamespacePredicate(ctx))).
+		Owns(&corev1.Secret{}).
 		Complete(r)
 }
