@@ -127,8 +127,12 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 	// Clear existing data and set new access token data
-	existingSecret.StringData = map[string]string{}
-	existingSecret.StringData["accessToken"] = accessToken
+	for k := range existingSecret.Data {
+		delete(existingSecret.Data, k)
+	}
+	existingSecret.StringData = map[string]string{
+		"accessToken": accessToken,
+	}
 	if err := r.Update(ctx, existingSecret); err != nil {
 		l.Error(err, "Failed to update existing Secret")
 		return ctrl.Result{}, err
