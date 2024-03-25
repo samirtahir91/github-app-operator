@@ -106,7 +106,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	secretName := githubApp.Spec.PrivateKeySecret
 	secretNamespace := githubApp.Namespace
 	secret := &corev1.Secret{}
-	err = r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, secret)
+	err := r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, secret)
 	if err != nil {
 		l.Error(err, "Failed to get Secret")
 		return ctrl.Result{}, err
