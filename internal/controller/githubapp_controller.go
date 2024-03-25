@@ -69,7 +69,6 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
     return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
-
 // Function to check expiry and update access token
 func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
     // Get the expiresAt status field
@@ -82,7 +81,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
         }
     } else {
         // Calculate the duration until expiry
-        durationUntilExpiry := expiresAt.Sub(time.Now())
+        durationUntilExpiry := expiresAt.Time.Sub(time.Now())
 
         // If the expiry is within the next 10 minutes, generate or renew access token
         if durationUntilExpiry <= 10*time.Minute {
@@ -91,7 +90,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
             }
         } else {
             // Log the next expiry time
-            log.Log.Info("Next expiry time:", "expiresAt", expiresAt)
+            log.Log.Info("Next expiry time:", "expiresAt", expiresAt.Time)
             // Return result with no error
             return ctrl.Result{}, nil
         }
@@ -101,122 +100,97 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Function to generate or update access token
-func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
-	l := log.FromContext(ctx)
+func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+    l := log.FromContext(ctx)
 
-	// Get the private key from the Secret
-	secretName := githubApp.Spec.PrivateKeySecret
-	secretNamespace := githubApp.Namespace
-	secret := &corev1.Secret{}
-	err := r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, secret)
-	if err != nil {
-		l.Error(err, "Failed to get Secret")
-		return ctrl.Result{}, err
-	}
+    // Get the private key from the Secret
+    secretName := githubApp.Spec.PrivateKeySecret
+    secretNamespace := githubApp.Namespace
+    secret := &corev1.Secret{}
+    err := r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, secret)
+    if err != nil {
+        l.Error(err, "Failed to get Secret")
+        return err
+    }
 
-	privateKey, ok := secret.Data["privateKey"]
-	if !ok {
-		l.Error(err, "privateKey not found in Secret")
-		return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
-	}
+    privateKey, ok := secret.Data["privateKey"]
+    if !ok {
+        l.Error(err, "privateKey not found in Secret")
+        return fmt.Errorf("privateKey not found in Secret")
+    }
 
     // Generate or renew access token
-    accessToken, expiresAtString, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
+    accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
     if err != nil {
         return err
     }
 
-    expiresAt, err := time.Parse(time.RFC3339, expiresAtString)
-    if err != nil {
-        l.Error(err, "Failed to parse expiration time")
-        return ctrl.Result{}, err
+    // Create a new Secret with the access token
+    accessTokenSecret := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
+    newSecret := &corev1.Secret{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      accessTokenSecret,
+            Namespace: githubApp.Namespace,
+        },
+        StringData: map[string]string{
+            "accessToken": accessToken,
+        },
+    }
+    accessTokenSecretKey := client.ObjectKey{
+        Namespace: githubApp.Namespace,
+        Name:      accessTokenSecret,
     }
 
-    // Check if the expiry time is near (within the next 5 minutes, for example)
-    nearThreshold := 5 * time.Minute
-    currentTime := time.Now()
-    timeUntilExpiry := expiresAt.Sub(currentTime)
-    if timeUntilExpiry > nearThreshold {
-        // Expiry time is not near, return and requeue reconciliation after some time
-        requeueAfter := timeUntilExpiry - nearThreshold
-        return ctrl.Result{RequeueAfter: requeueAfter}, nil
+    // Set owner reference to GithubApp object
+    if err := controllerutil.SetControllerReference(githubApp, newSecret, r.Scheme); err != nil {
+        l.Error(err, "Failed to set owner reference for access token secret")
+        return err
     }
 
-	// Create a new Secret with the access token
-	accessTokenSecret := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
-	newSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      accessTokenSecret,
-			Namespace: githubApp.Namespace,
-		},
-		StringData: map[string]string{
-			"accessToken": accessToken,
-		},
-	}
-	accessTokenSecretKey := client.ObjectKey{
-		Namespace: githubApp.Namespace,
-		Name:      accessTokenSecret,
-	}
-
-	// Set owner reference to GithubApp object
-	if err := controllerutil.SetControllerReference(githubApp, newSecret, r.Scheme); err != nil {
-		l.Error(err, "Failed to set owner reference for access token secret")
-		return ctrl.Result{}, err
-	}
-
-	// Attempt to retrieve the existing Secret
-	existingSecret := &corev1.Secret{}
-	if err := r.Get(ctx, accessTokenSecretKey, existingSecret); err != nil {
-		if apierrors.IsNotFound(err) {
-			// Secret doesn't exist, create a new one
-			if err := r.Create(ctx, newSecret); err != nil {
-				l.Error(err, "Failed to create Secret for access token")
-				return ctrl.Result{}, err
-			}
-			log.Log.Info("Secret created for access token", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
-			return ctrl.Result{}, nil
-		}
-		l.Error(err, "Failed to get access token secret", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
-		return ctrl.Result{}, err // Return both error and ctrl.Result{}
-	}
-
-	// Secret exists, update its data
-	// Set owner reference to GithubApp object
-	if err := controllerutil.SetControllerReference(githubApp, existingSecret, r.Scheme); err != nil {
-		l.Error(err, "Failed to set owner reference for access token secret")
-		return ctrl.Result{}, err
-	}
-	// Clear existing data and set new access token data
-	for k := range existingSecret.Data {
-		delete(existingSecret.Data, k)
-	}
-	existingSecret.StringData = map[string]string{
-		"accessToken": accessToken,
-	}
-	if err := r.Update(ctx, existingSecret); err != nil {
-		l.Error(err, "Failed to update existing Secret")
-		return ctrl.Result{}, err
-	}
-
-    githubApp.Status.ExpiresAt = expiresAt
-
-    // Update GithubApp resource status
-    if err := r.Status().Update(ctx, githubApp); err != nil {
-		l.Error(err, "Failed to update status of GithubApp")
-        return ctrl.Result{}, err
+    // Attempt to retrieve the existing Secret
+    existingSecret := &corev1.Secret{}
+    if err := r.Get(ctx, accessTokenSecretKey, existingSecret); err != nil {
+        if apierrors.IsNotFound(err) {
+            // Secret doesn't exist, create a new one
+            if err := r.Create(ctx, newSecret); err != nil {
+                l.Error(err, "Failed to create Secret for access token")
+                return err
+            }
+            log.Log.Info("Secret created for access token", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
+            return nil
+        }
+        l.Error(err, "Failed to get access token secret", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
+        return err // Return both error and ctrl.Result{}
     }
 
-	l.Info("Access token updated in the existing Secret successfully")
-	return ctrl.Result{}, nil
+    // Secret exists, update its data
+    // Set owner reference to GithubApp object
+    if err := controllerutil.SetControllerReference(githubApp, existingSecret, r.Scheme); err != nil {
+        l.Error(err, "Failed to set owner reference for access token secret")
+        return err
+    }
+    // Clear existing data and set new access token data
+    for k := range existingSecret.Data {
+        delete(existingSecret.Data, k)
+    }
+    existingSecret.StringData = map[string]string{
+        "accessToken": accessToken,
+    }
+    if err := r.Update(ctx, existingSecret); err != nil {
+        l.Error(err, "Failed to update existing Secret")
+        return err
+    }
 
     // Update the status with the new expiresAt time
-    githubApp.Status.ExpiresAt = expiresAt
+    githubApp.Status.ExpiresAt = metav1.NewTime(expiresAt)
     if err := r.Status().Update(ctx, githubApp); err != nil {
         return err
     }
 
+    l.Info("Access token updated in the existing Secret successfully")
     return nil
 }
+
 
 // function to generate new access tokenf or gh app
 func generateAccessToken(appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
