@@ -42,8 +42,9 @@ var _ = Describe("GithubApp controller", func() {
 		appId				 = "857468"
 		installId			 = "48531286"
 		githubAppName		 = "gh-app-test"
-		privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
 	)
+
+	var privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
 
 	Context("When setting up the test environment", func() {
 		It("Should create GithubApp custom resources", func() {
