@@ -29,8 +29,8 @@ type GithubAppSpec struct {
 
 // GithubAppStatus defines the observed state of GithubApp
 type GithubAppStatus struct {
-	// Synced will be set to true if secrets reconciled
-	Synced bool `json:"synced,omitempty"`
+	// Expiry of access token
+	ExpiresAt metav1.Time `json:"expiresAt,omitempty"`
 }
 
 //+kubebuilder:object:root=true
