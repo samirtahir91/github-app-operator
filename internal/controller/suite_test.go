@@ -21,8 +21,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-	"log"
-	"bytes"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -44,8 +42,6 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
-// Define a buffer to capture logs
-var logBuffer bytes.Buffer
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -53,24 +49,8 @@ func TestControllers(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
-// Redirect controller logs to the buffer
-func redirectLogs() {
-    log.SetOutput(&logBuffer)
-}
-
-// Print controller logs captured in the buffer
-func printControllerLogs() {
-    fmt.Println("Controller Logs:")
-    fmt.Println(logBuffer.String())
-}
-
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	// Define a buffer to capture logs
-	var logBuffer bytes.Buffer
-
-	// Redirect logs before running tests
-	redirectLogs()
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -104,10 +84,6 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	
-	// Print logs after running tests
-	printControllerLogs()
-
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
