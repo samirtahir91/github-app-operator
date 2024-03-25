@@ -111,7 +111,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, nil
 		}
 		l.Error(err, "Failed to get access token secret", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
-		return err
+		return ctrl.Result{}, err // Return both error and ctrl.Result{}
 	}
 
 	// Secret exists, update its data
