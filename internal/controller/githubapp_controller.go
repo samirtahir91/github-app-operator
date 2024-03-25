@@ -76,7 +76,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     expiresAt := githubApp.Status.ExpiresAt
 
     // If expiresAt status field is not present or expiry time has already passed, generate or renew access token
-    if !expiresAt || expiresAt.Before(time.Now()) {
+    if expiresAt.Before(time.Now()) {
         return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
 
