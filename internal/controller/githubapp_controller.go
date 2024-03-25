@@ -57,7 +57,8 @@ var (
 // Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
     l := log.FromContext(ctx)
-    l.Info("Reconciling GithubApp")
+	log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+
 
     // Fetch the GithubApp resource
     githubApp := &githubappv1.GithubApp{}
