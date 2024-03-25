@@ -198,11 +198,15 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 		return "", fmt.Errorf("failed to parse response body: %v", err)
 	}
 
-    // Extract access token and expires_at from response
-    accessToken := responseBody["token"].(string)
-    expiresAt := responseBody["expires_at"].(string)
+	// Extract access token and expires_at from response
+	accessToken := responseBody["token"].(string)
+	expiresAtString := responseBody["expires_at"].(string)
+	expiresAt, err := time.Parse(time.RFC3339, expiresAtString)
+	if err != nil {
+		return "", metav1.Time{}, fmt.Errorf("failed to parse expire time: %v", err)
+	}
 
-    return accessToken, expiresAt, nil
+	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
