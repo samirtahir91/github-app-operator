@@ -114,7 +114,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Deleting the access token secret")
 
 			// Define the secret name
-			secretName := fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
+			secretName := fmt.Sprintf("github-app-access-token-857468")
 
 			// Delete the access token secret
 			Expect(k8sClient.Delete(ctx, &corev1.Secret{
