@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"time"
 	"github.com/golang-jwt/jwt/v4"
+	"os"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -76,11 +77,12 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
     // Generate or renew access token
-    accessToken, expiresAtString, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
+    accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
     if err != nil {
 		l.Error(err, "Failed to generate or renew access token")
         return ctrl.Result{}, err
     }
+	os.Exit(1)
 
 	// Create a new Secret with the access token
 	accessTokenSecret := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
@@ -199,11 +201,11 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
     // Extract access token and expires_at from response
     accessToken, ok := responseBody["token"].(string)
     if !ok {
-        return "", metav1.Time{}, fmt.Errorf("failed to extract access token from response")
+        return "", fmt.Errorf("failed to extract access token from response")
     }
     expiresAtString, ok := responseBody["expires_at"].(string)
     if !ok {
-        return "", metav1.Time{}, fmt.Errorf("failed to extract expire time from response")
+        return "", fmt.Errorf("failed to extract expire time from response")
     }
 
     return accessToken, expiresAtString, nil
