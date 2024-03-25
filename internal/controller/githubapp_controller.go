@@ -41,6 +41,9 @@ import (
 type GithubAppReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+    ReconcileInterval time.Duration
+    TimeBeforeExpiry  time.Duration
 }
 
 var (
@@ -273,6 +276,9 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Assign reconcileInterval and timeBeforeExpiry to struct fields
+	r.ReconcileInterval = reconcileInterval
+	r.TimeBeforeExpiry = timeBeforeExpiry
 	// Get reconcile interval from environment variable or use default value
 	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
 	reconcileInterval, err := time.ParseDuration(reconcileIntervalStr)
