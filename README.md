@@ -1,5 +1,24 @@
 # github-app-operator
+This is a Kubernetes operator that will generate an access token for a GithubApp and store it in a secret to use for authenticated requests to Github as the GithubApp.
 
+## Description
+Key features:
+- Uses a custom resource `GithubApp` in your destination namespace.
+- Reads `appId`, `installId` and `privateKeySecret` defined in a `GithubApp` resource in a namespace and requests n access token from Github for the Github App.
+- The `privateKeySecret` referes to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
+  - It expects the field `data.privateKey` in the secret to pull the private key from.
+- Deleting the `GithubApp` object will also delete the access token secret it owns.
+- The operator will reconcile an access token for a `GithubApp` only, when:
+    - Modifications are made to the access token secret in the that is owned by any `GithubApp`.
+    - Modifications are made to the `GithubApp` object.
+    - The access token secret does not exist or does not have a `status.expiresAt` value
+- Periodically the operator will check the expiry time of the access token and reconcile a new access token if the threshold is met.
+- It stores the expiry time of the access token in the `status.expiresAt` field of the `GithubApp` object.
+- It will skip requesting a new access token if the expiry threshold is not reached/exceeded.
+
+
+## Example creating a secret to hold a GitHub App private key
+- Get your GithubApp private key and encode to base64
 ```sh
 base64 -w 0 private-key.pem
 ```
@@ -12,13 +31,7 @@ metadata:
 type: Opaque
 data:
   privateKey: BASE64_ENCODED_PRIVATE_KEY
-
 ```
-
-## Description
-Key features:
-
-
 ## Example GithubApp object
 Below example will setup a 
 ```sh
