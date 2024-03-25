@@ -60,6 +60,48 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+    // Check expiry and generate access token if needed
+    if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp); err != nil {
+        l.Error(err, "Failed to check expiry and update access token")
+        return ctrl.Result{}, err
+    }
+
+    // Requeue after a certain duration
+    return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+}
+
+
+// Function to check expiry and update access token
+func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+    // Get the expiresAt status field
+    expiresAt, exists := githubApp.Status.ExpiresAt
+
+    // If expiresAt status field is not present or expiry time has already passed, generate or renew access token
+    if !exists || expiresAt.Before(time.Now()) {
+        if err := r.generateOrUpdateAccessToken(ctx, githubApp); err != nil {
+            return err
+        }
+    } else {
+        // Calculate the duration until expiry
+        durationUntilExpiry := expiresAt.Sub(time.Now())
+
+        // If the expiry is within the next 10 minutes, generate or renew access token
+        if durationUntilExpiry <= 10*time.Minute {
+            if err := r.generateOrUpdateAccessToken(ctx, githubApp); err != nil {
+                return err
+            }
+        } else {
+            // Log the next expiry time
+            log.Log.Info("Next expiry time:", "expiresAt", expiresAt)
+        }
+    }
+
+    return nil
+}
+
+// Function to generate or update access token
+func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+
 	// Get the private key from the Secret
 	secretName := githubApp.Spec.PrivateKeySecret
 	secretNamespace := githubApp.Namespace
@@ -79,8 +121,23 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
     // Generate or renew access token
     accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
     if err != nil {
-		l.Error(err, "Failed to generate or renew access token")
+        return err
+    }
+
+    expiresAt, err := time.Parse(time.RFC3339, expiresAtString)
+    if err != nil {
+        l.Error(err, "Failed to parse expiration time")
         return ctrl.Result{}, err
+    }
+
+    // Check if the expiry time is near (within the next 5 minutes, for example)
+    nearThreshold := 5 * time.Minute
+    currentTime := time.Now()
+    timeUntilExpiry := expiresAt.Sub(currentTime)
+    if timeUntilExpiry > nearThreshold {
+        // Expiry time is not near, return and requeue reconciliation after some time
+        requeueAfter := timeUntilExpiry - nearThreshold
+        return ctrl.Result{RequeueAfter: requeueAfter}, nil
     }
 
 	// Create a new Secret with the access token
@@ -150,8 +207,17 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	l.Info("Access token updated in the existing Secret successfully")
 	os.Exit(1)
 	return ctrl.Result{}, nil
+
+    // Update the status with the new expiresAt time
+    githubApp.Status.ExpiresAt = expiresAt
+    if err := r.Status().Update(ctx, githubApp); err != nil {
+        return err
+    }
+
+    return nil
 }
 
+// function to generate new access tokenf or gh app
 func generateAccessToken(appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
 	// Parse private key
 	parsedKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
