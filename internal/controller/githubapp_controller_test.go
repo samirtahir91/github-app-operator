@@ -55,10 +55,9 @@ var _ = Describe("GithubApp controller", func() {
 					Name:		privateKeySecret,
 					Namespace: 	sourceNamespace,
 				},
-				Data: map[string][]byte{"privateKey": privateKey},
+				Data: map[string][]byte{"privateKey": []byte(privateKey)},
 			}
 			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
-			fmt.Println("Private Key:", privateKey)
 
 			By("Creating a first GithubApp custom resource in the sourceNamespace")
 			githubApp := githubappv1.GithubApp{
