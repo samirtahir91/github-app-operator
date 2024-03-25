@@ -18,67 +18,76 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
-	githubappv1 "github-app-operator/api/v1"
+	githubappv1 "secret-sync-operator/api/v1"
 )
 
-var _ = Describe("GithubApp Controller", func() {
-	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+var _ = Describe("GithubApp controller", func() {
 
-		ctx := context.Background()
+	const (
+		privateKeySecret     = "gh-app-key-test"
+		sourceNamespace      = "default"
+		appId				 = "857468"
+		installId			 = "48531286"
+		githubAppName		 = "gh-app-test"
+		privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
+	)
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
-		}
-		githubapp := &githubappv1.GithubApp{}
+	Context("When setting up the test environment", func() {
+		It("Should create GithubApp custom resources", func() {
+			By("Creating the privateKeySecret in the sourceNamespace")
+			secret1Obj := corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:		privateKeySecret,
+					Namespace: 	sourceNamespace,
+				},
+				Data: map[string][]byte{"privateKey": []byte(privateKey)},
+			}
+			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind GithubApp")
-			err := k8sClient.Get(ctx, typeNamespacedName, githubapp)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &githubappv1.GithubApp{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
+			By("Creating a first GithubApp custom resource in the sourceNamespace")
+			githubApp := githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName,
+					Namespace: sourceNamespace,
+				},
+				Spec: syncv1.GithubAppSpec{
+					AppId: appId,
+					InstallId: installId,
+					PrivateKeySecret: privateKeySecret,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
+		})
+	})
+
+	Context("When reconciling a GithubApp", func() {
+		It("Should write the access token to a secret and set the GithubApp expiresAt status", func() {
+			By("Checking if the GithubApp status has changed to the right status")
+			ctx := context.Background()
+			// Retrieve the GithubApp object to check its status
+			key := types.NamespacedName{Name: githubAppName, Namespace: sourceNamespace}
+			retrievedGithubApp := &githubappv1.GithubApp{}
+			timeout := 60 * time.Second
+			interval := 5 * time.Second
+			Eventually(func() bool {
+				if err := k8sClient.Get(ctx, key, retrievedGithubApp); err != nil {
+					return false
 				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-			}
-		})
-
-		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &githubappv1.GithubApp{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance GithubApp")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &GithubAppReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-			}
-
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+				// Check if the Secrets field matches the expected value
+				return reflect.DeepEqual(retrievedGithubApp.Status.ExpiresAt, true)
+			}, timeout, interval).Should(BeTrue(), "GithubApp status didn't change to the right status")
 		})
 	})
 })
