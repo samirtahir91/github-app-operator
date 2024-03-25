@@ -80,6 +80,21 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
         return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
 
+    // Check if the access token secret exists if not reconcile immediately
+    accessTokenSecretKey := client.ObjectKey{
+        Namespace: githubApp.Namespace,
+        Name:      fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId),
+    }
+    accessTokenSecret := &corev1.Secret{}
+    if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
+        if apierrors.IsNotFound(err) {
+            // Secret doesn't exist, reconcile straight away
+            return r.generateOrUpdateAccessToken(ctx, githubApp)
+        }
+        // Error other than NotFound, return error
+        return ctrl.Result{}, err
+    }
+	
     // Calculate the duration until expiry
     durationUntilExpiry := expiresAt.Sub(time.Now())
 
