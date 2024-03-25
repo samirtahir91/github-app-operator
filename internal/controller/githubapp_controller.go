@@ -84,7 +84,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     durationUntilExpiry := expiresAt.Sub(time.Now())
 
     // If the expiry is within the next 10 minutes, generate or renew access token
-    if durationUntilExpiry <= 10*time.Minute {
+    if durationUntilExpiry <= 59*time.Minute {
         return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
 
