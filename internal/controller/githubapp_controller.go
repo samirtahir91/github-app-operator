@@ -201,6 +201,12 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	if !ok {
 		return "", fmt.Errorf("failed to extract access token from response")
 	}
+	// Extract expiry time from response
+	var expiresAtString string
+	expiresAtString, ok = responseBody["expires_at"].(string)
+	if !ok {
+		return "", metav1.Time{}, fmt.Errorf("failed to extract expire time from response")
+	}
     // Parse expires_at to time.Time
     expiresAt, err := time.Parse(time.RFC3339, expiresAtString)
     if err != nil {
