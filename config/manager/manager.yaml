@@ -101,8 +101,8 @@ spec:
             memory: 64Mi
         env:
           - name: CHECK_INTERVAL
-            value: "1"
+            value: "1m"
           - name: EXPIRY_THRESHOLD
-            value: "58"
+            value: "58m"
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

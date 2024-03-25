@@ -17,10 +17,10 @@ Key features:
 - It stores the expiry time of the access token in the `status.expiresAt` field of the `GithubApp` object.
 - It will skip requesting a new access token if the expiry threshold is not reached/exceeded.
 - You can set override the check interval and expiry threshold using the deployment env vars:
-  - `CHECK_INTERVAL` - i.e. to check every 5 mins set the value to `5`
-    - It will default to `5` if not set
-  - `EXPIRY_THRESHOLD` - i.e. to reconcile a new access token if there is less than 10 mins left from expiry, set the value to `10`
-    - It will default to `15` if not set
+  - `CHECK_INTERVAL` - i.e. to check every 5 mins set the value to `5m`
+    - It will default to `5m` if not set
+  - `EXPIRY_THRESHOLD` - i.e. to reconcile a new access token if there is less than 10 mins left from expiry, set the value to `10m`
+    - It will default to `15m` if not set
 
 ## Example creating a secret to hold a GitHub App private key
 - Get your GithubApp private key and encode to base64
