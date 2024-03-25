@@ -48,13 +48,13 @@ func printControllerLogs() {
     fmt.Println(logBuffer.String())
 }
 
-var _ = Describe("GithubApp controller", func() {
-
     // Redirect logs before running tests
     BeforeSuite(redirectLogs)
 
     // Print logs after running tests
     AfterSuite(printControllerLogs)
+
+var _ = Describe("GithubApp controller", func() {
 
 	const (
 		privateKeySecret     = "gh-app-key-test"
