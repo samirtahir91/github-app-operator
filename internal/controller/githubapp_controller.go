@@ -101,7 +101,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Function to generate or update access token
-func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 
 	// Get the private key from the Secret
