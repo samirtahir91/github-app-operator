@@ -5,17 +5,20 @@ This is a Kubernetes operator that will generate an access token for a GithubApp
 Key features:
 - Uses a custom resource `GithubApp` in your destination namespace.
 - Reads `appId`, `installId` and `privateKeySecret` defined in a `GithubApp` resource and requests an access token from Github for the Github App.
-- The `privateKeySecret` referes to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
+  - It stores the access token in a secret `github-app-access-token-{appId}`
+- The `privateKeySecret` refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
   - It expects the field `data.privateKey` in the secret to pull the private key from.
 - Deleting the `GithubApp` object will also delete the access token secret it owns.
-- The operator will reconcile an access token for a `GithubApp` only, when:
-    - Modifications are made to the access token secret in the that is owned by any `GithubApp`.
-    - Modifications are made to the `GithubApp` object.
+- The operator will reconcile an access token for a `GithubApp` when:
+    - Modifications are made to the access token secret that is owned by a `GithubApp`.
+    - Modifications are made to a `GithubApp` object.
     - The access token secret does not exist or does not have a `status.expiresAt` value
 - Periodically the operator will check the expiry time of the access token and reconcile a new access token if the threshold is met.
 - It stores the expiry time of the access token in the `status.expiresAt` field of the `GithubApp` object.
 - It will skip requesting a new access token if the expiry threshold is not reached/exceeded.
-
+- You can set override the check interval and expiry threshold using the deployment env vars:
+  - `CHECK_INTERVAL` - i.e. to check every 5 mins set the value to `5`
+  - `EXPIRY_THRESHOLD` - i.e. to reconcile a new access token if there is less than 10 mins left from expiry, set the value to `10`
 
 ## Example creating a secret to hold a GitHub App private key
 - Get your GithubApp private key and encode to base64
