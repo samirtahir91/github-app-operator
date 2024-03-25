@@ -114,6 +114,7 @@ var _ = Describe("GithubApp controller", func() {
 	Context("When the access token secret is deleted", func() {
 		It("should be recreated with the access token field", func() {
 			By("Deleting the access token secret")
+			ctx := context.Background()
 
 			// Define the secret name
 			secretName := fmt.Sprintf("github-app-access-token-%s", appId)
