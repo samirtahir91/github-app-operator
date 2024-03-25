@@ -199,16 +199,10 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	}
 
     // Extract access token and expires_at from response
-    accessToken, ok := responseBody["token"].(string)
-    if !ok {
-        return "", fmt.Errorf("failed to extract access token from response")
-    }
-    expiresAtString, ok := responseBody["expires_at"].(string)
-    if !ok {
-        return "", fmt.Errorf("failed to extract expire time from response")
-    }
+    accessToken := responseBody["token"].(string)
+    expiresAt := responseBody["expires_at"].(string)
 
-    return accessToken, expiresAtString, nil
+    return accessToken, expiresAt, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
