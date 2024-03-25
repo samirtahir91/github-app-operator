@@ -73,10 +73,10 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 // Function to check expiry and update access token
 func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
     // Get the expiresAt status field
-    expiresAt, exists := githubApp.Status.ExpiresAt
+    expiresAt := githubApp.Status.ExpiresAt
 
     // If expiresAt status field is not present or expiry time has already passed, generate or renew access token
-    if !exists || expiresAt.Before(time.Now()) {
+    if !expiresAt || expiresAt.Before(time.Now()) {
         return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
 
