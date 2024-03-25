@@ -82,7 +82,6 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		l.Error(err, "Failed to generate or renew access token")
         return ctrl.Result{}, err
     }
-	os.Exit(1)
 
 	// Create a new Secret with the access token
 	accessTokenSecret := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
@@ -149,6 +148,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
     }
 
 	l.Info("Access token updated in the existing Secret successfully")
+	os.Exit(1)
 	return ctrl.Result{}, nil
 }
 
