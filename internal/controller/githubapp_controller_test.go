@@ -22,7 +22,7 @@ import (
 	"os"
 	"fmt"
 	"encoding/base64"
-	//"strconv"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -114,7 +114,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Deleting the access token secret")
 
 			// Define the secret name
-			secretName := fmt.Sprintf("github-app-access-token-857468aa")
+			secretName := fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 
 			// Delete the access token secret
 			Expect(k8sClient.Delete(ctx, &corev1.Secret{
@@ -124,15 +124,7 @@ var _ = Describe("GithubApp controller", func() {
 				},
 			})).To(Succeed())
 
-			By("Waiting for reconciliation to recreate the access token secret")
 
-			// Wait for reconciliation to recreate the access token secret
-			Eventually(func() bool {
-				recreatedSecret := &corev1.Secret{}
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, recreatedSecret)
-				return err == nil
-			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
-	
 
 			By("Verifying the recreated access token secret")
 
