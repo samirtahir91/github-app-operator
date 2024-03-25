@@ -198,7 +198,6 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	ctx := context.Background()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&githubappv1.GithubApp{}).
 		// Watch secrets owned by GithubApps.
