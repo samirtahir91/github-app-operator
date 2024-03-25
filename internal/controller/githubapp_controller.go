@@ -126,9 +126,9 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		l.Error(err, "Failed to set owner reference for access token secret")
 		return ctrl.Result{}, err
 	}
-	existingSecret.StringData = map[string]string{
-		"accessToken": accessToken,
-	}
+	// Clear existing data and set new access token data
+	existingSecret.StringData = map[string]string{}
+	existingSecret.StringData["accessToken"] = accessToken
 	if err := r.Update(ctx, existingSecret); err != nil {
 		l.Error(err, "Failed to update existing Secret")
 		return ctrl.Result{}, err
