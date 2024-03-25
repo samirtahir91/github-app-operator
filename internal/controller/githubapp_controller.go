@@ -215,7 +215,6 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 // function to generate new access tokenf or gh app
 func generateAccessToken(appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
 	// Parse private key
-	log.Log.Info("PrivateKey", "KEY", privateKey)
 	parsedKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
 	if err != nil {
 		return "", metav1.Time{}, fmt.Errorf("failed to parse private key: %v", err)
