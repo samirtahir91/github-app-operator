@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	
 )
 
@@ -101,8 +102,11 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	existingSecret := &corev1.Secret{}
 	if err := r.Get(ctx, accessTokenSecretKey, existingSecret); err != nil {
 		if apierrors.IsNotFound(err) {
-			// Create the destination secret
-			return r.createDestinationSecret(ctx, secretSync, sourceSecret)
+			// Secret doesn't exist, create a new one
+			if err := r.Create(ctx, newSecret); err != nil {
+				l.Error(err, "Failed to create Secret for access token")
+				return ctrl.Result{}, err
+			}
 		}
 		logctx.Error(err, "Failed to get access token secret", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
 		return err
