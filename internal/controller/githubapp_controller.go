@@ -45,10 +45,10 @@ type GithubAppReconciler struct {
 }
 
 var (
-	defaultRequeueAfter    = 5 // Default requeue interval
-	defaultTimeBeforeExpiry = 15  // Default time before expiry
-	reconcileInterval int // Requeue interval (from env var)
-	timeBeforeExpiry  int // Expiry threshold (from env var)
+	defaultRequeueAfter    = 5 * time.Minute // Default requeue interval
+	defaultTimeBeforeExpiry = 15  * time.Minute // Default time before expiry
+	reconcileInterval time.Duration // Requeue interval (from env var)
+	timeBeforeExpiry  time.Duration // Expiry threshold (from env var)
 )
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -108,7 +108,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     durationUntilExpiry := expiresAt.Sub(time.Now())
 
     // If the expiry is within the next x minutes, generate or renew access token
-    if durationUntilExpiry <= timeBeforeExpiry * time.Minute {
+    if durationUntilExpiry <= timeBeforeExpiry {
         return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
 
@@ -116,7 +116,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     log.Log.Info("Next expiry time:", "expiresAt", expiresAt)
 
     // Return result with no error and request reconciliation after 1 minute
-    return ctrl.Result{RequeueAfter: reconcileInterval * time.Minute}, nil
+	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
 }
 
 // Function to generate or update access token
@@ -276,13 +276,14 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Get reconcile interval from environment variable or use default value
 	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
-	reconcileInterval, err := strconv.Atoi(reconcileIntervalStr)
+	reconcileInterval, err := time.ParseDuration(reconcileIntervalStr)
 	if err != nil {
 		reconcileInterval = defaultRequeueAfter
 	}
+
 	// Get time before expiry from environment variable or use default value
 	timeBeforeExpiryStr := os.Getenv("EXPIRY_THRESHOLD")
-	timeBeforeExpiry, err := strconv.Atoi(timeBeforeExpiryStr)
+	timeBeforeExpiry, err := time.ParseDuration(timeBeforeExpiryStr)
 	if err != nil {
 		timeBeforeExpiry = defaultTimeBeforeExpiry
 	}
