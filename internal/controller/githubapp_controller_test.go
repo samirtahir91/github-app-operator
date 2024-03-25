@@ -76,6 +76,25 @@ var _ = Describe("GithubApp controller", func() {
 	})
 
 	Context("When reconciling a GithubApp", func() {
+		It("Should retrieve the private key from the secret", func() {
+			// Retrieve the privateKeySecret from the cluster
+			secretKey := types.NamespacedName{Name: privateKeySecret, Namespace: sourceNamespace}
+			secret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, secretKey, secret)).To(Succeed())
+
+			// Retrieve the privateKey data from the secret
+			privateKeyBytes, ok := secret.Data["privateKey"]
+			Expect(ok).To(BeTrue(), "privateKey data not found in secret")
+
+			// Convert privateKey bytes to string
+			privateKey = string(privateKeyBytes)
+			Expect(privateKey).NotTo(BeEmpty(), "privateKey is empty")
+
+			fmt.Println("Private Key:", privateKey)
+		})
+	})
+
+	Context("When reconciling a GithubApp", func() {
 		It("Should write the access token to a secret and set the GithubApp expiresAt status", func() {
 			By("Checking if the GithubApp status has changed to the right status")
 			ctx := context.Background()
