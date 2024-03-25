@@ -75,12 +75,12 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
 	}
 
-	// Generate or renew access token
-	accessToken, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
-	if err != nil {
+    // Generate or renew access token
+    accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, githubApp.Spec.PrivateKeySecret)
+    if err != nil {
 		l.Error(err, "Failed to generate or renew access token")
-		return ctrl.Result{}, err
-	}
+        return ctrl.Result{}, err
+    }
 
 	// Create a new Secret with the access token
 	accessTokenSecret := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
@@ -138,6 +138,14 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+    githubApp.Status.ExpiresAt = expiresAt
+
+    // Update GithubApp resource status
+    if err := r.Status().Update(ctx, githubApp); err != nil {
+		l.Error(err, "Failed to update status of GithubApp")
+        return ctrl.Result{}, err
+    }
+
 	l.Info("Access token updated in the existing Secret successfully")
 	return ctrl.Result{}, nil
 }
@@ -193,8 +201,13 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	if !ok {
 		return "", fmt.Errorf("failed to extract access token from response")
 	}
+    // Parse expires_at to time.Time
+    expiresAt, err := time.Parse(time.RFC3339, expiresAtString)
+    if err != nil {
+        return "", metav1.Time{}, fmt.Errorf("failed to parse expires_at: %v", err)
+    }
 
-	return accessToken, nil
+    return accessToken, metav1.NewTime(expiresAt), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
