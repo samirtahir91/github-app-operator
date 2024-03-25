@@ -77,10 +77,10 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
     // Generate or renew access token
-    accessToken, expiresAt, ok := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
-    if ok != nil {
-		l.Error(ok, "Failed to generate or renew access token")
-        return ctrl.Result{}, ok
+    accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
+    if err != nil {
+		l.Error(err, "Failed to generate or renew access token")
+        return ctrl.Result{}, err
     }
 	os.Exit(1)
 
@@ -156,7 +156,7 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	// Parse private key
 	parsedKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse private key: %v", err)
+		return "", "", fmt.Errorf("failed to parse private key: %v", err)
 	}
 
 	// Generate JWT
@@ -169,7 +169,7 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	signedToken, err := token.SignedString(parsedKey)
 	if err != nil {
-		return "", fmt.Errorf("failed to sign JWT: %v", err)
+		return "", "", fmt.Errorf("failed to sign JWT: %v", err)
 	}
 
 	// Create HTTP client and perform request to get installation token
@@ -177,25 +177,25 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installationID)
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create HTTP request: %v", err)
+		return "", "", fmt.Errorf("failed to create HTTP request: %v", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+signedToken)
 	req.Header.Set("Accept", "application/vnd.github+json")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to perform HTTP request: %v", err)
+		return "", "", fmt.Errorf("failed to perform HTTP request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return "", "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	// Parse response
 	var responseBody map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
-		return "", fmt.Errorf("failed to parse response body: %v", err)
+		return "", "", fmt.Errorf("failed to parse response body: %v", err)
 	}
 
 	// Extract access token and expires_at from response
