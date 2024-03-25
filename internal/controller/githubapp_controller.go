@@ -82,7 +82,6 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		l.Error(err, "Failed to generate or renew access token")
         return ctrl.Result{}, err
     }
-	fmt.Sprintf("github-expiry", expiresAt)
 	os.Exit(1)
 
 	// Create a new Secret with the access token
