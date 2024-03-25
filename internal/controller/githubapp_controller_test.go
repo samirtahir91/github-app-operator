@@ -101,7 +101,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			// Define the expected secret name
-			secretName := fmt.Sprintf("github-app-access-token-%s", appId)
+			secretName := fmt.Sprintf("github-app-access-token-857468")
 
 			var retrievedSecret corev1.Secret
 
