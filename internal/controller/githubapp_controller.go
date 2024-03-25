@@ -279,15 +279,23 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Handle case where environment variable is not set
 		reconcileInterval = defaultRequeueAfter
 	} else {
-		reconcileInterval = time.ParseDuration(reconcileIntervalStr)
+		reconcileInterval, err = time.ParseDuration(reconcileIntervalStr)
+		if err != nil {
+			// Handle case where environment variable value is invalid
+			reconcileInterval = defaultRequeueAfter
+		}
 	}
 	// Get reconcile interval from environment variable or use default value
 	timeBeforeExpiryStr := os.Getenv("EXPIRY_THRESHOLD")
 	if timeBeforeExpiryStr == "" {
 		// Handle case where environment variable is not set
-		timeBeforeExpiry = defaultTimeBeforeExpiry
+		timeBeforeExpiry, err = defaultTimeBeforeExpiry
 	} else {
-		timeBeforeExpiry = time.ParseDuration(timeBeforeExpiryStr)
+		timeBeforeExpiry, err = time.ParseDuration(timeBeforeExpiryStr)
+		if err != nil {
+			// Handle case where environment variable value is invalid
+			timeBeforeExpiry = defaultTimeBeforeExpiry
+		}
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
