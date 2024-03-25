@@ -46,27 +46,28 @@ type GithubAppReconciler struct {
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps/finalizers,verbs=update
 
-// Reconcile fucntion
+// Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx)
-	l.Info("Reconciling GithubApp")
+    l := log.FromContext(ctx)
+    l.Info("Reconciling GithubApp")
 
-	// Fetch the GithubApp resource
-	githubApp := &githubappv1.GithubApp{}
-	err := r.Get(ctx, req.NamespacedName, githubApp)
-	if err != nil {
-		l.Error(err, "Failed to get GithubApp")
-		return ctrl.Result{}, err
-	}
+    // Fetch the GithubApp resource
+    githubApp := &githubappv1.GithubApp{}
+    err := r.Get(ctx, req.NamespacedName, githubApp)
+    if err != nil {
+        l.Error(err, "Failed to get GithubApp")
+        return ctrl.Result{}, err
+    }
 
     // Check expiry and generate access token if needed
-    if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp); err != nil {
+    result, err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp)
+    if err != nil {
         l.Error(err, "Failed to check expiry and update access token")
         return ctrl.Result{}, err
     }
 
     // Requeue after a certain duration
-    return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+    return result, nil
 }
 
 // Function to check expiry and update access token
@@ -76,26 +77,21 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
     // If expiresAt status field is not present or expiry time has already passed, generate or renew access token
     if !exists || expiresAt.Before(time.Now()) {
-        if err := r.generateOrUpdateAccessToken(ctx, githubApp); err != nil {
-            return ctrl.Result{}, err
-        }
-    } else {
-        // Calculate the duration until expiry
-        durationUntilExpiry := expiresAt.Time.Sub(time.Now())
-
-        // If the expiry is within the next 10 minutes, generate or renew access token
-        if durationUntilExpiry <= 10*time.Minute {
-            if err := r.generateOrUpdateAccessToken(ctx, githubApp); err != nil {
-                return ctrl.Result{}, err
-            }
-        } else {
-            // Log the next expiry time
-            log.Log.Info("Next expiry time:", "expiresAt", expiresAt.Time)
-            // Return result with no error
-            return ctrl.Result{}, nil
-        }
+        return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
 
+    // Calculate the duration until expiry
+    durationUntilExpiry := expiresAt.Time.Sub(time.Now())
+
+    // If the expiry is within the next 10 minutes, generate or renew access token
+    if durationUntilExpiry <= 10*time.Minute {
+        return r.generateOrUpdateAccessToken(ctx, githubApp)
+    }
+
+    // Log the next expiry time
+    log.Log.Info("Next expiry time:", "expiresAt", expiresAt.Time)
+
+    // Return result with no error
     return ctrl.Result{}, nil
 }
 
