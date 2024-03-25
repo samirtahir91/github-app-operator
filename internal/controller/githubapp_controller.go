@@ -215,6 +215,9 @@ func (r *GithubAppReconciler) destinationNamespacePredicate(ctx context.Context)
 			}
 
 			// Ignore update events where the oldSecret secret data and newSecret secret data are identical
+			log.Log.Info("Old secret data", "data", oldSecret.Data)
+			log.Log.Info("New secret data", "data", newSecret.Data)
+
 			if reflect.DeepEqual(oldSecret.Data, newSecret.Data) {
 				return false
 			} else {
