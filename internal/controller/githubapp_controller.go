@@ -34,11 +34,7 @@ import (
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/builder"   // Required for Watching
-	"sigs.k8s.io/controller-runtime/pkg/event"     // Required for Watching
-	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
-	
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"	
 )
 
 // GithubAppReconciler reconciles a GithubApp object
