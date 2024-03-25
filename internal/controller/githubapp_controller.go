@@ -41,9 +41,6 @@ import (
 type GithubAppReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-
-    ReconcileInterval time.Duration
-    TimeBeforeExpiry  time.Duration
 }
 
 var (
@@ -276,21 +273,21 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// Assign reconcileInterval and timeBeforeExpiry to struct fields
-	r.ReconcileInterval = reconcileInterval
-	r.TimeBeforeExpiry = timeBeforeExpiry
 	// Get reconcile interval from environment variable or use default value
-	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
-	reconcileInterval, err := time.ParseDuration(reconcileIntervalStr)
-	if err != nil {
+	reconcileInterval = os.Getenv("CHECK_INTERVAL")
+	if sourceNamespace == "" {
+		// Handle case where environment variable is not set
 		reconcileInterval = defaultRequeueAfter
+	} else {
+		reconcileInterval = time.ParseDuration(reconcileInterval)
 	}
-
-	// Get time before expiry from environment variable or use default value
-	timeBeforeExpiryStr := os.Getenv("EXPIRY_THRESHOLD")
-	timeBeforeExpiry, err := time.ParseDuration(timeBeforeExpiryStr)
-	if err != nil {
+	// Get reconcile interval from environment variable or use default value
+	timeBeforeExpiry = os.Getenv("EXPIRY_THRESHOLD")
+	if timeBeforeExpiry == "" {
+		// Handle case where environment variable is not set
 		timeBeforeExpiry = defaultTimeBeforeExpiry
+	} else {
+		timeBeforeExpiry = time.ParseDuration(timeBeforeExpiry)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
