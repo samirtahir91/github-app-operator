@@ -22,6 +22,7 @@ import (
 	"os"
 	"fmt"
 	"encoding/base64"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -118,7 +119,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			// Define the secret name
-			secretName := fmt.Sprintf("github-app-access-token-%s", appId)
+			secretName := fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 
 			// Delete the access token secret
 			Expect(k8sClient.Delete(ctx, &corev1.Secret{
