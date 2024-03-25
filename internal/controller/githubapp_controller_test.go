@@ -48,11 +48,11 @@ func printControllerLogs() {
     fmt.Println(logBuffer.String())
 }
 
-    // Redirect logs before running tests
-    BeforeSuite(redirectLogs)
+// Redirect logs before running tests
+BeforeSuite(redirectLogs)
 
-    // Print logs after running tests
-    AfterSuite(printControllerLogs)
+// Print logs after running tests
+AfterSuite(printControllerLogs)
 
 var _ = Describe("GithubApp controller", func() {
 
