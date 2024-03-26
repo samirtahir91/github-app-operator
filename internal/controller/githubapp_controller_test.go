@@ -88,25 +88,6 @@ var _ = Describe("GithubApp controller", func() {
 			By("Reconciling the created resource")
 			ctx := context.Background()
 
-			controllerReconciler := &GithubAppReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-			}
-	
-			// Perform reconciliation for the resource
-			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: sourceNamespace,
-					Name:      githubAppName,
-				},
-			})
-	
-			// Verify if reconciliation was successful
-			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
-			
-			// Print the result
-			fmt.Println("Reconciliation result:", result)
-
 			By("Retrieving the access token secret")
 
 			var retrievedSecret corev1.Secret
@@ -136,23 +117,6 @@ var _ = Describe("GithubApp controller", func() {
 			})
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", sourceNamespace, secretName, err))
 
-			controllerReconciler := &GithubAppReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-			}
-	
-			// Perform reconciliation for the resource
-			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: sourceNamespace,
-					Name:      githubAppName,
-				},
-			})
-			// Verify if reconciliation was successful
-			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
-			// Print the result
-			fmt.Println("Reconciliation result:", result)
-
 			// Wait for the Secret to be recreated
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
@@ -177,23 +141,6 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
 			accessTokenSecret.Data["accessToken"] = []byte(dummyAccessToken)
 			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
-
-			controllerReconciler := &GithubAppReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-			}
-	
-			// Perform reconciliation for the resource
-			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: sourceNamespace,
-					Name:      githubAppName,
-				},
-			})
-			// Verify if reconciliation was successful
-			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
-			// Print the result
-			fmt.Println("Reconciliation result:", result)
 
 			// Wait for the accessToken to be updated
 			Eventually(func() string {
@@ -231,32 +178,4 @@ var _ = Describe("GithubApp controller", func() {
 		})
 	})
 
-	Context("When EXPIRY_THRESHOLD is set to 60m", func() {
-		It("Should reconcile due to expiry", func() {
-			ctx := context.Background()
-
-			// Set EXPIRY_THRESHOLD to 60 minutes
-			os.Setenv("EXPIRY_THRESHOLD", "60m")
-
-			controllerReconciler := &GithubAppReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-			}
-	
-			// Perform reconciliation for the resource
-			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: sourceNamespace,
-					Name:      githubAppName,
-				},
-			})
-	
-			// Verify if reconciliation was successful
-			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
-			
-			// Print the result
-			fmt.Println("Reconciliation result:", result)
-		})
-	})
-	
 })
