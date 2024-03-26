@@ -131,10 +131,10 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     }
 
     // Check if the access token is a valid github token via gh api auth
-    //if !isAccessTokenValid(ctx, string(accessToken), req) {
+    if !isAccessTokenValid(ctx, string(accessToken), req) {
         // If accessToken is invalid, generate or update access token
-    //    return r.generateOrUpdateAccessToken(ctx, githubApp)
-    //}
+        return r.generateOrUpdateAccessToken(ctx, githubApp)
+    }
 
 	// Access token exists, calculate the duration until expiry
 	durationUntilExpiry := expiresAt.Sub(time.Now())
