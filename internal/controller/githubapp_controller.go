@@ -37,6 +37,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/builder"   // Required for Watching
+	"sigs.k8s.io/controller-runtime/pkg/event"     // Required for Watching
 
 )
 
