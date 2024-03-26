@@ -203,7 +203,7 @@ func isAccessTokenValid(ctx context.Context, accessToken string) bool {
 	}
 
 	// Rate limit is valid
-	log.Log.Info("Rate limit is valid. Remaining requests:", remaining)
+	log.Log.Info("Rate limit is valid", "Remaining requests:", remaining)
 	return true
 }
 
