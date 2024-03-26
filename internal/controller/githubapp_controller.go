@@ -161,7 +161,7 @@ func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Reques
 	// Send the request
 	resp, err := client.Do(ghReq)
 	if err != nil {
-		l..Log.Info("Access token is invalid", "Renewing", "GithubApp", req.Name, "Namespace", req.Namespace)
+		log.Log.Info("Access token is invalid", "Renewing", "GithubApp", req.Name, "Namespace", req.Namespace)
 		return false
 	}
 	defer resp.Body.Close()
