@@ -159,7 +159,7 @@ func isAccessTokenValid(ctx context.Context, accessToken string) bool {
 	// Create a new request to fetch the current user from GitHub API
 	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
 	if err != nil {
-		l.Error("Error creating request:", err)
+		l.Error(err, "Error creating request to Github Users API",)
 		return false
 	}
 
@@ -169,14 +169,14 @@ func isAccessTokenValid(ctx context.Context, accessToken string) bool {
 	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
-		l.Error("Error sending request:", err)
+		l.Error(err, "Error sending request to Github Users API")
 		return false
 	}
 	defer resp.Body.Close()
 
 	// Check if the response status code is 200 (OK)
 	if resp.StatusCode != http.StatusOK {
-		l.Error("GitHub API request failed:", resp.Status)
+		l.Error(nil, "GitHub API request failed", "status", resp.Status)
 		return false
 	}
 
