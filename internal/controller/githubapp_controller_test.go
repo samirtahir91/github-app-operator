@@ -179,16 +179,13 @@ var _ = Describe("GithubApp controller", func() {
 		})
 	})
 
-	Context("When EXPIRY_THRESHOLD is set to 59.5 minutes", func() {
+	Context("When EXPIRY_THRESHOLD is met", func() {
 		It("Should reconcile", func() {
 			ctx := context.Background()
 
-			// Define the expiry threshold as 59.5 minutes
-			expiryThreshold := 59*time.Minute + 50*time.Second
-
-			// Export the expiryThreshold as an environment variable
-			os.Setenv("EXPIRY_THRESHOLD", expiryThreshold.String())
-
+			// Allow time for the EXPIRY_THRESHOLD (59min set in suite_test.go)
+			time.Sleep(50 * time.Second)
+			
 			controllerReconciler := &GithubAppReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
