@@ -85,7 +85,8 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If expiresAt status field is not present or expiry time has already passed, generate or renew access token
 	if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
-		return r.generateOrUpdateAccessToken(ctx, githubApp)
+        err := r.generateOrUpdateAccessToken(ctx, githubApp)
+        return ctrl.Result{}, err
 	}
 
 	// Check if the access token secret exists if not reconcile immediately
@@ -97,7 +98,8 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Secret doesn't exist, reconcile straight away
-			return r.generateOrUpdateAccessToken(ctx, githubApp)
+			err := r.generateOrUpdateAccessToken(ctx, githubApp)
+			return ctrl.Result{}, err
 		}
 		// Error other than NotFound, return error
 		return ctrl.Result{}, err
@@ -108,7 +110,8 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If the expiry is within the next x minutes, generate or renew access token
 	if durationUntilExpiry <= timeBeforeExpiry {
-		return r.generateOrUpdateAccessToken(ctx, githubApp)
+        err := r.generateOrUpdateAccessToken(ctx, githubApp)
+        return ctrl.Result{}, err
 	}
 
 	// Log the next expiry time
@@ -295,6 +298,6 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch GithubApps
 		For(&githubappv1.GithubApp{}).
 		// Watch access token secrets owned by GithubApps.
-		Owns(&corev1.Secret{}).
+		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Complete(r)
 }
