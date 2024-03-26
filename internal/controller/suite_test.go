@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	githubappv1 "github-app-operator/api/v1"
 	//+kubebuilder:scaffold:imports
