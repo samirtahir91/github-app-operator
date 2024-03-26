@@ -126,8 +126,12 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If the expiry is within the next x minutes, generate or renew access token
 	if durationUntilExpiry <= timeBeforeExpiry {
-		log.Log.Info("Expiry threshold reached - renewing", "GithubApp", req.Name, "Namespace", req.Namespace )
-        err := r.generateOrUpdateAccessToken(ctx, githubApp)
+		log.Log.Info(
+			"Expiry threshold reached - renewing",
+			"GithubApp", req.Name,
+			"Namespace", req.Namespace,
+		)
+		err := r.generateOrUpdateAccessToken(ctx, githubApp)
         return err
 	}
 	
@@ -164,7 +168,12 @@ func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Reques
 
 	// Check if the response status code is 200 (OK)
 	if resp.StatusCode != http.StatusOK {
-		log.Log.Info("Access token is invalid, will renew", "API Response code", resp.Status, "GithubApp", req.Name, "Namespace", req.Namespace)
+		log.Log.Info(
+			"Access token is invalid, will renew",
+			"API Response code", resp.Status,
+			"GithubApp", req.Name,
+			"Namespace", req.Namespace,
+		)
 		return false
 	}
 
@@ -227,7 +236,11 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 
 	// Generate or renew access token
-	accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
+	accessToken, expiresAt, err := generateAccessToken(
+		githubApp.Spec.AppId,
+		githubApp.Spec.InstallId,
+		privateKey
+	)
 	if err != nil {
 		return err
 	}
@@ -263,15 +276,23 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				l.Error(err, "Failed to create Secret for access token")
 				return err
 			}
-			log.Log.Info("Secret created for access token", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
-			// Update the status with the new expiresAt time
+			log.Log.Info(
+				"Secret created for access token",
+				"Namespace", githubApp.Namespace,
+				"Secret", accessTokenSecret,
+			) // Update the status with the new expiresAt time
 			githubApp.Status.ExpiresAt = expiresAt
 			if err := r.Status().Update(ctx, githubApp); err != nil {
 				return err
 			}
 			return nil
 		}
-		l.Error(err, "Failed to get access token secret", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
+		l.Error(
+			err,
+			"Failed to get access token secret",
+			"Namespace", githubApp.Namespace,
+			"Secret", accessTokenSecret,
+		)
 		return err // Return both error and ctrl.Result{}
 	}
 
