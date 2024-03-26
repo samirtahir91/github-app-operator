@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"encoding/base64"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -175,6 +176,27 @@ var _ = Describe("GithubApp controller", func() {
 			
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
+		})
+	})
+
+	Context("When EXPIRY_THRESHOLD is set to 59.5 minutes", func() {
+		It("Should reconcile", func() {
+			ctx := context.Background()
+
+			// Define the expiry threshold as 59.5 minutes
+			expiryThreshold := 59*time.Minute + 30*time.Second
+
+			// Export the expiryThreshold as an environment variable
+			os.Setenv("EXPIRY_THRESHOLD", expiryThreshold.String())
+
+			// Trigger reconciliation
+			_, err := r.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: sourceNamespace,
+					Name:      githubAppName,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
