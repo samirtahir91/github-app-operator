@@ -140,7 +140,20 @@ var _ = Describe("GithubApp controller", func() {
 				},
 			})
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", sourceNamespace, secretName, err))
+
+			controllerReconciler := &GithubAppReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
 	
+			// Perform reconciliation for the resource
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: sourceNamespace,
+					Name:      githubAppName,
+				},
+			})
+			
 			// Wait for the Secret to be deleted
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
