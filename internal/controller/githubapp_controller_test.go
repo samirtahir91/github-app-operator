@@ -29,7 +29,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -108,13 +107,11 @@ var _ = Describe("GithubApp controller", func() {
 			
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
-			// Add a sleep to allow the controller to trigger requeue
-			time.Sleep(10 * time.Second)
 
 			By("Reconciling the created resource")
 
 			var retrievedSecret corev1.Secret
-	
+			
 			// Wait for the Secret to be created
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
@@ -156,8 +153,6 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
-			// Add a sleep to allow the controller to trigger requeue
-			time.Sleep(10 * time.Second)
 
 			// Wait for the Secret to be recreated
 			Eventually(func() bool {
