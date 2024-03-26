@@ -34,6 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
+	"sigs.k8s.io/controller-runtime/pkg/builder"   // Required for Watching
+
 )
 
 // GithubAppReconciler reconciles a GithubApp object
@@ -298,6 +302,6 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch GithubApps
 		For(&githubappv1.GithubApp{}).
 		// Watch access token secrets owned by GithubApps.
-		Owns(&corev1.Secret{}).
+		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Complete(r)
 }
