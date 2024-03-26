@@ -277,6 +277,16 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
+// Define a predicate function to filter events for the source namespace
+func accessTokenSecretPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// Filter out secret create events
+			return false
+		},
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Get reconcile interval from environment variable or use default value
@@ -302,6 +312,6 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch GithubApps
 		For(&githubappv1.GithubApp{}).
 		// Watch access token secrets owned by GithubApps.
-		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
 		Complete(r)
 }
