@@ -72,15 +72,20 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	// Check expiry and generate access token if needed
-	result, err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp)
-	if err != nil {
+	// Call the function to delete unreferenced secrets
+	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp); err != nil {
 		l.Error(err, "Failed to check expiry and update access token")
 		return ctrl.Result{}, err
 	}
 
 	// Requeue after a certain duration
-	return result, nil
+    defer func() {
+        if _, err := r.checkExpiryAndRequeue(ctx, githubApp); err != nil {
+            l.Error(err, "Failed to requeue")
+        }
+    }()
+
+	return ctrl.Result{}, nil
 }
 
 // Function to check expiry and update access token
@@ -88,47 +93,27 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
-	// If expiresAt status field is not present or expiry time has already passed, generate or renew access token
-	if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
-        err := r.generateOrUpdateAccessToken(ctx, githubApp)
-        if err != nil {
-            return ctrl.Result{}, err
+    // If expiresAt status field is not present or expiry time has already passed, generate or renew access token
+    if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
+        return r.generateOrUpdateAccessToken(ctx, githubApp)
+    }
+
+    // Check if the access token secret exists if not reconcile immediately
+    accessTokenSecretKey := client.ObjectKey{
+        Namespace: githubApp.Namespace,
+        Name:      fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId),
+    }
+    accessTokenSecret := &corev1.Secret{}
+    if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
+        if apierrors.IsNotFound(err) {
+            // Secret doesn't exist, reconcile straight away
+            return r.generateOrUpdateAccessToken(ctx, githubApp)
         }
-        
-        // Call checkExpiryAndRequeue without returning yet
-        return r.checkExpiryAndRequeue(ctx, githubApp)
-	} else {
-		// Check if the access token secret exists if not reconcile immediately
-		accessTokenSecretKey := client.ObjectKey{
-			Namespace: githubApp.Namespace,
-			Name:      fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId),
-		}
-		accessTokenSecret := &corev1.Secret{}
-		if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
-			if apierrors.IsNotFound(err) {
-				// Secret doesn't exist, reconcile straight away
-				err := r.generateOrUpdateAccessToken(ctx, githubApp)
-				if err != nil {
-                    return ctrl.Result{}, err
-                }
-                
-                // Call checkExpiryAndRequeue without returning yet
-                return r.checkExpiryAndRequeue(ctx, githubApp)
-			}
-			// Error other than NotFound, return error
-			return ctrl.Result{}, err
-		}
-	}
+        // Error other than NotFound, return error
+        return ctrl.Result{}, err
+    }
 
-	return ctrl.Result{}, nil
-}
-
-// Fucntion to check expiry and requeue
-func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
-	// Get the expiresAt status field
-	expiresAt := githubApp.Status.ExpiresAt.Time
-
-	// Calculate the duration until expiry
+	// Access token exists, calculate the duration until expiry
 	durationUntilExpiry := expiresAt.Sub(time.Now())
 
 	// If the expiry is within the next x minutes, generate or renew access token
@@ -136,6 +121,14 @@ func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubA
         err := r.generateOrUpdateAccessToken(ctx, githubApp)
         return ctrl.Result{}, err
 	}
+	
+	return ctrl.Result{}, nil
+}
+
+// Fucntion to check expiry and requeue
+func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
+	// Get the expiresAt status field
+	expiresAt := githubApp.Status.ExpiresAt.Time
 
 	// Log the next expiry time
 	log.Log.Info("Next expiry time:", "expiresAt", expiresAt)
