@@ -29,6 +29,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -143,7 +144,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Wait for the Secret to be deleted
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
-				return errors.IsNotFound(err)
+				return apierrors.IsNotFound(err)
 			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s to be deleted", sourceNamespace, secretName))
 	
 			// Wait for the Secret to be recreated
