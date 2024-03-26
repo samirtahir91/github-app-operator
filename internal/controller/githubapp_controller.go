@@ -91,24 +91,42 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	// If expiresAt status field is not present or expiry time has already passed, generate or renew access token
 	if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
         err := r.generateOrUpdateAccessToken(ctx, githubApp)
-        return ctrl.Result{}, err
-	}
-
-	// Check if the access token secret exists if not reconcile immediately
-	accessTokenSecretKey := client.ObjectKey{
-		Namespace: githubApp.Namespace,
-		Name:      fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId),
-	}
-	accessTokenSecret := &corev1.Secret{}
-	if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
-		if apierrors.IsNotFound(err) {
-			// Secret doesn't exist, reconcile straight away
-			err := r.generateOrUpdateAccessToken(ctx, githubApp)
+        if err != nil {
+            return ctrl.Result{}, err
+        }
+        
+        // Call checkExpiryAndRequeue without returning yet
+        return r.checkExpiryAndRequeue(ctx, githubApp)
+	} else {
+		// Check if the access token secret exists if not reconcile immediately
+		accessTokenSecretKey := client.ObjectKey{
+			Namespace: githubApp.Namespace,
+			Name:      fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId),
+		}
+		accessTokenSecret := &corev1.Secret{}
+		if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Secret doesn't exist, reconcile straight away
+				err := r.generateOrUpdateAccessToken(ctx, githubApp)
+				if err != nil {
+                    return ctrl.Result{}, err
+                }
+                
+                // Call checkExpiryAndRequeue without returning yet
+                return r.checkExpiryAndRequeue(ctx, githubApp)
+			}
+			// Error other than NotFound, return error
 			return ctrl.Result{}, err
 		}
-		// Error other than NotFound, return error
-		return ctrl.Result{}, err
 	}
+
+	return ctrl.Result{}, nil
+}
+
+// Fucntion to check expiry and requeue
+func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
+	// Get the expiresAt status field
+	expiresAt := githubApp.Status.ExpiresAt.Time
 
 	// Calculate the duration until expiry
 	durationUntilExpiry := expiresAt.Sub(time.Now())
