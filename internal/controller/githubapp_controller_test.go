@@ -160,5 +160,49 @@ var _ = Describe("GithubApp controller", func() {
 			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
 		})
 	})
+
+	Context("When manually changing accessToken secret to an invalid value", func() {
+		It("Should update the accessToken on reconciliation", func() {
+			ctx := context.Background()
+
+			// Define constants for test
+			dummyAccessToken := "dummy_access_token"
+
+			// Edit the accessToken to a dummy value
+			accessTokenSecretKey := types.NamespacedName{
+				Namespace: sourceNamespace,
+				Name:      secretName,
+			}
+			accessTokenSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
+			accessTokenSecret.Data["accessToken"] = []byte(dummyAccessToken)
+			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
+
+			controllerReconciler := &GithubAppReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+	
+			// Perform reconciliation for the resource
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: sourceNamespace,
+					Name:      githubAppName,
+				},
+			})
+			// Verify if reconciliation was successful
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
+			// Print the result
+			fmt.Println("Reconciliation result:", result)
+
+			// Wait for the accessToken to be updated
+			Eventually(func() string {
+				updatedSecret := &corev1.Secret{}
+				err := k8sClient.Get(ctx, accessTokenSecretKey, updatedSecret)
+				Expect(err).To(Succeed())
+				return string(updatedSecret.Data["accessToken"])
+			}, "60s", "5s").ShouldNot(Equal(dummyAccessToken))
+		})
+	})
 	
 })
