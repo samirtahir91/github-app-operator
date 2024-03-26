@@ -168,7 +168,7 @@ func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Reques
 
 	// Check if the response status code is 200 (OK)
 	if resp.StatusCode != http.StatusOK {
-		log.Log.Info("Access token is invalid", "API Response code", resp.Status, "Renewing", "GithubApp", req.Name, "Namespace", req.Namespace)
+		log.Log.Info("Access token is invalid, will renew", "API Response code", resp.Status, "GithubApp", req.Name, "Namespace", req.Namespace)
 		return false
 	}
 
