@@ -160,17 +160,17 @@ func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Reques
 	client := &http.Client{}
 
 	// Create a new request
-	req, err := http.NewRequest("GET", url, nil)
+	ghReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		l.Error(err, "Error creating request to GitHub API for rate limit")
 		return false
 	}
 
 	// Add the access token to the request header
-	req.Header.Set("Authorization", "token "+accessToken)
+	ghReq.Header.Set("Authorization", "token "+accessToken)
 
 	// Send the request
-	resp, err := client.Do(req)
+	resp, err := client.Do(ghReq)
 	if err != nil {
 		l.Error(err, "Error sending request to GitHub API for rate limit")
 		return false
