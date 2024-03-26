@@ -115,6 +115,21 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
         return err
     }
 
+   	// Check if the secret data contains fields other than accessToken
+	for key := range accessTokenSecret.Data {
+		if key != "accessToken" {
+			// Found a key other than accessToken, reconcile straight away
+			return r.generateOrUpdateAccessToken(ctx, githubApp)
+		}
+	}
+
+	// Check if accessToken is empty or invalid
+	accessToken := string(accessTokenSecret.Data["accessToken"])
+	if accessToken == "" {
+		// accessToken is empty, reconcile straight away
+		return r.generateOrUpdateAccessToken(ctx, githubApp)
+	}
+
 	// Access token exists, calculate the duration until expiry
 	durationUntilExpiry := expiresAt.Sub(time.Now())
 

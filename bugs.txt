@@ -1,7 +1,5 @@
-on delete secret = 3 reconciles
-
-on create secret =  2 reconciles
+on delete secret = 2 reconciles (think after updating status)
+on create secret =  2 reconciles (think after updating status)
 
 edit secret does nothing to reconcile
 
-Not requeing properly with defer function - fixed dont defer
