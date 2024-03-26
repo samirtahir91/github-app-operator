@@ -131,7 +131,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     }
 
     // Check if the access token is a valid github token via gh api auth
-    if !isAccessTokenValid(string(ctx, accessToken)) {
+    if !isAccessTokenValid(ctx, string(accessToken)) {
         // If accessToken is invalid, generate or update access token
         return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
