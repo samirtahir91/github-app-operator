@@ -215,7 +215,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		return err
 	}
 
-	l.Info("Access token updated in the existing Secret successfully")
+	log.Log.Info("Access token updated in the existing Secret successfully")
 	return nil
 }
 
