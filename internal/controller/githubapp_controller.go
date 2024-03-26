@@ -123,12 +123,18 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 		}
 	}
 
-	// Check if accessToken is empty or invalid
-	accessToken := string(accessTokenSecret.Data["accessToken"])
-	if accessToken == "" {
-		// accessToken is empty, reconcile straight away
-		return r.generateOrUpdateAccessToken(ctx, githubApp)
-	}
+    // Check if the accessToken field exists and is not empty
+    accessToken, exists := accessTokenSecret.Data["accessToken"]
+    if !exists || len(accessToken) == 0 {
+        // If accessToken is missing or empty, generate or update access token
+        return r.generateOrUpdateAccessToken(ctx, githubApp)
+    }
+
+    // Check if the access token is a valid github token via gh api auth
+    if !isAccessTokenValid(string(accessToken)) {
+        // If accessToken is invalid, generate or update access token
+        return r.generateOrUpdateAccessToken(ctx, githubApp)
+    }
 
 	// Access token exists, calculate the duration until expiry
 	durationUntilExpiry := expiresAt.Sub(time.Now())
@@ -142,6 +148,43 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	
 	return nil
 }
+
+// Function to check if the access token is valid by making a request to GitHub API
+func isAccessTokenValid(ctx context.Context, accessToken string) bool {
+	l := log.FromContext(ctx)
+
+	// Create a new HTTP client
+	client := &http.Client{}
+
+	// Create a new request to fetch the current user from GitHub API
+	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
+	if err != nil {
+		l.Error("Error creating request:", err)
+		return false
+	}
+
+	// Add the access token to the request header
+	req.Header.Set("Authorization", "token "+accessToken)
+
+	// Send the request
+	resp, err := client.Do(req)
+	if err != nil {
+		l.Error("Error sending request:", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	// Check if the response status code is 200 (OK)
+	if resp.StatusCode != http.StatusOK {
+		l.Error("GitHub API request failed:", resp.Status)
+		return false
+	}
+
+	// If everything is fine, the token is valid
+	log.Log.Info("GitHub API request successful. Current user:", resp.StatusCode)
+	return true
+}
+
 
 // Fucntion to check expiry and requeue
 func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) (ctrl.Result, error) {
