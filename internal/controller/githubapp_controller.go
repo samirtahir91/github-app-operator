@@ -82,7 +82,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
     // Log and return
     log.Log.Info("End Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
-	log.Log.Info("\n")
+	fmt.Println()
     return requeueResult, nil
 }
 
