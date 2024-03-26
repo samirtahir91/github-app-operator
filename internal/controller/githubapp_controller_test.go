@@ -44,10 +44,10 @@ var _ = Describe("GithubApp controller", func() {
 		appId				 = 857468
 		installId			 = 48531286
 		githubAppName		 = "gh-app-test"
-		secretName 			 = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 	)
 
 	var privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
+	var secretName 			 = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 
 	Context("When setting up the test environment", func() {
 		It("Should create GithubApp custom resources", func() {
