@@ -56,34 +56,34 @@ var (
 
 // Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-    l := log.FromContext(ctx)
-    log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+	l := log.FromContext(ctx)
+	log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 
-    // Fetch the GithubApp resource
-    githubApp := &githubappv1.GithubApp{}
-    err := r.Get(ctx, req.NamespacedName, githubApp)
-    if err != nil {
-        l.Error(err, "Failed to get GithubApp")
-        return ctrl.Result{}, err
-    }
+	// Fetch the GithubApp resource
+	githubApp := &githubappv1.GithubApp{}
+	err := r.Get(ctx, req.NamespacedName, githubApp)
+	if err != nil {
+		l.Error(err, "Failed to get GithubApp")
+		return ctrl.Result{}, err
+	}
 
-    // Call the function to delete unreferenced secrets
-    if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
-        l.Error(err, "Failed to check expiry and update access token")
-        return ctrl.Result{}, err
-    }
+	// Call the function to delete unreferenced secrets
+	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
+		l.Error(err, "Failed to check expiry and update access token")
+		return ctrl.Result{}, err
+	}
 
-    // Call the function to check expiry and requeue
-    requeueResult, err := r.checkExpiryAndRequeue(ctx, githubApp, req)
-    if err != nil {
-        l.Error(err, "Failed to check expiry and requeue")
-        return requeueResult, err
-    }
+	// Call the function to check expiry and requeue
+	requeueResult, err := r.checkExpiryAndRequeue(ctx, githubApp, req)
+	if err != nil {
+		l.Error(err, "Failed to check expiry and requeue")
+		return requeueResult, err
+	}
 
-    // Log and return
-    log.Log.Info("End Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+	// Log and return
+	log.Log.Info("End Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 	fmt.Println()
-    return requeueResult, nil
+	return requeueResult, nil
 }
 
 // Function to check expiry and update access token
@@ -91,35 +91,35 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
-    // If expiresAt status field is not present or expiry time has already passed, generate or renew access token
-    if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
-        return r.generateOrUpdateAccessToken(ctx, githubApp)
-    }
+	// If expiresAt status field is not present or expiry time has already passed, generate or renew access token
+	if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
+		return r.generateOrUpdateAccessToken(ctx, githubApp)
+	}
 
-    // Check if the access token secret exists if not reconcile immediately
-    accessTokenSecretKey := client.ObjectKey{
-        Namespace: githubApp.Namespace,
-        Name:      fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId),
-    }
-    accessTokenSecret := &corev1.Secret{}
-    if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
-        if apierrors.IsNotFound(err) {
-            // Secret doesn't exist, reconcile straight away
-            return r.generateOrUpdateAccessToken(ctx, githubApp)
-        }
-        // Error other than NotFound, return error
-        return err
-    }
+	// Check if the access token secret exists if not reconcile immediately
+	accessTokenSecretKey := client.ObjectKey{
+		Namespace: githubApp.Namespace,
+		Name:      fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId),
+	}
+	accessTokenSecret := &corev1.Secret{}
+	if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Secret doesn't exist, reconcile straight away
+			return r.generateOrUpdateAccessToken(ctx, githubApp)
+		}
+		// Error other than NotFound, return error
+		return err
+	}
 
-    // Check if the accessToken field exists and is not empty
+	// Check if the accessToken field exists and is not empty
 	var accessToken string
 	accessToken = string(accessTokenSecret.Data["accessToken"])
 
-    // Check if the access token is a valid github token via gh api auth
-    if !isAccessTokenValid(ctx, accessToken, req) {
-        // If accessToken is invalid, generate or update access token
-        return r.generateOrUpdateAccessToken(ctx, githubApp)
-    }
+	// Check if the access token is a valid github token via gh api auth
+	if !isAccessTokenValid(ctx, accessToken, req) {
+		// If accessToken is invalid, generate or update access token
+		return r.generateOrUpdateAccessToken(ctx, githubApp)
+	}
 
 	// Access token exists, calculate the duration until expiry
 	durationUntilExpiry := expiresAt.Sub(time.Now())
@@ -132,9 +132,9 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 			"Namespace", req.Namespace,
 		)
 		err := r.generateOrUpdateAccessToken(ctx, githubApp)
-        return err
+		return err
 	}
-	
+
 	return nil
 }
 

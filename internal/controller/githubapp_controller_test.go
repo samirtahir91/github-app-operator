@@ -18,9 +18,9 @@ package controller
 
 import (
 	"context"
-	"os"
-	"fmt"
 	"encoding/base64"
+	"fmt"
+	"os"
 	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -34,19 +34,18 @@ import (
 	githubappv1 "github-app-operator/api/v1"
 )
 
-
 var _ = Describe("GithubApp controller", func() {
 
 	const (
-		privateKeySecret     = "gh-app-key-test"
-		sourceNamespace      = "default"
-		appId				 = 857468
-		installId			 = 48531286
-		githubAppName		 = "gh-app-test"
+		privateKeySecret = "gh-app-key-test"
+		sourceNamespace  = "default"
+		appId            = 857468
+		installId        = 48531286
+		githubAppName    = "gh-app-test"
 	)
 
-	var privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
-	var secretName 			 = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
+	var privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
+	var secretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 
 	Context("When setting up the test environment", func() {
 		It("Should create GithubApp custom resources", func() {
@@ -57,11 +56,11 @@ var _ = Describe("GithubApp controller", func() {
 			// Decode base64-encoded private key
 			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
 			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
-			
+
 			secret1Obj := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:		privateKeySecret,
-					Namespace: 	sourceNamespace,
+					Name:      privateKeySecret,
+					Namespace: sourceNamespace,
 				},
 				Data: map[string][]byte{"privateKey": []byte(decodedPrivateKey)},
 			}
@@ -74,8 +73,8 @@ var _ = Describe("GithubApp controller", func() {
 					Namespace: sourceNamespace,
 				},
 				Spec: githubappv1.GithubAppSpec{
-					AppId: appId,
-					InstallId: installId,
+					AppId:            appId,
+					InstallId:        installId,
 					PrivateKeySecret: privateKeySecret,
 				},
 			}
@@ -91,13 +90,13 @@ var _ = Describe("GithubApp controller", func() {
 			By("Retrieving the access token secret")
 
 			var retrievedSecret corev1.Secret
-			
+
 			// Wait for the Secret to be created
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
 				return err == nil
 			}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", sourceNamespace, secretName))
-	
+
 		})
 	})
 
@@ -107,7 +106,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			var retrievedSecret corev1.Secret
-	
+
 			// Delete the Secret if it exists
 			err := k8sClient.Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -161,7 +160,7 @@ var _ = Describe("GithubApp controller", func() {
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
-	
+
 			// Perform reconciliation for the resource
 			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
@@ -169,10 +168,10 @@ var _ = Describe("GithubApp controller", func() {
 					Name:      githubAppName,
 				},
 			})
-	
+
 			// Verify if reconciliation was successful
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
-			
+
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
 		})
