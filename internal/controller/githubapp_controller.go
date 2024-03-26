@@ -239,7 +239,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	accessToken, expiresAt, err := generateAccessToken(
 		githubApp.Spec.AppId,
 		githubApp.Spec.InstallId,
-		privateKey
+		privateKey,
 	)
 	if err != nil {
 		return err
