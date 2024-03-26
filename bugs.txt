@@ -4,4 +4,4 @@ on create secret =  2 reconciles
 
 edit secret does nothing to reconcile
 
-Not requeing properly with defer function
+Not requeing properly with defer function - fixed dont defer
