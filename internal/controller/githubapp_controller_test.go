@@ -189,14 +189,24 @@ var _ = Describe("GithubApp controller", func() {
 			// Export the expiryThreshold as an environment variable
 			os.Setenv("EXPIRY_THRESHOLD", expiryThreshold.String())
 
-			// Trigger reconciliation
-			_, err := r.Reconcile(ctx, reconcile.Request{
+			controllerReconciler := &GithubAppReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+	
+			// Perform reconciliation for the resource
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: sourceNamespace,
 					Name:      githubAppName,
 				},
 			})
-			Expect(err).NotTo(HaveOccurred())
+	
+			// Verify if reconciliation was successful
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
+			
+			// Print the result
+			fmt.Println("Reconciliation result:", result)
 		})
 	})
 
