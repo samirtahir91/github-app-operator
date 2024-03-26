@@ -70,7 +70,8 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: controller:latest
+        image: github-app-operator:latest
+        imagePullPolicy: Never
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
@@ -98,5 +99,10 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
+        env:
+          - name: CHECK_INTERVAL
+            value: "5m"
+          - name: EXPIRY_THRESHOLD
+            value: "15m"
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

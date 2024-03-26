@@ -18,67 +18,162 @@ package controller
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
+	"os"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	githubappv1 "github-app-operator/api/v1"
 )
 
-var _ = Describe("GithubApp Controller", func() {
-	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+var _ = Describe("GithubApp controller", func() {
 
-		ctx := context.Background()
+	const (
+		privateKeySecret = "gh-app-key-test"
+		sourceNamespace  = "default"
+		appId            = 857468
+		installId        = 48531286
+		githubAppName    = "gh-app-test"
+	)
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
-		}
-		githubapp := &githubappv1.GithubApp{}
+	var privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
+	var secretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind GithubApp")
-			err := k8sClient.Get(ctx, typeNamespacedName, githubapp)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &githubappv1.GithubApp{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+	Context("When setting up the test environment", func() {
+		It("Should create GithubApp custom resources", func() {
+			By("Creating the privateKeySecret in the sourceNamespace")
+
+			ctx := context.Background()
+
+			// Decode base64-encoded private key
+			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
+			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
+
+			secret1Obj := corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      privateKeySecret,
+					Namespace: sourceNamespace,
+				},
+				Data: map[string][]byte{"privateKey": []byte(decodedPrivateKey)},
 			}
-		})
+			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 
-		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &githubappv1.GithubApp{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance GithubApp")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			By("Creating a first GithubApp custom resource in the sourceNamespace")
+			githubApp := githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName,
+					Namespace: sourceNamespace,
+				},
+				Spec: githubappv1.GithubAppSpec{
+					AppId:            appId,
+					InstallId:        installId,
+					PrivateKeySecret: privateKeySecret,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
 		})
+	})
+
+	Context("When reconciling a GithubApp", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
+			ctx := context.Background()
+
+			By("Retrieving the access token secret")
+
+			var retrievedSecret corev1.Secret
+
+			// Wait for the Secret to be created
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
+				return err == nil
+			}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", sourceNamespace, secretName))
+
+		})
+	})
+
+	Context("When deleting an access token secret", func() {
+		It("should successfully reconcile the secret again", func() {
+			By("Deleting the access token secret")
+			ctx := context.Background()
+
+			var retrievedSecret corev1.Secret
+
+			// Delete the Secret if it exists
+			err := k8sClient.Delete(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: sourceNamespace,
+				},
+			})
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", sourceNamespace, secretName, err))
+
+			// Wait for the Secret to be recreated
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
+				return err == nil
+			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
+		})
+	})
+
+	Context("When manually changing accessToken secret to an invalid value", func() {
+		It("Should update the accessToken on reconciliation", func() {
+			ctx := context.Background()
+
+			// Define constants for test
+			dummyAccessToken := "dummy_access_token"
+
+			// Edit the accessToken to a dummy value
+			accessTokenSecretKey := types.NamespacedName{
+				Namespace: sourceNamespace,
+				Name:      secretName,
+			}
+			accessTokenSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
+			accessTokenSecret.Data["accessToken"] = []byte(dummyAccessToken)
+			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
+
+			// Wait for the accessToken to be updated
+			Eventually(func() string {
+				updatedSecret := &corev1.Secret{}
+				err := k8sClient.Get(ctx, accessTokenSecretKey, updatedSecret)
+				Expect(err).To(Succeed())
+				return string(updatedSecret.Data["accessToken"])
+			}, "60s", "5s").ShouldNot(Equal(dummyAccessToken))
+		})
+	})
+
+	Context("When requeing a reconcile for a GithubApp that is not expired", func() {
+		It("should successfully reconcile the resource and get the rate limit", func() {
+			By("Reconciling the created resource")
+			ctx := context.Background()
+
 			controllerReconciler := &GithubAppReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
+			// Perform reconciliation for the resource
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: sourceNamespace,
+					Name:      githubAppName,
+				},
 			})
-			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
+			// Verify if reconciliation was successful
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
+
+			// Print the result
+			fmt.Println("Reconciliation result:", result)
 		})
 	})
 })

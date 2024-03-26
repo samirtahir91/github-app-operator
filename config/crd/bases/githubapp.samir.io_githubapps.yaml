@@ -39,13 +39,24 @@ spec:
           spec:
             description: GithubAppSpec defines the desired state of GithubApp
             properties:
-              foo:
-                description: Foo is an example field of GithubApp. Edit githubapp_types.go
-                  to remove/update
+              appId:
+                type: integer
+              installId:
+                type: integer
+              privateKeySecret:
                 type: string
+            required:
+            - appId
+            - installId
+            - privateKeySecret
             type: object
           status:
             description: GithubAppStatus defines the observed state of GithubApp
+            properties:
+              expiresAt:
+                description: Expiry of access token
+                format: date-time
+                type: string
             type: object
         type: object
     served: true
