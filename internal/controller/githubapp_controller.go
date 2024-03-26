@@ -115,20 +115,9 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
         return err
     }
 
-   	// Check if the secret data contains fields other than accessToken
-	for key := range accessTokenSecret.Data {
-		if key != "accessToken" {
-			// Found a key other than accessToken, reconcile straight away
-			return r.generateOrUpdateAccessToken(ctx, githubApp)
-		}
-	}
-
     // Check if the accessToken field exists and is not empty
-    accessToken, exists := accessTokenSecret.Data["accessToken"]
-    if !exists || len(accessToken) == 0 {
-        // If accessToken is missing or empty, generate or update access token
-        return r.generateOrUpdateAccessToken(ctx, githubApp)
-    }
+	var accessToken
+	accessToken = accessTokenSecret.Data["accessToken"]
 
     // Check if the access token is a valid github token via gh api auth
     if !isAccessTokenValid(ctx, string(accessToken), req) {
