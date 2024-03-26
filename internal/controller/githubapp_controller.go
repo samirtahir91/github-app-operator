@@ -197,6 +197,11 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				return err
 			}
 			log.Log.Info("Secret created for access token", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
+			// Update the status with the new expiresAt time
+			githubApp.Status.ExpiresAt = expiresAt
+			if err := r.Status().Update(ctx, githubApp); err != nil {
+				return err
+			}
 			return nil
 		}
 		l.Error(err, "Failed to get access token secret", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
