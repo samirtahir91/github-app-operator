@@ -83,7 +83,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
         if _, err := r.checkExpiryAndRequeue(ctx, githubApp, req); err != nil {
             l.Error(err, "Failed to requeue")
         }
-		log.Log.Info("End Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace, ".", "\n")
+		log.Log.Info("End Reconcile\n")
 		}()
 
 	return ctrl.Result{}, nil
