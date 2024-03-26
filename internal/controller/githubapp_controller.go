@@ -34,11 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
-	//"sigs.k8s.io/controller-runtime/pkg/builder"   // Required for Watching
-	"sigs.k8s.io/controller-runtime/pkg/event"     // Required for Watching
-
 )
 
 // GithubAppReconciler reconciles a GithubApp object
@@ -195,8 +190,6 @@ func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Reques
 	log.Log.Info("Rate limit is valid", "Remaining requests:", remaining, "GithubApp", req.Name, "Namespace", req.Namespace)
 	return true
 }
-
-
 
 // Fucntion to check expiry and requeue
 func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) (ctrl.Result, error) {
