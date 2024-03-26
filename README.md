@@ -1,3 +1,6 @@
+[![Unit tests](https://github.com/samirtahir91/github-app-operator/actions/workflows/tests.yaml/badge.svg)](https://github.com/samirtahir91/github-app-operator/actions/workflows/tests.yaml)
+[![Coverage Status](https://coveralls.io/repos/github/samirtahir91/github-app-operator/badge.svg)](https://coveralls.io/github/samirtahir91/github-app-operator)
+
 # github-app-operator
 This is a Kubernetes operator that will generate an access token for a GithubApp and store it in a secret to use for authenticated requests to Github as the GithubApp.
 
@@ -65,7 +68,7 @@ EOF
 **Build and push your image to the location specified by `IMG`:**
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/secret-sync-operator:tag
+make docker-build docker-push IMG=<some-registry>/github-app-operator:tag
 ```
 
 **Install the CRDs into the cluster:**
@@ -77,7 +80,7 @@ make install
 **Deploy the Manager to the cluster with the image specified by `IMG`:**
 
 ```sh
-make deploy IMG=<some-registry>/secret-sync-operator:tag
+make deploy IMG=<some-registry>/github-app-operator:tag
 ```
 
 **Create instances of your solution**
