@@ -131,7 +131,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     }
 
     // Check if the access token is a valid github token via gh api auth
-    if !isAccessTokenValid(ctx, string(accessToken)) {
+    if !isAccessTokenValid(ctx, string(accessToken), req) {
         // If accessToken is invalid, generate or update access token
         return r.generateOrUpdateAccessToken(ctx, githubApp)
     }
@@ -150,7 +150,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Function to check if the access token is valid by making a request to GitHub API
-func isAccessTokenValid(ctx context.Context, accessToken string) bool {
+func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Request) bool {
 	l := log.FromContext(ctx)
 
 	// GitHub API endpoint for rate limit information
@@ -203,7 +203,7 @@ func isAccessTokenValid(ctx context.Context, accessToken string) bool {
 	}
 
 	// Rate limit is valid
-	log.Log.Info("Rate limit is valid", "Remaining requests:", remaining)
+	log.Log.Info("Rate limit is valid", "Remaining requests:", remaining, "GithubApp", req.Name, "Namespace", req.Namespace)
 	return true
 }
 
