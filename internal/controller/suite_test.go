@@ -75,7 +75,7 @@ var _ = BeforeSuite(func() {
 			fmt.Sprintf("1.28.3-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
 	os.Setenv("CHECK_INTERVAL", "5s")
-	os.Setenv("EXPIRY_THRESHOLD", "59m")
+	os.Setenv("EXPIRY_THRESHOLD", "15m")
 
 	var err error
 	// cfg is defined in this file globally.

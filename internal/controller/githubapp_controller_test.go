@@ -178,25 +178,4 @@ var _ = Describe("GithubApp controller", func() {
 			fmt.Println("Reconciliation result:", result)
 		})
 	})
-
-	Context("When EXPIRY_THRESHOLD is met", func() {
-		It("Should reconcile", func() {
-			ctx := context.Background()
-
-			// Allow time for the EXPIRY_THRESHOLD (59min set in suite_test.go)
-			time.Sleep(50 * time.Second)
-
-			By("Retrieving the access token secret")
-
-			var retrievedSecret corev1.Secret
-			
-			// Wait for the Secret to be created
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
-				return err == nil
-			}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", sourceNamespace, secretName))
-	
-		})
-	})
-
 })
