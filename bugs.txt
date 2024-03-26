@@ -1,0 +1,7 @@
+on delete secret = 3 reconciles
+
+on create secret =  2 reconciles
+
+edit secret does nothing to reconcile
+
+Not requeing properly with defer function

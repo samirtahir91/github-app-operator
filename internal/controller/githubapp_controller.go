@@ -73,7 +73,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Call the function to delete unreferenced secrets
-	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp); err != nil {
+	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
 		l.Error(err, "Failed to check expiry and update access token")
 		return ctrl.Result{}, err
 	}
@@ -90,7 +90,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 // Function to check expiry and update access token
-func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
@@ -119,6 +119,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If the expiry is within the next x minutes, generate or renew access token
 	if durationUntilExpiry <= timeBeforeExpiry {
+		log.Log.Info("Expiry threshold reached - renewing", "GithubApp", req.Name, "Namespace", req.Namespace )
         err := r.generateOrUpdateAccessToken(ctx, githubApp)
         return err
 	}
