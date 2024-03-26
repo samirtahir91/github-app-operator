@@ -22,6 +22,7 @@ import (
 	"os"
 	"fmt"
 	"encoding/base64"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -107,7 +108,20 @@ var _ = Describe("GithubApp controller", func() {
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
 			// Add a sleep to allow the controller to trigger requeue
-			time.Sleep(90 * time.Second)
+			time.Sleep(10 * time.Second)
+
+			By("Reconciling the created resource")
+			// Define the expected secret name
+			secretName := fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
+	
+			var retrievedSecret corev1.Secret
+	
+			// Wait for the Secret to be created
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
+				return err == nil
+			}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", sourceNamespace, secretName))
+	
 		})
 	})
 })
