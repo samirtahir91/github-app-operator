@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"encoding/base64"
 	"strconv"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
