@@ -333,6 +333,6 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&githubappv1.GithubApp{}).
 		// Watch access token secrets owned by GithubApps.
 		//Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
-		//Owns(&corev1.Secret{}).
+		Owns(&corev1.Secret{}).
 		Complete(r)
 }
