@@ -124,7 +124,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Function to generate or update access token
-func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
+func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
 
 	// Get the private key from the Secret
@@ -134,19 +134,19 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	err := r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, secret)
 	if err != nil {
 		l.Error(err, "Failed to get Secret")
-		return ctrl.Result{}, err
+		return err
 	}
 
 	privateKey, ok := secret.Data["privateKey"]
 	if !ok {
 		l.Error(err, "privateKey not found in Secret")
-		return ctrl.Result{}, fmt.Errorf("privateKey not found in Secret")
+		return fmt.Errorf("privateKey not found in Secret")
 	}
 
 	// Generate or renew access token
 	accessToken, expiresAt, err := generateAccessToken(githubApp.Spec.AppId, githubApp.Spec.InstallId, privateKey)
 	if err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
 	// Create a new Secret with the access token
@@ -168,7 +168,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	// Set owner reference to GithubApp object
 	if err := controllerutil.SetControllerReference(githubApp, newSecret, r.Scheme); err != nil {
 		l.Error(err, "Failed to set owner reference for access token secret")
-		return ctrl.Result{}, err
+		return err
 	}
 
 	// Attempt to retrieve the existing Secret
@@ -178,20 +178,20 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			// Secret doesn't exist, create a new one
 			if err := r.Create(ctx, newSecret); err != nil {
 				l.Error(err, "Failed to create Secret for access token")
-				return ctrl.Result{}, err
+				return err
 			}
 			log.Log.Info("Secret created for access token", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
-			return ctrl.Result{}, nil
+			return nil
 		}
 		l.Error(err, "Failed to get access token secret", "Namespace", githubApp.Namespace, "Secret", accessTokenSecret)
-		return ctrl.Result{}, err // Return both error and ctrl.Result{}
+		return err // Return both error and ctrl.Result{}
 	}
 
 	// Secret exists, update its data
 	// Set owner reference to GithubApp object
 	if err := controllerutil.SetControllerReference(githubApp, existingSecret, r.Scheme); err != nil {
 		l.Error(err, "Failed to set owner reference for access token secret")
-		return ctrl.Result{}, err
+		return err
 	}
 	// Clear existing data and set new access token data
 	for k := range existingSecret.Data {
@@ -202,17 +202,17 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 	if err := r.Update(ctx, existingSecret); err != nil {
 		l.Error(err, "Failed to update existing Secret")
-		return ctrl.Result{}, err
+		return err
 	}
 
 	// Update the status with the new expiresAt time
 	githubApp.Status.ExpiresAt = expiresAt
 	if err := r.Status().Update(ctx, githubApp); err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
 	l.Info("Access token updated in the existing Secret successfully")
-	return ctrl.Result{}, nil
+	return nil
 }
 
 // function to generate new access tokenf or gh app
@@ -298,6 +298,6 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch GithubApps
 		For(&githubappv1.GithubApp{}).
 		// Watch access token secrets owned by GithubApps.
-		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		Owns(&corev1.Secret{}).
 		Complete(r)
 }
