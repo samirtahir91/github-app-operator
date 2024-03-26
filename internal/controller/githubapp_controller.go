@@ -161,14 +161,14 @@ func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Reques
 	// Send the request
 	resp, err := client.Do(ghReq)
 	if err != nil {
-		log.Log.Info("Access token is invalid", "Renewing", "GithubApp", req.Name, "Namespace", req.Namespace)
+		l.Error(err, "Error sending request to GitHub API for rate limit")
 		return false
 	}
 	defer resp.Body.Close()
 
 	// Check if the response status code is 200 (OK)
 	if resp.StatusCode != http.StatusOK {
-		l.Error(nil, "GitHub API request for rate limit failed", "status", resp.Status)
+		log.Log.Info("Access token is invalid", "API Response code", resp.Status, "Renewing", "GithubApp", req.Name, "Namespace", req.Namespace)
 		return false
 	}
 
