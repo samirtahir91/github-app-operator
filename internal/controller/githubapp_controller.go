@@ -80,10 +80,10 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Requeue after a certain duration
     defer func() {
-        if _, err := r.checkExpiryAndRequeue(ctx, githubApp); err != nil {
+        if _, err := r.checkExpiryAndRequeue(ctx, githubApp, req); err != nil {
             l.Error(err, "Failed to requeue")
         }
-		return _, nil
+		return ctrl.Result{}, nil
     }()
 
 	return ctrl.Result{}, nil
@@ -127,7 +127,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Fucntion to check expiry and requeue
-func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
+func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) (ctrl.Result, error) {
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
