@@ -61,32 +61,33 @@ var (
 
 // Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx)
-	log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+    l := log.FromContext(ctx)
+    log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 
-	// Fetch the GithubApp resource
-	githubApp := &githubappv1.GithubApp{}
-	err := r.Get(ctx, req.NamespacedName, githubApp)
-	if err != nil {
-		l.Error(err, "Failed to get GithubApp")
-		return ctrl.Result{}, err
-	}
+    // Fetch the GithubApp resource
+    githubApp := &githubappv1.GithubApp{}
+    err := r.Get(ctx, req.NamespacedName, githubApp)
+    if err != nil {
+        l.Error(err, "Failed to get GithubApp")
+        return ctrl.Result{}, err
+    }
 
-	// Call the function to delete unreferenced secrets
-	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
-		l.Error(err, "Failed to check expiry and update access token")
-		return ctrl.Result{}, err
-	}
+    // Call the function to delete unreferenced secrets
+    if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
+        l.Error(err, "Failed to check expiry and update access token")
+        return ctrl.Result{}, err
+    }
 
-	// Requeue after a certain duration
-    defer func() {
-        if _, err := r.checkExpiryAndRequeue(ctx, githubApp, req); err != nil {
-            l.Error(err, "Failed to requeue")
-        }
-		log.Log.Info("End Reconcile\n")
-		}()
+    // Call the function to check expiry and requeue
+    requeueResult, err := r.checkExpiryAndRequeue(ctx, githubApp, req)
+    if err != nil {
+        l.Error(err, "Failed to check expiry and requeue")
+        return requeueResult, err
+    }
 
-	return ctrl.Result{}, nil
+    // Log and return
+    log.Log.Info("End Reconcile\n")
+    return requeueResult, nil
 }
 
 // Function to check expiry and update access token
