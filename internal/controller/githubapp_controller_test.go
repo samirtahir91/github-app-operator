@@ -184,7 +184,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			// Define the expiry threshold as 59.5 minutes
-			expiryThreshold := 59*time.Minute + 30*time.Second
+			expiryThreshold := 59*time.Minute + 50*time.Second
 
 			// Export the expiryThreshold as an environment variable
 			os.Setenv("EXPIRY_THRESHOLD", expiryThreshold.String())
