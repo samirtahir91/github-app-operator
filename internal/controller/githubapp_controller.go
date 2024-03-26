@@ -116,7 +116,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
     }
 
     // Check if the accessToken field exists and is not empty
-	var accessToken
+	var accessToken string
 	accessToken = accessTokenSecret.Data["accessToken"]
 
     // Check if the access token is a valid github token via gh api auth
