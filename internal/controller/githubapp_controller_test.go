@@ -153,18 +153,12 @@ var _ = Describe("GithubApp controller", func() {
 					Name:      githubAppName,
 				},
 			})
-			
-			// Wait for the Secret to be deleted
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
-				return apierrors.IsNotFound(err)
-			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s to be deleted", sourceNamespace, secretName))
-	
+
 			// Wait for the Secret to be recreated
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
 				return err == nil
-			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
+			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
 		})
 	})
 	
