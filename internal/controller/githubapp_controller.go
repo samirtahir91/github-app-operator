@@ -83,6 +83,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
         if _, err := r.checkExpiryAndRequeue(ctx, githubApp); err != nil {
             l.Error(err, "Failed to requeue")
         }
+		return ctrl.Result{}, nil
     }()
 
 	return ctrl.Result{}, nil
@@ -131,11 +132,11 @@ func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubA
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
 	// Log the next expiry time
-	log.Log.Info("Next expiry time:", "expiresAt", expiresAt)
+	log.Log.Info("Next expiry time:", "expiresAt", expiresAt, "GithubApp", req.Name, "Namespace", req.Namespace)
 
 	// Return result with no error and request reconciliation after x minutes
-	log.Log.Info("Expiry threshold:", "Time", timeBeforeExpiry)
-	log.Log.Info("Requeue after:", "Time", reconcileInterval)
+	log.Log.Info("Expiry threshold:", "Time", timeBeforeExpiry, "GithubApp", req.Name, "Namespace", req.Namespace)
+	log.Log.Info("Requeue after:", "Time", reconcileInterval, "GithubApp", req.Name, "Namespace", req.Namespace)
 	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
 }
 
