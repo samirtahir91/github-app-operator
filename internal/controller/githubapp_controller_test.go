@@ -44,6 +44,7 @@ var _ = Describe("GithubApp controller", func() {
 		appId				 = 857468
 		installId			 = 48531286
 		githubAppName		 = "gh-app-test"
+		secretName 			 = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 	)
 
 	var privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
@@ -111,9 +112,7 @@ var _ = Describe("GithubApp controller", func() {
 			time.Sleep(10 * time.Second)
 
 			By("Reconciling the created resource")
-			// Define the expected secret name
-			secretName := fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
-	
+
 			var retrievedSecret corev1.Secret
 	
 			// Wait for the Secret to be created
@@ -124,4 +123,35 @@ var _ = Describe("GithubApp controller", func() {
 	
 		})
 	})
+
+	Context("When deleting an access token secret", func() {
+		It("should successfully reconcile the secret again", func() {
+			By("Deleting the access token secret")
+			ctx := context.Background()
+
+			var retrievedSecret corev1.Secret
+	
+			// Delete the Secret if it exists
+			err := k8sClient.Delete(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: sourceNamespace,
+				},
+			})
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", sourceNamespace, secretName, err))
+	
+			// Wait for the Secret to be deleted
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
+				return errors.IsNotFound(err)
+			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s to be deleted", sourceNamespace, secretName))
+	
+			// Wait for the Secret to be recreated
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
+				return err == nil
+			}, "60s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
+		})
+	})
+	
 })
