@@ -44,6 +44,7 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var	ctx context.Context
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
