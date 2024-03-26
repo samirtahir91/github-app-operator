@@ -107,7 +107,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
 
-			By("Reconciling the created resource")
+			By("Retrieving the access token secret")
 
 			var retrievedSecret corev1.Secret
 			
@@ -202,6 +202,32 @@ var _ = Describe("GithubApp controller", func() {
 				Expect(err).To(Succeed())
 				return string(updatedSecret.Data["accessToken"])
 			}, "60s", "5s").ShouldNot(Equal(dummyAccessToken))
+		})
+	})
+
+	Context("When requeing a reconcile for a GithubApp that is not expired", func() {
+		It("should successfully reconcile the resource and get the rate limit", func() {
+			By("Reconciling the created resource")
+			ctx := context.Background()
+
+			controllerReconciler := &GithubAppReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+	
+			// Perform reconciliation for the resource
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: sourceNamespace,
+					Name:      githubAppName,
+				},
+			})
+	
+			// Verify if reconciliation was successful
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
+			
+			// Print the result
+			fmt.Println("Reconciliation result:", result)
 		})
 	})
 	
