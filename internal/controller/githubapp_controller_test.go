@@ -154,7 +154,11 @@ var _ = Describe("GithubApp controller", func() {
 			})
 			// Verify if reconciliation was successful
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
-			
+			// Print the result
+			fmt.Println("Reconciliation result:", result)
+			// Add a sleep to allow the controller to trigger requeue
+			time.Sleep(10 * time.Second)
+
 			// Wait for the Secret to be recreated
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
