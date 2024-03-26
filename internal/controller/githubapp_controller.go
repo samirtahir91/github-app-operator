@@ -153,13 +153,16 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 func isAccessTokenValid(ctx context.Context, accessToken string) bool {
 	l := log.FromContext(ctx)
 
+	// GitHub API endpoint for rate limit information
+	url := "https://api.github.com/rate_limit"
+
 	// Create a new HTTP client
 	client := &http.Client{}
 
-	// Create a new request to fetch the current user from GitHub API
-	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
+	// Create a new request
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		l.Error(err, "Error creating request to Github Users API",)
+		l.Error(err, "Error creating request to GitHub API for rate limit")
 		return false
 	}
 
@@ -169,21 +172,41 @@ func isAccessTokenValid(ctx context.Context, accessToken string) bool {
 	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
-		l.Error(err, "Error sending request to Github Users API")
+		l.Error(err, "Error sending request to GitHub API for rate limit")
 		return false
 	}
 	defer resp.Body.Close()
 
 	// Check if the response status code is 200 (OK)
 	if resp.StatusCode != http.StatusOK {
-		l.Error(nil, "GitHub API request failed", "status", resp.Status)
+		l.Error(nil, "GitHub API request for rate limit failed", "status", resp.Status)
 		return false
 	}
 
-	// If everything is fine, the token is valid
-	log.Log.Info("GitHub API request successful. Current user:", resp.StatusCode)
+	// Decode the response body into a map
+	var result map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		l.Error(err, "Error decoding response body for rate limit")
+		return false
+	}
+
+	// Extract rate limit information from the map
+	resources := result["resources"].(map[string]interface{})
+	core := resources["core"].(map[string]interface{})
+	remaining := int(core["remaining"].(float64))
+
+	// Check if remaining rate limit is greater than 0
+	if remaining <= 0 {
+		log.Log.Info("Rate limit exceeded for access token")
+		return false
+	}
+
+	// Rate limit is valid
+	l.Log.Info("Rate limit is valid. Remaining requests:", remaining)
 	return true
 }
+
 
 
 // Fucntion to check expiry and requeue
