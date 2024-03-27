@@ -67,13 +67,15 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	// Call the function to delete unreferenced secrets
+	// Call the function to check if access token required
+	// Will either create the access token secret or update it
 	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
 		l.Error(err, "Failed to check expiry and update access token")
 		return ctrl.Result{}, err
 	}
 
-	// Call the function to check expiry and requeue
+	// Call the function to check expiry and renew the access token if required
+	// Always requeue the githubApp for reconcile as per `reconcileInterval`
 	requeueResult, err := r.checkExpiryAndRequeue(ctx, githubApp, req)
 	if err != nil {
 		l.Error(err, "Failed to check expiry and requeue")
@@ -124,7 +126,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	// Access token exists, calculate the duration until expiry
 	durationUntilExpiry := expiresAt.Sub(time.Now())
 
-	// If the expiry is within the next x minutes, generate or renew access token
+	// If the expiry threshold met, generate or renew access token
 	if durationUntilExpiry <= timeBeforeExpiry {
 		log.Log.Info(
 			"Expiry threshold reached - renewing",
@@ -164,6 +166,7 @@ func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Reques
 		l.Error(err, "Error sending request to GitHub API for rate limit")
 		return false
 	}
+	// close connection
 	defer resp.Body.Close()
 
 	// Check if the response status code is 200 (OK)
@@ -355,12 +358,15 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	req.Header.Set("Authorization", "Bearer "+signedToken)
 	req.Header.Set("Accept", "application/vnd.github+json")
 
+	// Send post request for access token
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", metav1.Time{}, fmt.Errorf("failed to perform HTTP request: %v", err)
 	}
+	// Close connection
 	defer resp.Body.Close()
 
+	// Check error in response
 	if resp.StatusCode != http.StatusCreated {
 		return "", metav1.Time{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
