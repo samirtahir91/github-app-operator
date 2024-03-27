@@ -46,7 +46,7 @@ data:
 - It authenticates with GitHub API using your private key secret like above example.
 ```sh
 kubectl apply -f - <<EOF
-apiVersion: sync.samir.io/v1
+apiVersion: githubapp.samir.io/v1
 kind: GithubApp
 metadata:
   name: GithubApp-sample
