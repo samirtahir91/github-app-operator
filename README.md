@@ -1,5 +1,5 @@
 [![Unit tests](https://github.com/samirtahir91/github-app-operator/actions/workflows/tests.yaml/badge.svg)](https://github.com/samirtahir91/github-app-operator/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/samirtahir91/github-app-operator/badge.svg)](https://coveralls.io/github/samirtahir91/github-app-operator)
+[![Coverage Status](https://coveralls.io/repos/github/samirtahir91/github-app-operator/badge.svg?branch=main)](https://coveralls.io/github/samirtahir91/github-app-operator?branch=main)
 
 # github-app-operator
 This is a Kubernetes operator that will generate an access token for a GithubApp and store it in a secret to use for authenticated requests to Github as the GithubApp.
@@ -30,6 +30,7 @@ Key features:
 ```sh
 base64 -w 0 private-key.pem
 ```
+- Create a secret to hold the private key
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -41,7 +42,8 @@ data:
   privateKey: BASE64_ENCODED_PRIVATE_KEY
 ```
 ## Example GithubApp object
-Below example will setup a GithubApp and reconcile an access token in the `team-1` namespace, the access token will be available to use in the secret `github-app-access-token-123123`
+- Below example will setup a GithubApp and reconcile an access token in the `team-1` namespace, the access token will be available to use in the secret `github-app-access-token-123123`
+- It authenticates with GitHub API using your private key secret like above example.
 ```sh
 kubectl apply -f - <<EOF
 apiVersion: sync.samir.io/v1
@@ -101,7 +103,9 @@ make run
 ```
 
 **Run integration tests:**
+- Export your GitHub App private key as a `base64` string and then run the tests
 ```sh
+export GITHUB_PRIVATE_KEY=<YOUR_BASE64_ENCODED_GH_APP_PRIVATE_KEY>
 make test
 ```
 
