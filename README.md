@@ -2,7 +2,8 @@
 [![Coverage Status](https://coveralls.io/repos/github/samirtahir91/github-app-operator/badge.svg?branch=main)](https://coveralls.io/github/samirtahir91/github-app-operator?branch=main)
 
 # github-app-operator
-This is a Kubernetes operator that will generate an access token for a GithubApp and store it in a secret to use for authenticated requests to Github as the GithubApp.
+This is a Kubernetes operator that will generate an access token for a GithubApp and store it in a secret to use for authenticated requests to Github as the GithubApp. \
+It will reconcile a new access token before expiry (1hr).
 
 ## Description
 Key features:
@@ -16,10 +17,10 @@ Key features:
     - Modifications are made to the access token secret that is owned by a `GithubApp`.
     - Modifications are made to a `GithubApp` object.
     - The access token secret does not exist or does not have a `status.expiresAt` value
-- Periodically the operator will check the expiry time of the access token and reconcile a new access token if the threshold is met.
+- Periodically the operator will check the expiry time of the access token and reconcile a new access token if the threshold is met or if the access token is invalid (checks against GitHub API).
 - It stores the expiry time of the access token in the `status.expiresAt` field of the `GithubApp` object.
 - It will skip requesting a new access token if the expiry threshold is not reached/exceeded.
-- You can set override the check interval and expiry threshold using the deployment env vars:
+- You can override the check interval and expiry threshold using the deployment env vars:
   - `CHECK_INTERVAL` - i.e. to check every 5 mins set the value to `5m`
     - It will default to `5m` if not set
   - `EXPIRY_THRESHOLD` - i.e. to reconcile a new access token if there is less than 10 mins left from expiry, set the value to `10m`
@@ -95,6 +96,9 @@ kubectl apply -k config/samples/
 ### Testing
 
 Current integration tests cover the scenarios:
+- Modifying an access token secret triggers reconcile of new access token
+- Deleting an access token secret triggers reconcile of a new access token secret
+- Reconcile of access token is valid
 
 
 **Run the controller in the foreground for testing:**
