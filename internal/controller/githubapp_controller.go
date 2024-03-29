@@ -469,6 +469,7 @@ func githubAppPredicate() predicate.Predicate {
 			// Compare the old and new objects
 			oldGithubApp := e.ObjectOld.(*githubappv1.GithubApp)
 			newGithubApp := e.ObjectNew.(*githubappv1.GithubApp)
+			log.Log.Info("GOT DELETE FOR GITHUB APP")
 
 			// Check if only the status field has changed
 			if reflect.DeepEqual(oldGithubApp.Status, newGithubApp.Status) {
