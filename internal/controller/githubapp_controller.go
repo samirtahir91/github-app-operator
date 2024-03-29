@@ -60,14 +60,14 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 
 	// Fetch the GithubApp instance
-	secretSync := &githubappv1.GithubApp{}
+	githubApp := &githubappv1.GithubApp{}
 	err := r.Get(ctx, req.NamespacedName, githubApp)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Log.Info("GithubApp resource not found. Ignoring since object must be deleted.")
 			return ctrl.Result{}, nil
 		}
-		logctx.Error(err, "Failed to get GithubApp")
+		l.Error(err, "Failed to get GithubApp")
 		return ctrl.Result{}, err
 	}
 
