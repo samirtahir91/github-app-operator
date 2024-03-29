@@ -296,9 +296,9 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				"Secret", accessTokenSecret,
 			)
 			// Update the status with the new expiresAt time
-			//if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
-			//	return fmt.Errorf("Failed after creating secret: %v", err)
-			//}	
+			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
+				return fmt.Errorf("Failed after creating secret: %v", err)
+			}	
 			return nil
 		}
 		l.Error(
