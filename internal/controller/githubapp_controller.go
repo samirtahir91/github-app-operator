@@ -120,6 +120,12 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 		// Error other than NotFound, return error
 		return err
 	}
+	// Check if there are additional keys in the existing secret's data besides accessToken
+	for key := range accessTokenSecret.StringData {
+		if key != "accessToken" {
+			return r.generateOrUpdateAccessToken(ctx, githubApp)
+		}
+	}
 
 	// Check if the accessToken field exists and is not empty
 	var accessToken string
@@ -131,18 +137,6 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 		return r.generateOrUpdateAccessToken(ctx, githubApp)
 	}
 
-	// Clear existing data and set new access token data
-	existingSecret := &corev1.Secret{}
-	for k := range existingSecret.Data {
-		delete(existingSecret.Data, k)
-	}
-	existingSecret.StringData = map[string]string{
-		"accessToken": accessToken,
-	}
-	if err := r.Update(ctx, existingSecret); err != nil {
-		return fmt.Errorf("Failed to update existing Secret: %v", err)
-	}
-	
 	// Access token exists, calculate the duration until expiry
 	durationUntilExpiry := expiresAt.Sub(time.Now())
 
