@@ -76,7 +76,8 @@ You can pull the helm chart from this repos packages
     helm pull oci://ghcr.io/samirtahir91/github-app-operator/helm-charts/github-app-operator --version <TAG>
     ```
 - Untar the chart and edit the `values.yaml` as required.
--   You can use the latest public image on DockerHub - `samirtahir91076/github-app-operator:main`
+- You can use the latest public image on DockerHub - `samirtahir91076/github-app-operator:latest`
+  - See [tags](https://hub.docker.com/r/samirtahir91076/github-app-operator/tags) 
 - Deploy the chart with Helm.
 
 ### To Deploy on the cluster (from source and with Kustomize)
