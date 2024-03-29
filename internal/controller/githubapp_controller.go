@@ -31,11 +31,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/builder"   // Required for Watching
-	"sigs.k8s.io/controller-runtime/pkg/event"     // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
 )
 
@@ -97,7 +97,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // Function to check expiry and update access token
 func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
-	
+
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
@@ -303,7 +303,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			// Update the status with the new expiresAt time
 			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
 				return fmt.Errorf("Failed after creating secret: %v", err)
-			}	
+			}
 			return nil
 		}
 		l.Error(
@@ -337,7 +337,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
 		return fmt.Errorf("Failed after updating secret: %v", err)
 	}
-	
+
 	log.Log.Info("Access token updated in the existing Secret successfully")
 	return nil
 }
@@ -358,7 +358,7 @@ func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler,
 				return fmt.Errorf("Maximum retry attempts reached, failed to update GitHubApp status")
 			}
 			// Incremental sleep between attempts
-			time.Sleep(time.Duration(attempts * 2) * time.Second)
+			time.Sleep(time.Duration(attempts*2) * time.Second)
 			continue
 		}
 		// Other error, return with the error
@@ -437,7 +437,7 @@ func accessTokenSecretPredicate() predicate.Predicate {
 	}
 }
 
-/* 
+/*
 	Define a predicate function to filter events for GithubApp objects
 	Check if the status field in ObjectOld is unset
 	Check if ExpiresAt is valid in the new GithubApp
@@ -450,10 +450,10 @@ func githubAppPredicate() predicate.Predicate {
 			oldGithubApp := e.ObjectOld.(*githubappv1.GithubApp)
 			newGithubApp := e.ObjectNew.(*githubappv1.GithubApp)
 
-            if oldGithubApp.Status.ExpiresAt.IsZero() &&
-                !newGithubApp.Status.ExpiresAt.IsZero() {
-                return false
-            }
+			if oldGithubApp.Status.ExpiresAt.IsZero() &&
+				!newGithubApp.Status.ExpiresAt.IsZero() {
+				return false
+			}
 			return true
 		},
 	}
