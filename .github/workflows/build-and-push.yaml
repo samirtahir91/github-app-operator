@@ -4,9 +4,6 @@ on:
       - "main"
     tags:
       - "v*.*.*"
-  pull_request:
-    branches:
-      - "main"
 
 env:
   REGISTRY_IMAGE: samirtahir91076/github-app-operator
@@ -37,7 +34,6 @@ jobs:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
