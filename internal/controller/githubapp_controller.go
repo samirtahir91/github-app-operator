@@ -95,8 +95,6 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 // Function to check expiry and update access token
 func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
 	
-	log.Log.Info(" AT FUNCTION: checkExpiryAndUpdateAccessToken")
-
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
@@ -229,7 +227,6 @@ func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubA
 func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
 
-	log.Log.Info(" AT FUNCTION: generateOrUpdateAccessToken")
 	// Get the private key from the Secret
 	secretName := githubApp.Spec.PrivateKeySecret
 	secretNamespace := githubApp.Namespace
