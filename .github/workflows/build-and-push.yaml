@@ -1,6 +1,11 @@
 on:
   push:
     branches:
+      - "**"
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches:
       - "main"
 
 env:
@@ -30,6 +35,13 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -48,6 +60,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          provenance: mode=max
+          sbom: true
+          tags: ${{ steps.meta.outputs.tags }}
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
