@@ -250,7 +250,8 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		privateKey,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to generate access token: %v", err)
+
 	}
 
 	// Create a new Secret with the access token
@@ -301,7 +302,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			"Namespace", githubApp.Namespace,
 			"Secret", accessTokenSecret,
 		)
-		return err // Return both error and ctrl.Result{}
+		return fmt.Errorf("Failed to get access token secret: %v", err)
 	}
 
 	// Secret exists, update its data
@@ -325,7 +326,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	// Update the status with the new expiresAt time
 	githubApp.Status.ExpiresAt = expiresAt
 	if err := r.Status().Update(ctx, githubApp); err != nil {
-		return err
+		return fmt.Errorf("Failed to update GitHubApp status: %v", err)
 	}
 
 	log.Log.Info("Access token updated in the existing Secret successfully")
