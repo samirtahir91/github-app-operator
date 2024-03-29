@@ -427,14 +427,17 @@ func accessTokenSecretPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// Filter out create events
+			log.Log.Info("IGNORING SECRETE CREATE FOR ACCESS TOKEN")
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Filter on update events
+			log.Log.Info("GOT SECRETE UPDATE FOR ACCESS TOKEN")
 			return true
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			// Filter on delete events
+			log.Log.Info("GOT SECRETE DELETE FOR ACCESS TOKEN")
 			return true
 		},
 	}
