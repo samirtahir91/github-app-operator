@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-	"reflect"
 
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -489,18 +488,20 @@ func githubAppPredicate() predicate.Predicate {
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Compare the old and new objects
 			oldGithubApp := e.ObjectOld.(*githubappv1.GithubApp)
+			newGithubApp := e.ObjectNew.(*githubappv1.GithubApp)
+
 			log.Log.Info("GOT UPDATE FOR GITHUB APP")
-			// Check if the status field in ObjectOld is nil
-			if oldGithubApp.Status == nil {
-				log.Log.Info(
-					"Ignoring status update event for GithubApp",
-					"Namespace",
-					oldGithubApp.GetNamespace(),
-					"GithubApp",
-					oldGithubApp.GetName(),
-				)
-				return false
-			}
+			// Check if the status field in ObjectOld is unset
+            // Check if ExpiresAt is valid in the new GithubApp
+            if oldGithubApp.Status.ExpiresAt.IsZero() &&
+                !newGithubApp.Status.ExpiresAt.IsZero() {
+                log.Log.Info(
+                    "Ignoring status update event for GithubApp",
+                    "Namespace", newGithubApp.GetNamespace(),
+                    "GithubApp", newGithubApp.GetName(),
+                )
+                return false
+            }
 			return true
 		},
 	}
