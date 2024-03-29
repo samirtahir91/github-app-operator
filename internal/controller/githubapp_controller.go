@@ -64,7 +64,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	err := r.Get(ctx, req.NamespacedName, githubApp)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Log.Info("GithubApp resource not found. Ignoring since object must be deleted.")
+			log.Log.Info("GithubApp resource not found. Ignoring since object must be deleted.", "GithubApp", req.Name, "Namespace", req.Namespace)
 			return ctrl.Result{}, nil
 		}
 		l.Error(err, "Failed to get GithubApp")
