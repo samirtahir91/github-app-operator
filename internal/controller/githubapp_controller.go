@@ -456,7 +456,7 @@ func accessTokenSecretPredicate() predicate.Predicate {
 		CreateFunc: func(e event.CreateEvent) bool {
 			// Ignore create events for access token secrets
 			log.Log.Info("GOT CREATE FOR GITHUB APP")
-			return true
+			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Process update events for access token secrets
