@@ -34,6 +34,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	"sigs.k8s.io/controller-runtime/pkg/builder"   // Required for Watching
+	"sigs.k8s.io/controller-runtime/pkg/event"     // Required for Watching
+	"sigs.k8s.io/controller-runtime/pkg/handler"   // Required for Watching
+	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
 )
 
 // GithubAppReconciler reconciles a GithubApp object
@@ -417,6 +422,24 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
+// Define a predicate function to filter events for the access token secrets
+func accessTokenSecretPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// Filter out create events
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Filter on update events
+			return true
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			// Filter on delete events
+			return true
+		},
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Get reconcile interval from environment variable or use default value
@@ -442,6 +465,6 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch GithubApps
 		For(&githubappv1.GithubApp{}).
 		// Watch access token secrets owned by GithubApps.
-		Owns(&corev1.Secret{}).
+		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
 		Complete(r)
 }
