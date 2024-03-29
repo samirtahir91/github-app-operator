@@ -333,7 +333,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 }
 
 // Function to update GithubApp status field with retry up to 10 attempts
-func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler, githubApp *githubappv1.GithubApp, expiresAt time.Time, maxAttempts int) error {
+func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler, githubApp *githubappv1.GithubApp, expiresAt metav1.Time, maxAttempts int) error {
 	attempts := 0
 	for {
 		attempts++
