@@ -294,7 +294,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			) // Update the status with the new expiresAt time
 			githubApp.Status.ExpiresAt = expiresAt
 			if err := r.Status().Update(ctx, githubApp); err != nil {
-				return err
+				return fmt.Errorf("Failed to update GitHubApp status: %v", err)
 			}
 			return nil
 		}
