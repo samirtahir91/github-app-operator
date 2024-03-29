@@ -289,11 +289,11 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				"Secret created for access token",
 				"Namespace", githubApp.Namespace,
 				"Secret", accessTokenSecret,
-			) // Update the status with the new expiresAt time
-			githubApp.Status.ExpiresAt = expiresAt
-			if err := r.Status().Update(ctx, githubApp); err != nil {
-				return fmt.Errorf("Failed to update GitHubApp status: %v", err)
-			}
+			)
+			// Update the status with the new expiresAt time
+			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
+				return err
+			}	
 			return nil
 		}
 		l.Error(
@@ -324,13 +324,36 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 
 	// Update the status with the new expiresAt time
-	githubApp.Status.ExpiresAt = expiresAt
-	if err := r.Status().Update(ctx, githubApp); err != nil {
-		return fmt.Errorf("Failed to update GitHubApp status: %v", err)
+	if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
+		return err
 	}
-
+	
 	log.Log.Info("Access token updated in the existing Secret successfully")
 	return nil
+}
+
+// Function to update GithubApp status field with retry up to 10 attempts
+func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler, githubApp *githubappv1.GithubApp, expiresAt time.Time, maxAttempts int) error {
+	attempts := 0
+	for {
+		attempts++
+		githubApp.Status.ExpiresAt = expiresAt
+		err := r.Status().Update(ctx, githubApp)
+		if err == nil {
+			return nil // Update successful
+		}
+		if errors.IsConflict(err) {
+			// Conflict error, retry the update
+			if attempts >= maxAttempts {
+				return fmt.Errorf("Maximum retry attempts reached, failed to update GitHubApp status")
+			}
+			// Incremental sleep between attempts
+			time.Sleep(time.Duration(attempts * 2) * time.Second)
+			continue
+		}
+		// Other error, return with the error
+		return fmt.Errorf("Failed to update GitHubApp status: %v", err)
+	}
 }
 
 // function to generate new access tokenf or gh app
