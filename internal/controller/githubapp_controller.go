@@ -451,55 +451,31 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// Define a predicate function to filter events for access token secrets
+// Define a predicate function to filter create events for access token secrets
 func accessTokenSecretPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// Ignore create events for access token secrets
-			log.Log.Info("GOT CREATE FOR SECRET")
 			return false
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			// Process delete events for access token secrets
-			log.Log.Info("GOT DELETE FOR SECRET")
-			return true
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Compare the old and new objects
-			log.Log.Info("GOT UPDATE FOR SECRET")
-			return true
 		},
 	}
 }
 
-// Define a predicate function to filter events for GithubApp objects
+/* 
+	Define a predicate function to filter events for GithubApp objects
+	Check if the status field in ObjectOld is unset
+	Check if ExpiresAt is valid in the new GithubApp
+	Ignore status update event for GithubApp
+*/
 func githubAppPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			// Ignore create events for access token secrets
-			log.Log.Info("GOT CREATE FOR GITHUB APP")
-			return true
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			// Process delete events for access token secrets
-			log.Log.Info("GOT DELETE FOR GITHUB APP")
-			return true
-		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Compare the old and new objects
 			oldGithubApp := e.ObjectOld.(*githubappv1.GithubApp)
 			newGithubApp := e.ObjectNew.(*githubappv1.GithubApp)
 
-			log.Log.Info("GOT UPDATE FOR GITHUB APP")
-			// Check if the status field in ObjectOld is unset
-            // Check if ExpiresAt is valid in the new GithubApp
             if oldGithubApp.Status.ExpiresAt.IsZero() &&
                 !newGithubApp.Status.ExpiresAt.IsZero() {
-                log.Log.Info(
-                    "Ignoring status update event for GithubApp",
-                    "Namespace", newGithubApp.GetNamespace(),
-                    "GithubApp", newGithubApp.GetName(),
-                )
                 return false
             }
 			return true
