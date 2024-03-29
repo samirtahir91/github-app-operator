@@ -31,9 +31,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
 )
 
 // GithubAppReconciler reconciles a GithubApp object
@@ -94,7 +97,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // Function to check expiry and update access token
 func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
-	
+
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
@@ -116,6 +119,13 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 		}
 		// Error other than NotFound, return error
 		return err
+	}
+	// Check if there are additional keys in the existing secret's data besides accessToken
+	for key := range accessTokenSecret.Data {
+		if key != "accessToken" {
+			log.Log.Info("Removing invalid key in access token secret", "Key", key)
+			return r.generateOrUpdateAccessToken(ctx, githubApp)
+		}
 	}
 
 	// Check if the accessToken field exists and is not empty
@@ -292,8 +302,8 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			)
 			// Update the status with the new expiresAt time
 			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
-				return err
-			}	
+				return fmt.Errorf("Failed after creating secret: %v", err)
+			}
 			return nil
 		}
 		l.Error(
@@ -325,9 +335,9 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 
 	// Update the status with the new expiresAt time
 	if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
-		return err
+		return fmt.Errorf("Failed after updating secret: %v", err)
 	}
-	
+
 	log.Log.Info("Access token updated in the existing Secret successfully")
 	return nil
 }
@@ -348,7 +358,7 @@ func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler,
 				return fmt.Errorf("Maximum retry attempts reached, failed to update GitHubApp status")
 			}
 			// Incremental sleep between attempts
-			time.Sleep(time.Duration(attempts * 2) * time.Second)
+			time.Sleep(time.Duration(attempts*2) * time.Second)
 			continue
 		}
 		// Other error, return with the error
@@ -417,6 +427,38 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
+// Define a predicate function to filter create events for access token secrets
+func accessTokenSecretPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// Ignore create events for access token secrets
+			return false
+		},
+	}
+}
+
+/*
+	Define a predicate function to filter events for GithubApp objects
+	Check if the status field in ObjectOld is unset
+	Check if ExpiresAt is valid in the new GithubApp
+	Ignore status update event for GithubApp
+*/
+func githubAppPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Compare the old and new objects
+			oldGithubApp := e.ObjectOld.(*githubappv1.GithubApp)
+			newGithubApp := e.ObjectNew.(*githubappv1.GithubApp)
+
+			if oldGithubApp.Status.ExpiresAt.IsZero() &&
+				!newGithubApp.Status.ExpiresAt.IsZero() {
+				return false
+			}
+			return true
+		},
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Get reconcile interval from environment variable or use default value
@@ -440,8 +482,8 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		// Watch GithubApps
-		For(&githubappv1.GithubApp{}).
+		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, githubAppPredicate())).
 		// Watch access token secrets owned by GithubApps.
-		Owns(&corev1.Secret{}).
+		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
 		Complete(r)
 }
