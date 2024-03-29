@@ -1,0 +1,35 @@
+name: Build and Release Helm
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  helm-chart:
+    name: helm-chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: helmify
+        run: make helm
+      - name: Chart | Push
+        uses: appany/helm-oci-chart-releaser@v0.3.0
+        with:
+          name: github-app-operator
+          repository: ${{ github.repository }}/helm-charts
+          tag: ${{ github.ref_name }}
+          path: charts/github-app-operator # Default charts/{name}
+          registry: ghcr.io
+          registry_username:  ${{ github.repository_owner }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: release
+        run: gh release create ${{ github.ref_name }} --generate-notes --verify-tag
