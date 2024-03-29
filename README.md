@@ -67,7 +67,19 @@ EOF
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
 
-### To Deploy on the cluster
+### To deploy with Helm using public Docker image
+A helm chart is generated using `make helm` when a new tag is pushed, i.e a release.
+You can pull the helm chart from this repos packages
+- See the [packages page](https://github.com/samirtahir91/github-app-operator/pkgs/container/github-app-operator%2Fhelm-charts%2Fgithub-app-operator)
+- Pull with helm:
+  - ```sh
+    helm pull oci://ghcr.io/samirtahir91/github-app-operator/helm-charts/github-app-operator --version <TAG>
+    ```
+- Untar the chart and edit the `values.yaml` as required.
+-   You can use the latest public image on DockerHub - `samirtahir91076/github-app-operator:main`
+- Deploy the chart with Helm.
+
+### To Deploy on the cluster (from source and with Kustomize)
 **Build and push your image to the location specified by `IMG`:**
 
 ```sh
