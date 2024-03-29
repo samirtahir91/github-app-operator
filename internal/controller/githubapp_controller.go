@@ -448,11 +448,32 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch GithubApps
 		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, githubAppPredicate())).
 		// Watch access token secrets owned by GithubApps.
-		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
 		Complete(r)
 }
 
-// Define a predicate function to filter events for the GithubApp object
+// Define a predicate function to filter events for access token secrets
+func accessTokenSecretPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// Ignore create events for access token secrets
+			log.Log.Info("GOT CREATE FOR SECRET")
+			return false
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			// Process delete events for access token secrets
+			log.Log.Info("GOT DELETE FOR SECRET")
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Compare the old and new objects
+			log.Log.Info("GOT UPDATE FOR SECRET")
+			return true
+		},
+	}
+}
+
+// Define a predicate function to filter events for GithubApp objects
 func githubAppPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -468,14 +489,16 @@ func githubAppPredicate() predicate.Predicate {
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Compare the old and new objects
 			oldGithubApp := e.ObjectOld.(*githubappv1.GithubApp)
-			newGithubApp := e.ObjectNew.(*githubappv1.GithubApp)
 			log.Log.Info("GOT UPDATE FOR GITHUB APP")
-			log.Log.Info("GOT UPDATE FOR GITHUB APP", "oldGithubApp", oldGithubApp.Status)
-			log.Log.Info("GOT UPDATE FOR GITHUB APP", "newGithubApp", newGithubApp.Status)
-
-			// Check if only the status field has changed
-			if reflect.DeepEqual(oldGithubApp.Status, newGithubApp.Status) {
-				log.Log.Info("Ignoring update event for GithubApp because only the status field has changed.")
+			// Check if the status field in ObjectOld is nil
+			if oldGithubApp.Status == nil {
+				log.Log.Info(
+					"Ignoring status update event for GithubApp",
+					"Namespace",
+					oldGithubApp.GetNamespace(),
+					"GithubApp",
+					oldGithubApp.GetName(),
+				)
 				return false
 			}
 			return true
