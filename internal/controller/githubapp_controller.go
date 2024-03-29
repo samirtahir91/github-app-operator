@@ -445,27 +445,35 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		// Watch GithubApps
-		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
+		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, githubAppPredicate())).
 		// Watch access token secrets owned by GithubApps.
-		//Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Complete(r)
 }
 
-func accessTokenSecretPredicate() predicate.Predicate {
+// Define a predicate function to filter events for the GithubApp object
+func githubAppPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// Ignore create events for access token secrets
 			log.Log.Info("GOT CREATE FOR GITHUB APP")
 			return true
 		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Process update events for access token secrets
-			log.Log.Info("GOT UPDATE FOR GITHUB APP")
-			return true
-		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			// Process delete events for access token secrets
 			log.Log.Info("GOT DELETE FOR GITHUB APP")
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Compare the old and new objects
+			oldGithubApp := e.ObjectOld.(*githubappv1.GithubApp)
+			newGithubApp := e.ObjectNew.(*githubappv1.GithubApp)
+
+			// Check if only the status field has changed
+			if reflect.DeepEqual(oldGithubApp.Status, newGithubApp.Status) {
+				log.Log.Info("Ignoring update event for GithubApp because only the status field has changed.")
+				return false
+			}
 			return true
 		},
 	}
