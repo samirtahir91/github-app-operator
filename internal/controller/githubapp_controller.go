@@ -445,8 +445,28 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		// Watch GithubApps
-		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
 		// Watch access token secrets owned by GithubApps.
 		//Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Complete(r)
+}
+
+func accessTokenSecretPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// Ignore create events for access token secrets
+			log.Log.Info("GOT CREATE FOR GITHUB APP")
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Process update events for access token secrets
+			log.Log.Info("GOT UPDATE FOR GITHUB APP")
+			return true
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			// Process delete events for access token secrets
+			log.Log.Info("GOT DELETE FOR GITHUB APP")
+			return true
+		},
+	}
 }
