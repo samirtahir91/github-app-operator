@@ -121,7 +121,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 		return err
 	}
 	// Check if there are additional keys in the existing secret's data besides accessToken
-	for key := range accessTokenSecret.StringData {
+	for key := range accessTokenSecret.Data {
 		log.Log.Info("KEY", "KEY", key)
 		if key != "accessToken" {
 			return r.generateOrUpdateAccessToken(ctx, githubApp)
