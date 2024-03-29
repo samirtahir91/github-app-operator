@@ -59,10 +59,14 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	l := log.FromContext(ctx)
 	log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 
-	// Fetch the GithubApp resource
+	// Fetch the GithubApp instance
 	githubApp := &githubappv1.GithubApp{}
 	err := r.Get(ctx, req.NamespacedName, githubApp)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Log.Info("GithubApp resource not found. Ignoring since object must be deleted.", "GithubApp", req.Name, "Namespace", req.Namespace)
+			return ctrl.Result{}, nil
+		}
 		l.Error(err, "Failed to get GithubApp")
 		return ctrl.Result{}, err
 	}
@@ -90,6 +94,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // Function to check expiry and update access token
 func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+	
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
@@ -245,7 +250,8 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		privateKey,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to generate access token: %v", err)
+
 	}
 
 	// Create a new Secret with the access token
@@ -283,11 +289,11 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				"Secret created for access token",
 				"Namespace", githubApp.Namespace,
 				"Secret", accessTokenSecret,
-			) // Update the status with the new expiresAt time
-			githubApp.Status.ExpiresAt = expiresAt
-			if err := r.Status().Update(ctx, githubApp); err != nil {
+			)
+			// Update the status with the new expiresAt time
+			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
 				return err
-			}
+			}	
 			return nil
 		}
 		l.Error(
@@ -296,7 +302,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			"Namespace", githubApp.Namespace,
 			"Secret", accessTokenSecret,
 		)
-		return err // Return both error and ctrl.Result{}
+		return fmt.Errorf("Failed to get access token secret: %v", err)
 	}
 
 	// Secret exists, update its data
@@ -318,13 +324,36 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 
 	// Update the status with the new expiresAt time
-	githubApp.Status.ExpiresAt = expiresAt
-	if err := r.Status().Update(ctx, githubApp); err != nil {
+	if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
 		return err
 	}
-
+	
 	log.Log.Info("Access token updated in the existing Secret successfully")
 	return nil
+}
+
+// Function to update GithubApp status field with retry up to 10 attempts
+func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler, githubApp *githubappv1.GithubApp, expiresAt metav1.Time, maxAttempts int) error {
+	attempts := 0
+	for {
+		attempts++
+		githubApp.Status.ExpiresAt = expiresAt
+		err := r.Status().Update(ctx, githubApp)
+		if err == nil {
+			return nil // Update successful
+		}
+		if apierrors.IsConflict(err) {
+			// Conflict error, retry the update
+			if attempts >= maxAttempts {
+				return fmt.Errorf("Maximum retry attempts reached, failed to update GitHubApp status")
+			}
+			// Incremental sleep between attempts
+			time.Sleep(time.Duration(attempts * 2) * time.Second)
+			continue
+		}
+		// Other error, return with the error
+		return fmt.Errorf("Failed to update GitHubApp status: %v", err)
+	}
 }
 
 // function to generate new access tokenf or gh app
