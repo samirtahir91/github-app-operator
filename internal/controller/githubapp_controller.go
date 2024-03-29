@@ -34,10 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
 	"sigs.k8s.io/controller-runtime/pkg/builder"   // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/event"     // Required for Watching
-	//"sigs.k8s.io/controller-runtime/pkg/handler"   // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
 )
 
@@ -133,6 +131,19 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 		return r.generateOrUpdateAccessToken(ctx, githubApp)
 	}
 
+	// Clear existing data and set new access token data
+	existingSecret := &corev1.Secret{}
+	for k := range existingSecret.Data {
+		delete(existingSecret.Data, k)
+	}
+	existingSecret.StringData = map[string]string{
+		"accessToken": accessToken,
+	}
+	if err := r.Update(ctx, existingSecret); err != nil {
+		l.Error(err, "Failed to update existing Secret")
+		return err
+	}
+	
 	// Access token exists, calculate the duration until expiry
 	durationUntilExpiry := expiresAt.Sub(time.Now())
 
@@ -422,35 +433,6 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// Get reconcile interval from environment variable or use default value
-	var err error
-	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
-	reconcileInterval, err = time.ParseDuration(reconcileIntervalStr)
-	if err != nil {
-		// Handle case where environment variable is not set or invalid
-		log.Log.Error(err, "Failed to set reconcileInterval, defaulting")
-		reconcileInterval = defaultRequeueAfter
-	}
-
-	// Get time before expiry from environment variable or use default value
-	timeBeforeExpiryStr := os.Getenv("EXPIRY_THRESHOLD")
-	timeBeforeExpiry, err = time.ParseDuration(timeBeforeExpiryStr)
-	if err != nil {
-		// Handle case where environment variable is not set or invalid
-		log.Log.Error(err, "Failed to set timeBeforeExpiry, defaulting")
-		timeBeforeExpiry = defaultTimeBeforeExpiry
-	}
-
-	return ctrl.NewControllerManagedBy(mgr).
-		// Watch GithubApps
-		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, githubAppPredicate())).
-		// Watch access token secrets owned by GithubApps.
-		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
-		Complete(r)
-}
-
 // Define a predicate function to filter create events for access token secrets
 func accessTokenSecretPredicate() predicate.Predicate {
 	return predicate.Funcs{
@@ -481,4 +463,33 @@ func githubAppPredicate() predicate.Predicate {
 			return true
 		},
 	}
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Get reconcile interval from environment variable or use default value
+	var err error
+	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
+	reconcileInterval, err = time.ParseDuration(reconcileIntervalStr)
+	if err != nil {
+		// Handle case where environment variable is not set or invalid
+		log.Log.Error(err, "Failed to set reconcileInterval, defaulting")
+		reconcileInterval = defaultRequeueAfter
+	}
+
+	// Get time before expiry from environment variable or use default value
+	timeBeforeExpiryStr := os.Getenv("EXPIRY_THRESHOLD")
+	timeBeforeExpiry, err = time.ParseDuration(timeBeforeExpiryStr)
+	if err != nil {
+		// Handle case where environment variable is not set or invalid
+		log.Log.Error(err, "Failed to set timeBeforeExpiry, defaulting")
+		timeBeforeExpiry = defaultTimeBeforeExpiry
+	}
+
+	return ctrl.NewControllerManagedBy(mgr).
+		// Watch GithubApps
+		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, githubAppPredicate())).
+		// Watch access token secrets owned by GithubApps.
+		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
+		Complete(r)
 }
