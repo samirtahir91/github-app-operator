@@ -140,8 +140,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 		"accessToken": accessToken,
 	}
 	if err := r.Update(ctx, existingSecret); err != nil {
-		l.Error(err, "Failed to update existing Secret")
-		return err
+		return fmt.Errorf("Failed to update existing Secret: %v", err)
 	}
 	
 	// Access token exists, calculate the duration until expiry
