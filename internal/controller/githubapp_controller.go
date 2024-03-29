@@ -445,7 +445,7 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		// Watch GithubApps
-		For(&githubappv1.GithubApp{}builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
+		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		// Watch access token secrets owned by GithubApps.
 		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Complete(r)
