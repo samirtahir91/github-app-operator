@@ -57,6 +57,8 @@ var (
 
 const (
 	gitUsername             = "not-used"
+	ownerKey 				= ".metadata.controller"
+
 )
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
