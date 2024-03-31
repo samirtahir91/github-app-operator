@@ -62,6 +62,11 @@ var (
 
 // Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+    // Acquire lock for the GitHubApp object
+    r.lock.Lock()
+	// Release lock
+    defer r.lock.Unlock()
+
 	l := log.FromContext(ctx)
 	log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 
@@ -450,7 +455,7 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
-// Function to bounce pods in the with matching labels if restartPods in GithubApp (in  the same namespace)
+// Function to bounce pods as per `spec.restartPods.labels` in GithubApp (in the same namespace)
 func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
 	// Check if restartPods field is defined
 	if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
