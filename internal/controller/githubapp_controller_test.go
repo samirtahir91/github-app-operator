@@ -138,7 +138,7 @@ var _ = Describe("GithubApp controller", func() {
 			}
 			accessTokenSecret := &corev1.Secret{}
 			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
-			accessTokenSecret.Data["accessToken"] = []byte(dummyAccessToken)
+			accessTokenSecret.Data["token"] = []byte(dummyAccessToken)
 			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
 
 			// Wait for the accessToken to be updated
@@ -146,7 +146,7 @@ var _ = Describe("GithubApp controller", func() {
 				updatedSecret := &corev1.Secret{}
 				err := k8sClient.Get(ctx, accessTokenSecretKey, updatedSecret)
 				Expect(err).To(Succeed())
-				return string(updatedSecret.Data["accessToken"])
+				return string(updatedSecret.Data["token"])
 			}, "60s", "5s").ShouldNot(Equal(dummyAccessToken))
 		})
 	})
