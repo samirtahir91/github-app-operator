@@ -91,6 +91,10 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Will either create the access token secret or update it
 	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
 		l.Error(err, "Failed to check expiry and update access token")
+		// Update status field 'Error' with the error message
+		if updateErr := r.updateStatusWithError(ctx, githubApp, err.Error()); updateErr != nil {
+			l.Error(updateErr, "Failed to update status field 'Error'")
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -99,6 +103,10 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	requeueResult, err := r.checkExpiryAndRequeue(ctx, githubApp, req)
 	if err != nil {
 		l.Error(err, "Failed to check expiry and requeue")
+		// Update status field 'Error' with the error message
+		if updateErr := r.updateStatusWithError(ctx, githubApp, err.Error()); updateErr != nil {
+			l.Error(updateErr, "Failed to update status field 'Error'")
+		}
 		return requeueResult, err
 	}
 
@@ -106,6 +114,19 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	l.Info("End Reconcile")
 	fmt.Println()
 	return requeueResult, nil
+}
+
+// Function to update the status field 'Error' of a GithubApp with an error message
+func (r *GithubAppReconciler) updateStatusWithError(ctx context.Context, githubApp *githubappv1.GithubApp, errMsg string) error {
+	l := log.FromContext(ctx)
+	
+	// Update the error message in the status field
+	githubApp.Status.Error = errMsg
+	if err := r.Status().Update(ctx, githubApp); err != nil {
+l		return fmt.Errorf("failed to update status field 'Error' for GithubApp: %v", err)
+	}
+
+	return nil
 }
 
 // Function to check expiry and update access token
