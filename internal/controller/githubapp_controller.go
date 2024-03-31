@@ -482,7 +482,7 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
 				"Pod marked for deletion to refresh secret",
 				"GithubApp", req.Name,
 				"Namespace", pod.Namespace,
-				"Name", pod.Name
+				"Name", pod.Name,
 			)
 		}
 	}
