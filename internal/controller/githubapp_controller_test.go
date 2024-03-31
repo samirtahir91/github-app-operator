@@ -44,8 +44,10 @@ var _ = Describe("GithubApp controller", func() {
 		installId        = 48531286
 		githubAppName    = "gh-app-test"
 		githubAppName2   = "gh-app-test-2"
+		githubAppName3   = "gh-app-test-3"
 		podName			 = "foo"
-		namespace2		 = "foo"
+		namespace2		 = "namespace2"
+		namespace3		 = "namespace3"
 	)
 
 	var privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
@@ -273,6 +275,47 @@ var _ = Describe("GithubApp controller", func() {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, pod)
 				return apierrors.IsNotFound(err) // Pod is deleted
 			}, "60s", "5s").Should(BeTrue(), "Failed to delete the pod within timeout")
+		})
+	})
+
+	Context("When reconciling a GithubApp with an error", func() {
+		It("Should reflect the error message in the status.Error field of the object", func() {
+			ctx := context.Background()
+
+			By("Creating a new namespace")
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace3,
+				},
+			}
+			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+
+			By("Creating a GithubApp wihtout creating the privateKeySecret")
+			// Create a GithubApp instance with the RestartPods field initialized
+			githubApp := githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName3,
+					Namespace: namespace3,
+				},
+				Spec: githubappv1.GithubAppSpec{
+					AppId:            appId,
+					InstallId:        installId,
+					PrivateKeySecret: privateKeySecret,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
+
+			// Check if the status.Error field gets populated with the expected error message
+			Eventually(func() bool {
+				// Retrieve the GitHubApp object
+				key := types.NamespacedName{Name: githubAppName3, Namespace: namespace3}
+				err := k8sClient.Get(ctx, key, githubApp)
+				if err != nil {
+					return false // Unable to retrieve the GitHubApp
+				}
+				// Check if the status.Error field contains the expected error message
+				return retrievedGithubApp.Status.Error == "Secret \"gh-app-key-test\" not found"
+			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
 		})
 	})
 })
