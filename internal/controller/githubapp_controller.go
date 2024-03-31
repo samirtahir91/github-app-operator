@@ -44,6 +44,7 @@ import (
 type GithubAppReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	lock sync.Mutex
 }
 
 var (
