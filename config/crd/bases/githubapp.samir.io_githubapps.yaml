@@ -62,6 +62,9 @@ spec:
           status:
             description: GithubAppStatus defines the observed state of GithubApp
             properties:
+              error:
+                description: Error field to store error messages
+                type: string
               expiresAt:
                 description: Expiry of access token
                 format: date-time

@@ -27,8 +27,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -45,9 +45,9 @@ var _ = Describe("GithubApp controller", func() {
 		githubAppName    = "gh-app-test"
 		githubAppName2   = "gh-app-test-2"
 		githubAppName3   = "gh-app-test-3"
-		podName			 = "foo"
-		namespace2		 = "namespace2"
-		namespace3		 = "namespace3"
+		podName          = "foo"
+		namespace2       = "namespace2"
+		namespace3       = "namespace3"
 	)
 
 	var privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
@@ -180,7 +180,7 @@ var _ = Describe("GithubApp controller", func() {
 
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
-			
+
 			// Delete the GitHubApp after reconciliation
 			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
 				ObjectMeta: metav1.ObjectMeta{
@@ -198,7 +198,7 @@ var _ = Describe("GithubApp controller", func() {
 				}, &githubappv1.GithubApp{})
 				return apierrors.IsNotFound(err) // GitHubApp is deleted
 			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
-   		})
+		})
 	})
 
 	Context("When reconciling a GithubApp with spec.restartPods.labels.foo as bar", func() {
@@ -265,7 +265,7 @@ var _ = Describe("GithubApp controller", func() {
 					AppId:            appId,
 					InstallId:        installId,
 					PrivateKeySecret: privateKeySecret,
-					RestartPods: restartPodsSpec,
+					RestartPods:      restartPodsSpec,
 				},
 			}
 			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())

@@ -23,8 +23,8 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"net/http"
 	"os"
-	"time"
 	"sync"
+	"time"
 
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -45,7 +45,7 @@ import (
 type GithubAppReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	lock sync.Mutex
+	lock   sync.Mutex
 }
 
 var (
@@ -56,7 +56,7 @@ var (
 )
 
 const (
-	gitUsername             = "not-used"
+	gitUsername = "not-used"
 )
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -67,10 +67,10 @@ const (
 
 // Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-    // Acquire lock for the GitHubApp object
-    r.lock.Lock()
+	// Acquire lock for the GitHubApp object
+	r.lock.Lock()
 	// Release lock
-    defer r.lock.Unlock()
+	defer r.lock.Unlock()
 
 	l := log.FromContext(ctx)
 	l.Info("Enter Reconcile")
@@ -98,10 +98,10 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	*/
 	if !githubApp.ObjectMeta.DeletionTimestamp.IsZero() {
 		l.Info("GithubApp is being deleted. Deleting managed objects.")
-        // Delete owned access token secret
-        if err := r.deleteOwnedSecrets(ctx, githubApp); err != nil {
-            return ctrl.Result{}, err
-        }
+		// Delete owned access token secret
+		if err := r.deleteOwnedSecrets(ctx, githubApp); err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
