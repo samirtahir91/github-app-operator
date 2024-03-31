@@ -50,7 +50,7 @@ var (
 	defaultTimeBeforeExpiry = 15 * time.Minute // Default time before expiry
 	reconcileInterval       time.Duration      // Requeue interval (from env var)
 	timeBeforeExpiry        time.Duration      // Expiry threshold (from env var)
-	gitUsername				= "not-used"
+	gitUsername             = "not-used"
 )
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -283,8 +283,8 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			Namespace: githubApp.Namespace,
 		},
 		StringData: map[string]string{
-			"token": accessToken,
-			"username": gitUsername, // username is ignored in github auth but required 
+			"token":    accessToken,
+			"username": gitUsername, // username is ignored in github auth but required
 		},
 	}
 	accessTokenSecretKey := client.ObjectKey{
@@ -342,7 +342,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		delete(existingSecret.Data, k)
 	}
 	existingSecret.StringData = map[string]string{
-		"token": accessToken,
+		"token":    accessToken,
 		"username": gitUsername,
 	}
 	if err := r.Update(ctx, existingSecret); err != nil {
@@ -451,51 +451,51 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 // Function to bounce pods in the with matching labels if restartPods in GithubApp (in  the same namespace)
 func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 
-    // Get the namespace of the GithubApp
-    namespace := githubApp.Namespace
+	// Get the namespace of the GithubApp
+	namespace := githubApp.Namespace
 
-    // Check if restartPods field is defined
-    if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
-        // No action needed if restartPods is not defined or no labels are specified
-        return nil
-    }
+	// Check if restartPods field is defined
+	if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
+		// No action needed if restartPods is not defined or no labels are specified
+		return nil
+	}
 
-    // Get the labels specified in restartPods
-    labels := githubApp.Spec.RestartPods.Labels
+	// Get the labels specified in restartPods
+	labels := githubApp.Spec.RestartPods.Labels
 
-    // Create a label selector from the labels
-    var labelSelectors []metav1.LabelSelectorRequirement
-    for key, value := range labels {
-        labelSelectors = append(labelSelectors, metav1.LabelSelectorRequirement{
-            Key:      key,
-            Operator: metav1.LabelSelectorOpIn,
-            Values:   []string{value},
-        })
-    }
-    labelSelector := metav1.LabelSelector{MatchExpressions: labelSelectors}
-    
+	// Create a label selector from the labels
+	var labelSelectors []metav1.LabelSelectorRequirement
+	for key, value := range labels {
+		labelSelectors = append(labelSelectors, metav1.LabelSelectorRequirement{
+			Key:      key,
+			Operator: metav1.LabelSelectorOpIn,
+			Values:   []string{value},
+		})
+	}
+	labelSelector := metav1.LabelSelector{MatchExpressions: labelSelectors}
+
 	// Check if the label selector is empty
-    if len(labelSelector.MatchLabels) == 0 {
-        // If label selector is empty, return an error indicating that no pods would be selected
-        return fmt.Errorf("label selector is empty, no pods would be selected")
-    }
+	if len(labelSelector.MatchLabels) == 0 {
+		// If label selector is empty, return an error indicating that no pods would be selected
+		return fmt.Errorf("label selector is empty, no pods would be selected")
+	}
 
-    // Get the list of pods matching the label selector in the namespace
-    podList := &corev1.PodList{}
-    if err := r.List(ctx, podList, &client.ListOptions{Namespace: namespace, LabelSelector: labelSelector}); err != nil {
-        return fmt.Errorf("failed to list pods: %v", err)
-    }
+	// Get the list of pods matching the label selector in the namespace
+	podList := &corev1.PodList{}
+	if err := r.List(ctx, podList, &client.ListOptions{Namespace: namespace, LabelSelector: labelSelector}); err != nil {
+		return fmt.Errorf("failed to list pods: %v", err)
+	}
 
-    // Restart each pod in the list
-    for _, pod := range podList.Items {
-        // Delete the pod
-        err := r.Delete(ctx, &pod)
-        if err != nil {
-            return reconcile.Result{}, fmt.Errorf("failed to delete pod: %v", err)
-        }
-    }
+	// Restart each pod in the list
+	for _, pod := range podList.Items {
+		// Delete the pod
+		err := r.Delete(ctx, &pod)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to delete pod: %v", err)
+		}
+	}
 
-    return nil
+	return nil
 }
 
 // Define a predicate function to filter create events for access token secrets
@@ -509,10 +509,10 @@ func accessTokenSecretPredicate() predicate.Predicate {
 }
 
 /*
-	Define a predicate function to filter events for GithubApp objects
-	Check if the status field in ObjectOld is unset
-	Check if ExpiresAt is valid in the new GithubApp
-	Ignore status update event for GithubApp
+Define a predicate function to filter events for GithubApp objects
+Check if the status field in ObjectOld is unset
+Check if ExpiresAt is valid in the new GithubApp
+Ignore status update event for GithubApp
 */
 func githubAppPredicate() predicate.Predicate {
 	return predicate.Funcs{
