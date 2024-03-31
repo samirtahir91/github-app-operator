@@ -76,7 +76,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Call the function to check if access token required
 	// Will either create the access token secret or update it
-	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
+	if err := r.checkExpiryAndUpdatetoken(ctx, githubApp, req); err != nil {
 		l.Error(err, "Failed to check expiry and update access token")
 		return ctrl.Result{}, err
 	}
@@ -96,46 +96,46 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 // Function to check expiry and update access token
-func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+func (r *GithubAppReconciler) checkExpiryAndUpdatetoken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
 
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
 	// If expiresAt status field is not present or expiry time has already passed, generate or renew access token
 	if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
-		return r.generateOrUpdateAccessToken(ctx, githubApp)
+		return r.generateOrUpdatetoken(ctx, githubApp)
 	}
 
 	// Check if the access token secret exists if not reconcile immediately
-	accessTokenSecretKey := client.ObjectKey{
+	tokenSecretKey := client.ObjectKey{
 		Namespace: githubApp.Namespace,
 		Name:      fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId),
 	}
-	accessTokenSecret := &corev1.Secret{}
-	if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
+	tokenSecret := &corev1.Secret{}
+	if err := r.Get(ctx, tokenSecretKey, tokenSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Secret doesn't exist, reconcile straight away
-			return r.generateOrUpdateAccessToken(ctx, githubApp)
+			return r.generateOrUpdatetoken(ctx, githubApp)
 		}
 		// Error other than NotFound, return error
 		return err
 	}
-	// Check if there are additional keys in the existing secret's data besides accessToken
-	for key := range accessTokenSecret.Data {
-		if key != "accessToken" {
+	// Check if there are additional keys in the existing secret's data besides token
+	for key := range tokenSecret.Data {
+		if key != "token" {
 			log.Log.Info("Removing invalid key in access token secret", "Key", key)
-			return r.generateOrUpdateAccessToken(ctx, githubApp)
+			return r.generateOrUpdatetoken(ctx, githubApp)
 		}
 	}
 
-	// Check if the accessToken field exists and is not empty
-	var accessToken string
-	accessToken = string(accessTokenSecret.Data["accessToken"])
+	// Check if the token field exists and is not empty
+	var token string
+	token = string(tokenSecret.Data["token"])
 
 	// Check if the access token is a valid github token via gh api auth
-	if !isAccessTokenValid(ctx, accessToken, req) {
-		// If accessToken is invalid, generate or update access token
-		return r.generateOrUpdateAccessToken(ctx, githubApp)
+	if !istokenValid(ctx, token, req) {
+		// If token is invalid, generate or update access token
+		return r.generateOrUpdatetoken(ctx, githubApp)
 	}
 
 	// Access token exists, calculate the duration until expiry
@@ -148,7 +148,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 			"GithubApp", req.Name,
 			"Namespace", req.Namespace,
 		)
-		err := r.generateOrUpdateAccessToken(ctx, githubApp)
+		err := r.generateOrUpdatetoken(ctx, githubApp)
 		return err
 	}
 
@@ -156,7 +156,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Function to check if the access token is valid by making a request to GitHub API
-func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Request) bool {
+func istokenValid(ctx context.Context, token string, req ctrl.Request) bool {
 	l := log.FromContext(ctx)
 
 	// GitHub API endpoint for rate limit information
@@ -173,7 +173,7 @@ func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Reques
 	}
 
 	// Add the access token to the request header
-	ghReq.Header.Set("Authorization", "token "+accessToken)
+	ghReq.Header.Set("Authorization", "token "+token)
 
 	// Send the request
 	resp, err := client.Do(ghReq)
@@ -234,7 +234,7 @@ func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubA
 }
 
 // Function to generate or update access token
-func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+func (r *GithubAppReconciler) generateOrUpdatetoken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
 
 	// Get the private key from the Secret
@@ -254,7 +254,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 
 	// Generate or renew access token
-	accessToken, expiresAt, err := generateAccessToken(
+	token, expiresAt, err := generatetoken(
 		githubApp.Spec.AppId,
 		githubApp.Spec.InstallId,
 		privateKey,
@@ -265,19 +265,19 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 
 	// Create a new Secret with the access token
-	accessTokenSecret := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
+	tokenSecret := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
 	newSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      accessTokenSecret,
+			Name:      tokenSecret,
 			Namespace: githubApp.Namespace,
 		},
 		StringData: map[string]string{
-			"accessToken": accessToken,
+			"token": token,
 		},
 	}
-	accessTokenSecretKey := client.ObjectKey{
+	tokenSecretKey := client.ObjectKey{
 		Namespace: githubApp.Namespace,
-		Name:      accessTokenSecret,
+		Name:      tokenSecret,
 	}
 
 	// Set owner reference to GithubApp object
@@ -288,7 +288,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 
 	// Attempt to retrieve the existing Secret
 	existingSecret := &corev1.Secret{}
-	if err := r.Get(ctx, accessTokenSecretKey, existingSecret); err != nil {
+	if err := r.Get(ctx, tokenSecretKey, existingSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Secret doesn't exist, create a new one
 			if err := r.Create(ctx, newSecret); err != nil {
@@ -298,7 +298,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			log.Log.Info(
 				"Secret created for access token",
 				"Namespace", githubApp.Namespace,
-				"Secret", accessTokenSecret,
+				"Secret", tokenSecret,
 			)
 			// Update the status with the new expiresAt time
 			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
@@ -310,7 +310,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			err,
 			"Failed to get access token secret",
 			"Namespace", githubApp.Namespace,
-			"Secret", accessTokenSecret,
+			"Secret", tokenSecret,
 		)
 		return fmt.Errorf("Failed to get access token secret: %v", err)
 	}
@@ -326,7 +326,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		delete(existingSecret.Data, k)
 	}
 	existingSecret.StringData = map[string]string{
-		"accessToken": accessToken,
+		"token": token,
 	}
 	if err := r.Update(ctx, existingSecret); err != nil {
 		l.Error(err, "Failed to update existing Secret")
@@ -367,7 +367,7 @@ func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler,
 }
 
 // function to generate new access tokenf or gh app
-func generateAccessToken(appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
+func generatetoken(appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
 	// Parse private key
 	parsedKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
 	if err != nil {
@@ -417,18 +417,18 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	}
 
 	// Extract access token and expires_at from response
-	accessToken := responseBody["token"].(string)
+	token := responseBody["token"].(string)
 	expiresAtString := responseBody["expires_at"].(string)
 	expiresAt, err := time.Parse(time.RFC3339, expiresAtString)
 	if err != nil {
 		return "", metav1.Time{}, fmt.Errorf("failed to parse expire time: %v", err)
 	}
 
-	return accessToken, metav1.NewTime(expiresAt), nil
+	return token, metav1.NewTime(expiresAt), nil
 }
 
 // Define a predicate function to filter create events for access token secrets
-func accessTokenSecretPredicate() predicate.Predicate {
+func tokenSecretPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// Ignore create events for access token secrets
@@ -484,6 +484,6 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch GithubApps
 		For(&githubappv1.GithubApp{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, githubAppPredicate())).
 		// Watch access token secrets owned by GithubApps.
-		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
+		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, tokenSecretPredicate())).
 		Complete(r)
 }
