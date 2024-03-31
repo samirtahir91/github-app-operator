@@ -211,6 +211,23 @@ var _ = Describe("GithubApp controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
+			By("Creating the privateKeySecret in namespace2")
+
+			ctx := context.Background()
+
+			// Decode base64-encoded private key
+			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
+			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
+
+			secret1Obj := corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      privateKeySecret,
+					Namespace: namespace2,
+				},
+				Data: map[string][]byte{"privateKey": []byte(decodedPrivateKey)},
+			}
+			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+
 			By("Creating a pod with the label foo: bar")
 			// Create a pod with label "foo: bar"
 			pod := &corev1.Pod{
