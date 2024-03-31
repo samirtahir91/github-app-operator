@@ -123,7 +123,7 @@ func (r *GithubAppReconciler) updateStatusWithError(ctx context.Context, githubA
 	// Update the error message in the status field
 	githubApp.Status.Error = errMsg
 	if err := r.Status().Update(ctx, githubApp); err != nil {
-l		return fmt.Errorf("failed to update status field 'Error' for GithubApp: %v", err)
+		return fmt.Errorf("failed to update status field 'Error' for GithubApp: %v", err)
 	}
 
 	return nil
