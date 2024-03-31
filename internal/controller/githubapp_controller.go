@@ -47,7 +47,7 @@ type GithubAppReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	lock sync.Mutex
-	loggingController loggingController{log: log}
+	loggingController loggingController
 }
 
 var (
