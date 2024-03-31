@@ -29,9 +29,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -461,7 +461,7 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
 	for key, value := range githubApp.Spec.RestartPods.Labels {
 		// Create a list options with label selector
 		listOptions := &client.ListOptions{
-			Namespace:    githubApp.Namespace,
+			Namespace:     githubApp.Namespace,
 			LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
 		}
 
