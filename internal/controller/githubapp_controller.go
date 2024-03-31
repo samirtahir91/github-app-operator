@@ -317,7 +317,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				return fmt.Errorf("Failed after creating secret: %v", err)
 			}
 			// Restart the pods is required
-			if err := restartPods(ctx, githubApp); err != nil {
+			if err := r.restartPods(ctx, githubApp); err != nil {
 				return fmt.Errorf("Failed to restart pods after after creating secret: %v", err)
 			}
 			return nil
@@ -355,7 +355,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		return fmt.Errorf("Failed after updating secret: %v", err)
 	}
 	// Restart the pods is required
-	if err := restartPods(ctx, githubApp); err != nil {
+	if err := r.restartPods(ctx, githubApp); err != nil {
 		return fmt.Errorf("Failed to restart pods after updating secret: %v", err)
 	}
 
