@@ -163,7 +163,6 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 	if username != "not-used" {
 		log.Log.Info(
 			"Username key is invalid, will renew",
-			"API Response code", resp.Status,
 			"GithubApp", req.Name,
 			"Namespace", req.Namespace,
 		)
