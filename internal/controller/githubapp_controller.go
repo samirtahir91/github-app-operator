@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"sync"
 
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
