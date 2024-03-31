@@ -113,7 +113,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Log and return
 	l.Info("End Reconcile")
 	fmt.Println()
-	return requeueResult, nil
+	return ctrl.Result{}, nil
 }
 
 // Function to update the status field 'Error' of a GithubApp with an error message
