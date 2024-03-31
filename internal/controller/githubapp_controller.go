@@ -450,48 +450,34 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 
 // Function to bounce pods in the with matching labels if restartPods in GithubApp (in  the same namespace)
 func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp) error {
-
-	// Get the namespace of the GithubApp
-	namespace := githubApp.Namespace
-
 	// Check if restartPods field is defined
 	if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
 		// No action needed if restartPods is not defined or no labels are specified
 		return nil
 	}
 
-	// Get the labels specified in restartPods
-	labels := githubApp.Spec.RestartPods.Labels
+	// Loop through each label specified in restartPods.labels and restart pods matching each label
+	for key, value := range githubApp.Spec.RestartPods.Labels {
+		// Create a list options with label selector
+		listOptions := &ctrl.ListOptions{
+			Namespace:    githubApp.Namespace,
+			LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
+		}
 
-	// Create a label selector from the labels
-	var labelSelectors []metav1.LabelSelectorRequirement
-	for key, value := range labels {
-		labelSelectors = append(labelSelectors, metav1.LabelSelectorRequirement{
-			Key:      key,
-			Operator: metav1.LabelSelectorOpIn,
-			Values:   []string{value},
-		})
-	}
-	labelSelector := metav1.LabelSelector{MatchExpressions: labelSelectors}
+		// List pods with the label selector
+		podList := &corev1.PodList{}
+		if err := r.List(ctx, podList, listOptions); err != nil {
+			return fmt.Errorf("failed to list pods with label %s=%s: %v", key, value, err)
+		}
 
-	// Check if the label selector is empty
-	if len(labelSelector.MatchLabels) == 0 {
-		// If label selector is empty, return an error indicating that no pods would be selected
-		return fmt.Errorf("label selector is empty, no pods would be selected")
-	}
-
-	// Get the list of pods matching the label selector in the namespace
-	podList := &corev1.PodList{}
-	if err := r.List(ctx, podList, &client.ListOptions{Namespace: namespace, LabelSelector: labelSelector}); err != nil {
-		return fmt.Errorf("failed to list pods: %v", err)
-	}
-
-	// Restart each pod in the list
-	for _, pod := range podList.Items {
-		// Delete the pod
-		err := r.Delete(ctx, &pod)
-		if err != nil {
-			return fmt.Errorf("failed to delete pod: %v", err)
+		// Restart each pod by deleting it
+		for _, pod := range podList.Items {
+			// Set deletion timestamp on the pod
+			if err := r.Delete(ctx, &pod); err != nil {
+				return fmt.Errorf("failed to delete pod %s/%s: %v", pod.Namespace, pod.Name, err)
+			}
+			// Log pod deletion
+			log.Log.Info("Pod marked for deletion", "Namespace", pod.Namespace, "Name", pod.Name)
 		}
 	}
 
