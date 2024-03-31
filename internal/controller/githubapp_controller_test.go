@@ -124,30 +124,30 @@ var _ = Describe("GithubApp controller", func() {
 		})
 	})
 
-	Context("When manually changing token secret to an invalid value", func() {
-		It("Should update the token on reconciliation", func() {
+	Context("When manually changing accessToken secret to an invalid value", func() {
+		It("Should update the accessToken on reconciliation", func() {
 			ctx := context.Background()
 
 			// Define constants for test
-			dummytoken := "dummy_access_token"
+			dummyAccessToken := "dummy_access_token"
 
-			// Edit the token to a dummy value
-			tokenSecretKey := types.NamespacedName{
+			// Edit the accessToken to a dummy value
+			accessTokenSecretKey := types.NamespacedName{
 				Namespace: sourceNamespace,
 				Name:      secretName,
 			}
-			tokenSecret := &corev1.Secret{}
-			Expect(k8sClient.Get(ctx, tokenSecretKey, tokenSecret)).To(Succeed())
-			tokenSecret.Data["token"] = []byte(dummytoken)
-			Expect(k8sClient.Update(ctx, tokenSecret)).To(Succeed())
+			accessTokenSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
+			accessTokenSecret.Data["token"] = []byte(dummyAccessToken)
+			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
 
-			// Wait for the token to be updated
+			// Wait for the accessToken to be updated
 			Eventually(func() string {
 				updatedSecret := &corev1.Secret{}
-				err := k8sClient.Get(ctx, tokenSecretKey, updatedSecret)
+				err := k8sClient.Get(ctx, accessTokenSecretKey, updatedSecret)
 				Expect(err).To(Succeed())
 				return string(updatedSecret.Data["token"])
-			}, "60s", "5s").ShouldNot(Equal(dummytoken))
+			}, "60s", "5s").ShouldNot(Equal(dummyAccessToken))
 		})
 	})
 
