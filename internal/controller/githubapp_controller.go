@@ -143,16 +143,20 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // Function to delete the access token secret owned by the GithubApp
 func (r *GithubAppReconciler) deleteOwnedSecrets(ctx context.Context, githubApp *githubappv1.GithubApp) error {
-	// Create a list of secrets with owner references pointing to the GitHubApp
-	ownedSecrets := &corev1.SecretList{}
-	if err := r.List(ctx, ownedSecrets, client.InNamespace(githubApp.Namespace), client.MatchingFields{".metadata.controller": githubApp.Name}); err != nil {
+	secrets := &corev1.SecretList{}
+	err := r.List(ctx, secrets, client.InNamespace(githubApp.Namespace))
+	if err != nil {
 		return err
 	}
 
-	// Delete each owned secret
-	for _, secret := range ownedSecrets.Items {
-		if err := r.Delete(ctx, &secret); err != nil {
-			return err
+	for _, secret := range secrets.Items {
+		for _, ownerRef := range secret.OwnerReferences {
+			if ownerRef.Kind == "GithubApp" && ownerRef.Name == githubApp.Name {
+				if err := r.Delete(ctx, &secret); err != nil {
+					return err
+				}
+				break
+			}
 		}
 	}
 
