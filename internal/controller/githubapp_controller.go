@@ -50,6 +50,7 @@ var (
 	defaultTimeBeforeExpiry = 15 * time.Minute // Default time before expiry
 	reconcileInterval       time.Duration      // Requeue interval (from env var)
 	timeBeforeExpiry        time.Duration      // Expiry threshold (from env var)
+	gitUsername				= "not-used"
 )
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -129,11 +130,11 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	}
 
 	// Check if the accessToken field exists and is not empty
-	var accessToken string
-	accessToken = string(accessTokenSecret.Data["token"])
+	accessToken := string(accessTokenSecret.Data["token"])
+	username := string(accessTokenSecret.Data["username"])
 
 	// Check if the access token is a valid github token via gh api auth
-	if !isAccessTokenValid(ctx, accessToken, req) {
+	if !isAccessTokenValid(ctx, username, accessToken, req) {
 		// If accessToken is invalid, generate or update access token
 		return r.generateOrUpdateAccessToken(ctx, githubApp)
 	}
@@ -156,8 +157,18 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Function to check if the access token is valid by making a request to GitHub API
-func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Request) bool {
+func isAccessTokenValid(ctx context.Context, username string, accessToken string, req ctrl.Request) bool {
 	l := log.FromContext(ctx)
+
+	// If username has been modified, renew the secret
+	if username != gitUsername {
+		log.Log.Info(
+			"Username key is invalid, will renew",
+			"GithubApp", req.Name,
+			"Namespace", req.Namespace,
+		)
+		return false
+	}
 
 	// GitHub API endpoint for rate limit information
 	url := "https://api.github.com/rate_limit"
@@ -273,7 +284,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		},
 		StringData: map[string]string{
 			"token": accessToken,
-			"username": "not-used", // username is ignored in github auth but required 
+			"username": gitUsername, // username is ignored in github auth but required 
 		},
 	}
 	accessTokenSecretKey := client.ObjectKey{
@@ -328,7 +339,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 	existingSecret.StringData = map[string]string{
 		"token": accessToken,
-		"username": "not-used",
+		"username": gitUsername,
 	}
 	if err := r.Update(ctx, existingSecret); err != nil {
 		l.Error(err, "Failed to update existing Secret")
