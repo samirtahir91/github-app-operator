@@ -75,7 +75,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	r.logger(ctx).V(3).Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 
 	l := log.FromContext(ctx)
-	log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+	//log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 
 	// Fetch the GithubApp instance
 	githubApp := &githubappv1.GithubApp{}
