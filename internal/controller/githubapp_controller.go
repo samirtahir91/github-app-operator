@@ -46,7 +46,6 @@ type GithubAppReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	lock sync.Mutex
-	loggingController
 }
 
 var (
@@ -70,10 +69,8 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Release lock
     defer r.lock.Unlock()
 
-	logger := log
-	logger.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 	l := log.FromContext(ctx)
-	//log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 
 	// Fetch the GithubApp instance
 	githubApp := &githubappv1.GithubApp{}
