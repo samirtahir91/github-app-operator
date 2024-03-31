@@ -55,9 +55,9 @@ var (
 	timeBeforeExpiry        time.Duration      // Expiry threshold (from env var)
 )
 
-const {
+const (
 	gitUsername             = "not-used"
-}
+)
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps/status,verbs=get;update;patch
