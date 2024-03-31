@@ -55,7 +55,7 @@ var (
 	timeBeforeExpiry        time.Duration      // Expiry threshold (from env var)
 )
 
-cost {
+const {
 	gitUsername             = "not-used"
 }
 
