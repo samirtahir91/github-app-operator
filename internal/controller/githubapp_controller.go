@@ -57,8 +57,6 @@ var (
 
 const (
 	gitUsername             = "not-used"
-	ownerKey 				= ".metadata.controller"
-
 )
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -147,7 +145,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *GithubAppReconciler) deleteOwnedSecrets(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	// Create a list of secrets with owner references pointing to the GitHubApp
 	ownedSecrets := &corev1.SecretList{}
-	if err := r.List(ctx, ownedSecrets, client.InNamespace(githubApp.Namespace), client.MatchingFields{ownerKey: githubApp.Name}); err != nil {
+	if err := r.List(ctx, ownedSecrets, client.InNamespace(githubApp.Namespace), client.MatchingFields{".metadata.controller": githubApp.Name}); err != nil {
 		return err
 	}
 
