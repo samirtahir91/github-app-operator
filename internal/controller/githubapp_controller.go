@@ -118,8 +118,6 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // Function to update the status field 'Error' of a GithubApp with an error message
 func (r *GithubAppReconciler) updateStatusWithError(ctx context.Context, githubApp *githubappv1.GithubApp, errMsg string) error {
-	l := log.FromContext(ctx)
-	
 	// Update the error message in the status field
 	githubApp.Status.Error = errMsg
 	if err := r.Status().Update(ctx, githubApp); err != nil {
