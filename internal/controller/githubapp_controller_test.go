@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -42,6 +43,11 @@ var _ = Describe("GithubApp controller", func() {
 		appId            = 857468
 		installId        = 48531286
 		githubAppName    = "gh-app-test"
+		githubAppName2   = "gh-app-test-2"
+		githubAppName3   = "gh-app-test-3"
+		podName          = "foo"
+		namespace2       = "namespace2"
+		namespace3       = "namespace3"
 	)
 
 	var privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
@@ -174,6 +180,143 @@ var _ = Describe("GithubApp controller", func() {
 
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
+
+			// Delete the GitHubApp after reconciliation
+			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName,
+					Namespace: sourceNamespace,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
+			// Wait for the GitHubApp to be deleted
+			Eventually(func() bool {
+				// Check if the GitHubApp still exists
+				err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: sourceNamespace,
+					Name:      githubAppName,
+				}, &githubappv1.GithubApp{})
+				return apierrors.IsNotFound(err) // GitHubApp is deleted
+			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
+		})
+	})
+
+	Context("When reconciling a GithubApp with spec.restartPods.labels.foo as bar", func() {
+		It("Should eventually delete the pod with the matching label foo: bar", func() {
+			ctx := context.Background()
+
+			By("Creating a new namespace")
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace2,
+				},
+			}
+			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+
+			By("Creating the privateKeySecret in namespace2")
+			// Decode base64-encoded private key
+			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
+			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
+
+			secret1Obj := corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      privateKeySecret,
+					Namespace: namespace2,
+				},
+				Data: map[string][]byte{"privateKey": []byte(decodedPrivateKey)},
+			}
+			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+
+			By("Creating a pod with the label foo: bar")
+			// Create a pod with label "foo: bar"
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: podName,
+					Namespace:    namespace2,
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  podName,
+							Image: "busybox",
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
+
+			By("Creating a GithubApp with the spec.restartPods.labels foo: bar")
+			// Create a RestartPodsSpec instance
+			restartPodsSpec := &githubappv1.RestartPodsSpec{
+				Labels: map[string]string{
+					"foo": "bar",
+				},
+			}
+			// Create a GithubApp instance with the RestartPods field initialized
+			githubApp := githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName2,
+					Namespace: namespace2,
+				},
+				Spec: githubappv1.GithubAppSpec{
+					AppId:            appId,
+					InstallId:        installId,
+					PrivateKeySecret: privateKeySecret,
+					RestartPods:      restartPodsSpec,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
+
+			// Wait for the pod to be deleted by the reconcile loop
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, pod)
+				return apierrors.IsNotFound(err) // Pod is deleted
+			}, "60s", "5s").Should(BeTrue(), "Failed to delete the pod within timeout")
+		})
+	})
+
+	Context("When reconciling a GithubApp with an error", func() {
+		It("Should reflect the error message in the status.Error field of the object", func() {
+			ctx := context.Background()
+
+			By("Creating a new namespace")
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace3,
+				},
+			}
+			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+
+			By("Creating a GithubApp wihtout creating the privateKeySecret")
+			// Create a GithubApp instance with the RestartPods field initialized
+			githubApp := githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName3,
+					Namespace: namespace3,
+				},
+				Spec: githubappv1.GithubAppSpec{
+					AppId:            appId,
+					InstallId:        installId,
+					PrivateKeySecret: privateKeySecret,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
+
+			// Check if the status.Error field gets populated with the expected error message
+			Eventually(func() bool {
+				// Retrieve the GitHubApp object
+				key := types.NamespacedName{Name: githubAppName3, Namespace: namespace3}
+				retrievedGithubApp := &githubappv1.GithubApp{}
+				err := k8sClient.Get(ctx, key, retrievedGithubApp)
+				if err != nil {
+					return false // Unable to retrieve the GitHubApp
+				}
+				// Check if the status.Error field contains the expected error message
+				return retrievedGithubApp.Status.Error == "Secret \"gh-app-key-test\" not found"
+			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
 		})
 	})
 })

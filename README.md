@@ -19,6 +19,7 @@ Key features:
     - The access token secret does not exist or does not have a `status.expiresAt` value
 - Periodically the operator will check the expiry time of the access token and reconcile a new access token if the threshold is met or if the access token is invalid (checks against GitHub API).
 - It stores the expiry time of the access token in the `status.expiresAt` field of the `GithubApp` object.
+- If any errors are recieved during a reconcile they are set in the `status.error` field of the `GithubApp` object.
 - It will skip requesting a new access token if the expiry threshold is not reached/exceeded.
 - You can override the check interval and expiry threshold using the deployment env vars:
   - `CHECK_INTERVAL` - i.e. to check every 5 mins set the value to `5m`

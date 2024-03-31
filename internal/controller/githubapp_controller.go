@@ -23,6 +23,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	githubappv1 "github-app-operator/api/v1"
@@ -44,6 +45,7 @@ import (
 type GithubAppReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	lock   sync.Mutex
 }
 
 var (
@@ -51,7 +53,10 @@ var (
 	defaultTimeBeforeExpiry = 15 * time.Minute // Default time before expiry
 	reconcileInterval       time.Duration      // Requeue interval (from env var)
 	timeBeforeExpiry        time.Duration      // Expiry threshold (from env var)
-	gitUsername             = "not-used"
+)
+
+const (
+	gitUsername = "not-used"
 )
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -62,25 +67,52 @@ var (
 
 // Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// Acquire lock for the GitHubApp object
+	r.lock.Lock()
+	// Release lock
+	defer r.lock.Unlock()
+
 	l := log.FromContext(ctx)
-	log.Log.Info("Enter Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Enter Reconcile")
 
 	// Fetch the GithubApp instance
 	githubApp := &githubappv1.GithubApp{}
 	err := r.Get(ctx, req.NamespacedName, githubApp)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Log.Info("GithubApp resource not found. Ignoring since object must be deleted.", "GithubApp", req.Name, "Namespace", req.Namespace)
+			l.Info("GithubApp resource not found. Ignoring since object must be deleted.")
+			// Delete owned access token secret
+			if err := r.deleteOwnedSecrets(ctx, githubApp); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, nil
 		}
 		l.Error(err, "Failed to get GithubApp")
 		return ctrl.Result{}, err
 	}
 
+	/* Check if the GithubApp object is being deleted
+	Remove access tokensecret if being deleted
+	This should be handled by k8s garbage collection but just incase,
+	we manually delete the secret.
+	*/
+	if !githubApp.ObjectMeta.DeletionTimestamp.IsZero() {
+		l.Info("GithubApp is being deleted. Deleting managed objects.")
+		// Delete owned access token secret
+		if err := r.deleteOwnedSecrets(ctx, githubApp); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
 	// Call the function to check if access token required
 	// Will either create the access token secret or update it
 	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
 		l.Error(err, "Failed to check expiry and update access token")
+		// Update status field 'Error' with the error message
+		if updateErr := r.updateStatusWithError(ctx, githubApp, err.Error()); updateErr != nil {
+			l.Error(updateErr, "Failed to update status field 'Error'")
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -89,17 +121,63 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	requeueResult, err := r.checkExpiryAndRequeue(ctx, githubApp, req)
 	if err != nil {
 		l.Error(err, "Failed to check expiry and requeue")
+		// Update status field 'Error' with the error message
+		if updateErr := r.updateStatusWithError(ctx, githubApp, err.Error()); updateErr != nil {
+			l.Error(updateErr, "Failed to update status field 'Error'")
+		}
 		return requeueResult, err
 	}
 
+	// Clear the error field
+	githubApp.Status.Error = ""
+	if err := r.Status().Update(ctx, githubApp); err != nil {
+		l.Error(err, "Failed to clear status field 'Error' for GithubApp")
+		return ctrl.Result{}, err
+	}
+
 	// Log and return
-	log.Log.Info("End Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("End Reconcile")
 	fmt.Println()
-	return requeueResult, nil
+	return ctrl.Result{}, nil
+}
+
+// Function to delete the access token secret owned by the GithubApp
+func (r *GithubAppReconciler) deleteOwnedSecrets(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+	secrets := &corev1.SecretList{}
+	err := r.List(ctx, secrets, client.InNamespace(githubApp.Namespace))
+	if err != nil {
+		return err
+	}
+
+	for _, secret := range secrets.Items {
+		for _, ownerRef := range secret.OwnerReferences {
+			if ownerRef.Kind == "GithubApp" && ownerRef.Name == githubApp.Name {
+				if err := r.Delete(ctx, &secret); err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// Function to update the status field 'Error' of a GithubApp with an error message
+func (r *GithubAppReconciler) updateStatusWithError(ctx context.Context, githubApp *githubappv1.GithubApp, errMsg string) error {
+	// Update the error message in the status field
+	githubApp.Status.Error = errMsg
+	if err := r.Status().Update(ctx, githubApp); err != nil {
+		return fmt.Errorf("failed to update status field 'Error' for GithubApp: %v", err)
+	}
+
+	return nil
 }
 
 // Function to check expiry and update access token
 func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+
+	l := log.FromContext(ctx)
 
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
@@ -126,7 +204,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	// Check if there are additional keys in the existing secret's data besides accessToken
 	for key := range accessTokenSecret.Data {
 		if key != "token" && key != "username" {
-			log.Log.Info("Removing invalid key in access token secret", "Key", key)
+			l.Info("Removing invalid key in access token secret", "Key", key)
 			return r.generateOrUpdateAccessToken(ctx, githubApp, req)
 		}
 	}
@@ -146,10 +224,8 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If the expiry threshold met, generate or renew access token
 	if durationUntilExpiry <= timeBeforeExpiry {
-		log.Log.Info(
+		l.Info(
 			"Expiry threshold reached - renewing",
-			"GithubApp", req.Name,
-			"Namespace", req.Namespace,
 		)
 		err := r.generateOrUpdateAccessToken(ctx, githubApp, req)
 		return err
@@ -164,10 +240,8 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 
 	// If username has been modified, renew the secret
 	if username != gitUsername {
-		log.Log.Info(
+		l.Info(
 			"Username key is invalid, will renew",
-			"GithubApp", req.Name,
-			"Namespace", req.Namespace,
 		)
 		return false
 	}
@@ -199,11 +273,9 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 
 	// Check if the response status code is 200 (OK)
 	if resp.StatusCode != http.StatusOK {
-		log.Log.Info(
+		l.Info(
 			"Access token is invalid, will renew",
 			"API Response code", resp.Status,
-			"GithubApp", req.Name,
-			"Namespace", req.Namespace,
 		)
 		return false
 	}
@@ -223,26 +295,28 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 
 	// Check if remaining rate limit is greater than 0
 	if remaining <= 0 {
-		log.Log.Info("Rate limit exceeded for access token")
+		l.Info("Rate limit exceeded for access token")
 		return false
 	}
 
 	// Rate limit is valid
-	log.Log.Info("Rate limit is valid", "Remaining requests:", remaining, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Rate limit is valid", "Remaining requests:", remaining)
 	return true
 }
 
 // Fucntion to check expiry and requeue
 func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) (ctrl.Result, error) {
+	l := log.FromContext(ctx)
+
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
 	// Log the next expiry time
-	log.Log.Info("Next expiry time:", "expiresAt", expiresAt, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Next expiry time:", "expiresAt", expiresAt)
 
 	// Return result with no error and request reconciliation after x minutes
-	log.Log.Info("Expiry threshold:", "Time", timeBeforeExpiry, "GithubApp", req.Name, "Namespace", req.Namespace)
-	log.Log.Info("Requeue after:", "Time", reconcileInterval, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Expiry threshold:", "Time", timeBeforeExpiry)
+	l.Info("Requeue after:", "Time", reconcileInterval)
 	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
 }
 
@@ -309,9 +383,8 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				l.Error(err, "Failed to create Secret for access token")
 				return err
 			}
-			log.Log.Info(
+			l.Info(
 				"Secret created for access token",
-				"Namespace", githubApp.Namespace,
 				"Secret", accessTokenSecret,
 			)
 			// Update the status with the new expiresAt time
@@ -361,7 +434,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		return fmt.Errorf("Failed to restart pods after updating secret: %v", err)
 	}
 
-	log.Log.Info("Access token updated in the existing Secret successfully")
+	l.Info("Access token updated in the existing Secret successfully")
 	return nil
 }
 
@@ -450,8 +523,10 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
-// Function to bounce pods in the with matching labels if restartPods in GithubApp (in  the same namespace)
+// Function to bounce pods as per `spec.restartPods.labels` in GithubApp (in the same namespace)
 func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+	l := log.FromContext(ctx)
+
 	// Check if restartPods field is defined
 	if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
 		// No action needed if restartPods is not defined or no labels are specified
@@ -479,11 +554,9 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
 				return fmt.Errorf("failed to delete pod %s/%s: %v", pod.Namespace, pod.Name, err)
 			}
 			// Log pod deletion
-			log.Log.Info(
+			l.Info(
 				"Pod marked for deletion to refresh secret",
-				"GithubApp", req.Name,
-				"Namespace", pod.Namespace,
-				"Name", pod.Name,
+				"Pod Name", pod.Name,
 			)
 		}
 	}
@@ -502,8 +575,9 @@ func accessTokenSecretPredicate() predicate.Predicate {
 
 /*
 Define a predicate function to filter events for GithubApp objects
-Check if the status field in ObjectOld is unset
-Check if ExpiresAt is valid in the new GithubApp
+Check if the status field in ObjectOld is unset return false
+Check if ExpiresAt is valid in the new GithubApp return false
+Check if Error status field is cleared return false
 Ignore status update event for GithubApp
 */
 func githubAppPredicate() predicate.Predicate {
@@ -515,6 +589,10 @@ func githubAppPredicate() predicate.Predicate {
 
 			if oldGithubApp.Status.ExpiresAt.IsZero() &&
 				!newGithubApp.Status.ExpiresAt.IsZero() {
+				return false
+			}
+			if oldGithubApp.Status.Error != "" &&
+				newGithubApp.Status.Error == "" {
 				return false
 			}
 			return true

@@ -32,6 +32,8 @@ type GithubAppSpec struct {
 type GithubAppStatus struct {
 	// Expiry of access token
 	ExpiresAt metav1.Time `json:"expiresAt,omitempty"`
+	// Error field to store error messages
+	Error string `json:"error,omitempty"`
 }
 
 //+kubebuilder:object:root=true
