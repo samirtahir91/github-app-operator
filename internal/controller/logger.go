@@ -26,7 +26,7 @@ type contextKey string
 
 // String returns the context key and package path
 func (c contextKey) String() string {
-	return fmt.Sprintf("context key (pkg/reconcilermanager/controllers): %s", string(c))
+	return fmt.Sprintf("context key (internat/controller): %s", string(c))
 }
 
 // contextKeyLogger is used to store the current logr.Logger, with contextual
