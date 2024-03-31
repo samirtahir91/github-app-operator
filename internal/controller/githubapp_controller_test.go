@@ -177,7 +177,16 @@ var _ = Describe("GithubApp controller", func() {
 
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
-		})
+			
+			// Delete the GitHubApp after reconciliation
+			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName,
+					Namespace: sourceNamespace,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
+   		})
 	})
 
 	Context("When reconciling a GithubApp with spec.restartPods.labels.foo as bar", func() {
