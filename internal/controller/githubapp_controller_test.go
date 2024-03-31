@@ -45,6 +45,7 @@ var _ = Describe("GithubApp controller", func() {
 		githubAppName    = "gh-app-test"
 		githubAppName2   = "gh-app-test-2"
 		podName			 = "foo"
+		namespace2		 = "foo"
 	)
 
 	var privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
@@ -200,13 +201,22 @@ var _ = Describe("GithubApp controller", func() {
 
 	Context("When reconciling a GithubApp with spec.restartPods.labels.foo as bar", func() {
 		It("Should eventually delete the pod with the matching label foo: bar", func() {
-			By("Creating a pod with the label foo: bar")
 			ctx := context.Background()
+
+			By("Creating a new namespace")
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace2,
+				},
+			}
+			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+
+			By("Creating a pod with the label foo: bar")
 			// Create a pod with label "foo: bar"
 			pod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: podName,
-					Namespace:    sourceNamespace,
+					Namespace:    namespace2,
 					Labels: map[string]string{
 						"foo": "bar",
 					},
@@ -233,7 +243,7 @@ var _ = Describe("GithubApp controller", func() {
 			githubApp := githubappv1.GithubApp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      githubAppName2,
-					Namespace: sourceNamespace,
+					Namespace: namespace2,
 				},
 				Spec: githubappv1.GithubAppSpec{
 					AppId:            appId,
