@@ -491,7 +491,7 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
 		// Delete the pod
 		err := r.Delete(ctx, &pod)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to delete pod: %v", err)
+			return fmt.Errorf("failed to delete pod: %v", err)
 		}
 	}
 
