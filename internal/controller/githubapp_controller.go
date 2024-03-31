@@ -552,7 +552,7 @@ func githubAppPredicate() predicate.Predicate {
 				return false
 			}
 			if oldGithubApp.Status.Error != "" &&
-				!newGithubApp.Status.Error == "" {
+				newGithubApp.Status.Error == "" {
 				return false
 			}
 			return true
