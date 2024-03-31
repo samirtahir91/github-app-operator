@@ -48,7 +48,6 @@ type GithubAppReconciler struct {
 	Scheme *runtime.Scheme
 	lock sync.Mutex
 	loggingController
-	Log logr.Logger
 }
 
 var (
