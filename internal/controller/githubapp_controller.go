@@ -459,7 +459,7 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
 	// Loop through each label specified in restartPods.labels and restart pods matching each label
 	for key, value := range githubApp.Spec.RestartPods.Labels {
 		// Create a list options with label selector
-		listOptions := &ctrl.ListOptions{
+		listOptions := &client.ListOptions{
 			Namespace:    githubApp.Namespace,
 			LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
 		}
