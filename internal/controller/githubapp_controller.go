@@ -77,7 +77,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	err := r.Get(ctx, req.NamespacedName, githubApp)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Log.Info("GithubApp resource not found. Ignoring since object must be deleted.", "GithubApp", req.Name, "Namespace", req.Namespace)
+			l.Info("GithubApp resource not found. Ignoring since object must be deleted.", "GithubApp", req.Name, "Namespace", req.Namespace)
 			return ctrl.Result{}, nil
 		}
 		l.Error(err, "Failed to get GithubApp")
@@ -100,13 +100,15 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Log and return
-	log.Log.Info("End Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("End Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
 	fmt.Println()
 	return requeueResult, nil
 }
 
 // Function to check expiry and update access token
 func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+
+	l := log.FromContext(ctx)
 
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
@@ -133,7 +135,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	// Check if there are additional keys in the existing secret's data besides accessToken
 	for key := range accessTokenSecret.Data {
 		if key != "token" && key != "username" {
-			log.Log.Info("Removing invalid key in access token secret", "Key", key)
+			l.Info("Removing invalid key in access token secret", "Key", key)
 			return r.generateOrUpdateAccessToken(ctx, githubApp, req)
 		}
 	}
@@ -153,7 +155,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If the expiry threshold met, generate or renew access token
 	if durationUntilExpiry <= timeBeforeExpiry {
-		log.Log.Info(
+		l.Info(
 			"Expiry threshold reached - renewing",
 			"GithubApp", req.Name,
 			"Namespace", req.Namespace,
@@ -171,7 +173,7 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 
 	// If username has been modified, renew the secret
 	if username != gitUsername {
-		log.Log.Info(
+		l.Info(
 			"Username key is invalid, will renew",
 			"GithubApp", req.Name,
 			"Namespace", req.Namespace,
@@ -206,7 +208,7 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 
 	// Check if the response status code is 200 (OK)
 	if resp.StatusCode != http.StatusOK {
-		log.Log.Info(
+		l.Info(
 			"Access token is invalid, will renew",
 			"API Response code", resp.Status,
 			"GithubApp", req.Name,
@@ -230,26 +232,28 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 
 	// Check if remaining rate limit is greater than 0
 	if remaining <= 0 {
-		log.Log.Info("Rate limit exceeded for access token")
+		l.Info("Rate limit exceeded for access token")
 		return false
 	}
 
 	// Rate limit is valid
-	log.Log.Info("Rate limit is valid", "Remaining requests:", remaining, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Rate limit is valid", "Remaining requests:", remaining, "GithubApp", req.Name, "Namespace", req.Namespace)
 	return true
 }
 
 // Fucntion to check expiry and requeue
 func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) (ctrl.Result, error) {
+	l := log.FromContext(ctx)
+
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
 	// Log the next expiry time
-	log.Log.Info("Next expiry time:", "expiresAt", expiresAt, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Next expiry time:", "expiresAt", expiresAt, "GithubApp", req.Name, "Namespace", req.Namespace)
 
 	// Return result with no error and request reconciliation after x minutes
-	log.Log.Info("Expiry threshold:", "Time", timeBeforeExpiry, "GithubApp", req.Name, "Namespace", req.Namespace)
-	log.Log.Info("Requeue after:", "Time", reconcileInterval, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Expiry threshold:", "Time", timeBeforeExpiry, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Requeue after:", "Time", reconcileInterval, "GithubApp", req.Name, "Namespace", req.Namespace)
 	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
 }
 
@@ -316,7 +320,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				l.Error(err, "Failed to create Secret for access token")
 				return err
 			}
-			log.Log.Info(
+			l.Info(
 				"Secret created for access token",
 				"Namespace", githubApp.Namespace,
 				"Secret", accessTokenSecret,
@@ -368,7 +372,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		return fmt.Errorf("Failed to restart pods after updating secret: %v", err)
 	}
 
-	log.Log.Info("Access token updated in the existing Secret successfully")
+	l.Info("Access token updated in the existing Secret successfully")
 	return nil
 }
 
@@ -459,6 +463,8 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 
 // Function to bounce pods as per `spec.restartPods.labels` in GithubApp (in the same namespace)
 func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+	l := log.FromContext(ctx)
+
 	// Check if restartPods field is defined
 	if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
 		// No action needed if restartPods is not defined or no labels are specified
@@ -486,7 +492,7 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
 				return fmt.Errorf("failed to delete pod %s/%s: %v", pod.Namespace, pod.Name, err)
 			}
 			// Log pod deletion
-			log.Log.Info(
+			l.Info(
 				"Pod marked for deletion to refresh secret",
 				"GithubApp", req.Name,
 				"Namespace", pod.Namespace,
