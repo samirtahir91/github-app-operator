@@ -81,6 +81,10 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			l.Info("GithubApp resource not found. Ignoring since object must be deleted.")
+			// Delete owned access token secret
+			if err := r.deleteOwnedSecrets(githubApp); err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, nil
 		}
 		l.Error(err, "Failed to get GithubApp")
