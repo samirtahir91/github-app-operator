@@ -50,6 +50,7 @@ var (
 	defaultTimeBeforeExpiry = 15 * time.Minute // Default time before expiry
 	reconcileInterval       time.Duration      // Requeue interval (from env var)
 	timeBeforeExpiry        time.Duration      // Expiry threshold (from env var)
+	gitUsername				= "not-used"
 )
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -160,7 +161,7 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 	l := log.FromContext(ctx)
 
 	// If username has been modified, renew the secret
-	if username != "not-used" {
+	if username != gitUsername {
 		log.Log.Info(
 			"Username key is invalid, will renew",
 			"GithubApp", req.Name,
@@ -283,7 +284,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		},
 		StringData: map[string]string{
 			"token": accessToken,
-			"username": "not-used", // username is ignored in github auth but required 
+			"username": gitUsername, // username is ignored in github auth but required 
 		},
 	}
 	accessTokenSecretKey := client.ObjectKey{
@@ -338,7 +339,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 	existingSecret.StringData = map[string]string{
 		"token": accessToken,
-		"username": "not-used",
+		"username": gitUsername,
 	}
 	if err := r.Update(ctx, existingSecret); err != nil {
 		l.Error(err, "Failed to update existing Secret")
