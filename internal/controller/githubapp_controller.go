@@ -77,7 +77,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	err := r.Get(ctx, req.NamespacedName, githubApp)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			l.Info("GithubApp resource not found. Ignoring since object must be deleted.", "GithubApp", req.Name, "Namespace", req.Namespace)
+			l.Info("GithubApp resource not found. Ignoring since object must be deleted.")
 			return ctrl.Result{}, nil
 		}
 		l.Error(err, "Failed to get GithubApp")
@@ -100,7 +100,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Log and return
-	l.Info("End Reconcile", "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("End Reconcile")
 	fmt.Println()
 	return requeueResult, nil
 }
@@ -157,8 +157,6 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	if durationUntilExpiry <= timeBeforeExpiry {
 		l.Info(
 			"Expiry threshold reached - renewing",
-			"GithubApp", req.Name,
-			"Namespace", req.Namespace,
 		)
 		err := r.generateOrUpdateAccessToken(ctx, githubApp, req)
 		return err
@@ -175,8 +173,6 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 	if username != gitUsername {
 		l.Info(
 			"Username key is invalid, will renew",
-			"GithubApp", req.Name,
-			"Namespace", req.Namespace,
 		)
 		return false
 	}
@@ -211,8 +207,6 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 		l.Info(
 			"Access token is invalid, will renew",
 			"API Response code", resp.Status,
-			"GithubApp", req.Name,
-			"Namespace", req.Namespace,
 		)
 		return false
 	}
@@ -237,7 +231,7 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 	}
 
 	// Rate limit is valid
-	l.Info("Rate limit is valid", "Remaining requests:", remaining, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Rate limit is valid", "Remaining requests:", remaining)
 	return true
 }
 
@@ -249,11 +243,11 @@ func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubA
 	expiresAt := githubApp.Status.ExpiresAt.Time
 
 	// Log the next expiry time
-	l.Info("Next expiry time:", "expiresAt", expiresAt, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Next expiry time:", "expiresAt", expiresAt)
 
 	// Return result with no error and request reconciliation after x minutes
-	l.Info("Expiry threshold:", "Time", timeBeforeExpiry, "GithubApp", req.Name, "Namespace", req.Namespace)
-	l.Info("Requeue after:", "Time", reconcileInterval, "GithubApp", req.Name, "Namespace", req.Namespace)
+	l.Info("Expiry threshold:", "Time", timeBeforeExpiry)
+	l.Info("Requeue after:", "Time", reconcileInterval)
 	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
 }
 
@@ -322,7 +316,6 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			}
 			l.Info(
 				"Secret created for access token",
-				"Namespace", githubApp.Namespace,
 				"Secret", accessTokenSecret,
 			)
 			// Update the status with the new expiresAt time
@@ -494,9 +487,7 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
 			// Log pod deletion
 			l.Info(
 				"Pod marked for deletion to refresh secret",
-				"GithubApp", req.Name,
-				"Namespace", pod.Namespace,
-				"Name", pod.Name,
+				"Pod Name", pod.Name,
 			)
 		}
 	}
