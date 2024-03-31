@@ -316,7 +316,7 @@ var _ = Describe("GithubApp controller", func() {
 				}
 				// Check if the status.Error field contains the expected error message
 				return retrievedGithubApp.Status.Error == "Secret \"gh-app-key-test\" not found"
-			}, time.Minute*1).Should(BeTrue(), "Failed to set status.Error field within timeout")
+			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
 		})
 	})
 })
