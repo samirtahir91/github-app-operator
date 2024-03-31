@@ -145,6 +145,10 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *GithubAppReconciler) deleteOwnedSecrets(githubApp *githubappv1.GithubApp) error {
     // Construct the name of the secret
     secretName := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
+	fmt.Println(secretName)
+	fmt.Println(secretName)
+	fmt.Println(secretName)
+	fmt.Println(secretName)
 
     // Create a new Secret object with the same namespace and name
     secret := &corev1.Secret{
