@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
@@ -50,7 +51,7 @@ var (
 	defaultTimeBeforeExpiry = 15 * time.Minute // Default time before expiry
 	reconcileInterval       time.Duration      // Requeue interval (from env var)
 	timeBeforeExpiry        time.Duration      // Expiry threshold (from env var)
-	gitUsername				= "not-used"
+	gitUsername             = "not-used"
 )
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -104,7 +105,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If expiresAt status field is not present or expiry time has already passed, generate or renew access token
 	if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
-		return r.generateOrUpdateAccessToken(ctx, githubApp)
+		return r.generateOrUpdateAccessToken(ctx, githubApp, req)
 	}
 
 	// Check if the access token secret exists if not reconcile immediately
@@ -116,7 +117,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Secret doesn't exist, reconcile straight away
-			return r.generateOrUpdateAccessToken(ctx, githubApp)
+			return r.generateOrUpdateAccessToken(ctx, githubApp, req)
 		}
 		// Error other than NotFound, return error
 		return err
@@ -125,7 +126,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	for key := range accessTokenSecret.Data {
 		if key != "token" && key != "username" {
 			log.Log.Info("Removing invalid key in access token secret", "Key", key)
-			return r.generateOrUpdateAccessToken(ctx, githubApp)
+			return r.generateOrUpdateAccessToken(ctx, githubApp, req)
 		}
 	}
 
@@ -136,7 +137,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	// Check if the access token is a valid github token via gh api auth
 	if !isAccessTokenValid(ctx, username, accessToken, req) {
 		// If accessToken is invalid, generate or update access token
-		return r.generateOrUpdateAccessToken(ctx, githubApp)
+		return r.generateOrUpdateAccessToken(ctx, githubApp, req)
 	}
 
 	// Access token exists, calculate the duration until expiry
@@ -149,7 +150,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 			"GithubApp", req.Name,
 			"Namespace", req.Namespace,
 		)
-		err := r.generateOrUpdateAccessToken(ctx, githubApp)
+		err := r.generateOrUpdateAccessToken(ctx, githubApp, req)
 		return err
 	}
 
@@ -245,7 +246,7 @@ func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubA
 }
 
 // Function to generate or update access token
-func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
 	l := log.FromContext(ctx)
 
 	// Get the private key from the Secret
@@ -283,8 +284,8 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			Namespace: githubApp.Namespace,
 		},
 		StringData: map[string]string{
-			"token": accessToken,
-			"username": gitUsername, // username is ignored in github auth but required 
+			"token":    accessToken,
+			"username": gitUsername, // username is ignored in github auth but required
 		},
 	}
 	accessTokenSecretKey := client.ObjectKey{
@@ -316,6 +317,10 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
 				return fmt.Errorf("Failed after creating secret: %v", err)
 			}
+			// Restart the pods is required
+			if err := r.restartPods(ctx, githubApp, req); err != nil {
+				return fmt.Errorf("Failed to restart pods after after creating secret: %v", err)
+			}
 			return nil
 		}
 		l.Error(
@@ -338,7 +343,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		delete(existingSecret.Data, k)
 	}
 	existingSecret.StringData = map[string]string{
-		"token": accessToken,
+		"token":    accessToken,
 		"username": gitUsername,
 	}
 	if err := r.Update(ctx, existingSecret); err != nil {
@@ -349,6 +354,10 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	// Update the status with the new expiresAt time
 	if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
 		return fmt.Errorf("Failed after updating secret: %v", err)
+	}
+	// Restart the pods is required
+	if err := r.restartPods(ctx, githubApp, req); err != nil {
+		return fmt.Errorf("Failed to restart pods after updating secret: %v", err)
 	}
 
 	log.Log.Info("Access token updated in the existing Secret successfully")
@@ -440,6 +449,46 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
+// Function to bounce pods in the with matching labels if restartPods in GithubApp (in  the same namespace)
+func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+	// Check if restartPods field is defined
+	if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
+		// No action needed if restartPods is not defined or no labels are specified
+		return nil
+	}
+
+	// Loop through each label specified in restartPods.labels and restart pods matching each label
+	for key, value := range githubApp.Spec.RestartPods.Labels {
+		// Create a list options with label selector
+		listOptions := &client.ListOptions{
+			Namespace:     githubApp.Namespace,
+			LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
+		}
+
+		// List pods with the label selector
+		podList := &corev1.PodList{}
+		if err := r.List(ctx, podList, listOptions); err != nil {
+			return fmt.Errorf("failed to list pods with label %s=%s: %v", key, value, err)
+		}
+
+		// Restart each pod by deleting it
+		for _, pod := range podList.Items {
+			// Set deletion timestamp on the pod
+			if err := r.Delete(ctx, &pod); err != nil {
+				return fmt.Errorf("failed to delete pod %s/%s: %v", pod.Namespace, pod.Name, err)
+			}
+			// Log pod deletion
+			log.Log.Info(
+				"Pod marked for deletion to refresh secret",
+				"GithubApp", req.Name,
+				"Namespace", pod.Namespace,
+				"Name", pod.Name,
+			)
+		}
+	}
+	return nil
+}
+
 // Define a predicate function to filter create events for access token secrets
 func accessTokenSecretPredicate() predicate.Predicate {
 	return predicate.Funcs{
@@ -451,10 +500,10 @@ func accessTokenSecretPredicate() predicate.Predicate {
 }
 
 /*
-	Define a predicate function to filter events for GithubApp objects
-	Check if the status field in ObjectOld is unset
-	Check if ExpiresAt is valid in the new GithubApp
-	Ignore status update event for GithubApp
+Define a predicate function to filter events for GithubApp objects
+Check if the status field in ObjectOld is unset
+Check if ExpiresAt is valid in the new GithubApp
+Ignore status update event for GithubApp
 */
 func githubAppPredicate() predicate.Predicate {
 	return predicate.Funcs{

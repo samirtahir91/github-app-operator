@@ -45,6 +45,15 @@ spec:
                 type: integer
               privateKeySecret:
                 type: string
+              restartPods:
+                description: RestartPodsSpec defines the specification for restarting
+                  pods
+                properties:
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                type: object
             required:
             - appId
             - installId

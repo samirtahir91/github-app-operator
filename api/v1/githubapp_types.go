@@ -22,9 +22,10 @@ import (
 
 // GithubAppSpec defines the desired state of GithubApp
 type GithubAppSpec struct {
-	AppId            int    `json:"appId"`
-	InstallId        int    `json:"installId"`
-	PrivateKeySecret string `json:"privateKeySecret"`
+	AppId            int              `json:"appId"`
+	InstallId        int              `json:"installId"`
+	PrivateKeySecret string           `json:"privateKeySecret"`
+	RestartPods      *RestartPodsSpec `json:"restartPods,omitempty"`
 }
 
 // GithubAppStatus defines the observed state of GithubApp
@@ -43,6 +44,11 @@ type GithubApp struct {
 
 	Spec   GithubAppSpec   `json:"spec,omitempty"`
 	Status GithubAppStatus `json:"status,omitempty"`
+}
+
+// RestartPodsSpec defines the specification for restarting pods
+type RestartPodsSpec struct {
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 //+kubebuilder:object:root=true
