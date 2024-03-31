@@ -143,25 +143,24 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // Function to delete the access token secret owned by the GithubApp
 func (r *GithubAppReconciler) deleteOwnedSecrets(githubApp *githubappv1.GithubApp) error {
-    // Construct the name of the secret
-    secretName := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
-	fmt.Println(secretName)
-	fmt.Println(secretName)
-	fmt.Println(secretName)
-	fmt.Println(secretName)
+    // Define label selector to select secrets owned by the GithubApp
+    selector := labels.Set{controllerutil.LabelManagedBy: githubApp.Name}
 
-    // Create a new Secret object with the same namespace and name
-    secret := &corev1.Secret{
-        ObjectMeta: metav1.ObjectMeta{
-            Namespace: githubApp.Namespace,
-            Name:      secretName,
-        },
-    }
-
-    // Delete the secret
-    err := r.Delete(context.Background(), secret)
+    // List secrets owned by the GithubApp
+    secrets := &corev1.SecretList{}
+    err := r.List(context.Background(), secrets, &client.ListOptions{
+        Namespace:     githubApp.Namespace,
+        LabelSelector: metav1.SetAsLabelSelector(selector),
+    })
     if err != nil {
         return err
+    }
+
+    // Delete each secret
+    for _, secret := range secrets.Items {
+        if err := r.Delete(context.Background(), &secret); err != nil {
+            return err
+        }
     }
 
     return nil
