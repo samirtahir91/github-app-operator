@@ -25,7 +25,6 @@ import (
 	"os"
 	"time"
 	"sync"
-	"github.com/go-logr/logr"
 
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
