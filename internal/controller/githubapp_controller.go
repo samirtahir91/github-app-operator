@@ -87,6 +87,12 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+	// Check if the GithubApp object is being deleted
+	if !githubApp.ObjectMeta.DeletionTimestamp.IsZero() {
+		l.Info("GithubApp is being deleted. Skipping reconciliation.")
+		return ctrl.Result{}, nil
+	}
+
 	// Call the function to check if access token required
 	// Will either create the access token secret or update it
 	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
