@@ -230,7 +230,7 @@ var _ = Describe("GithubApp controller", func() {
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, pod)
 				return apierrors.IsNotFound(err) // Pod is deleted
-			}, time.Minute*1).Should(BeTrue(), "Failed to delete the pod within timeout")
+			}, "60s", "5s").Should(BeTrue(), "Failed to delete the pod within timeout")
 		})
 	})
 })
