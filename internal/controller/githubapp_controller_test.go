@@ -212,7 +212,7 @@ var _ = Describe("GithubApp controller", func() {
 				},
 			}
 			// Create a GithubApp instance with the RestartPods field initialized
-			githubApp := &githubappv1.GithubApp{
+			githubApp := githubappv1.GithubApp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      githubAppName2,
 					Namespace: sourceNamespace,
