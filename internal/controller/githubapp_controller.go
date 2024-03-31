@@ -87,9 +87,17 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	// Check if the GithubApp object is being deleted
+	/* Check if the GithubApp object is being deleted
+	Remove access tokensecret if being deleted
+	This should be handled by k8s garbage collection but just incase,
+	we manually delete the secret.
+	*/
 	if !githubApp.ObjectMeta.DeletionTimestamp.IsZero() {
-		l.Info("GithubApp is being deleted. Skipping reconciliation.")
+		l.Info("GithubApp is being deleted. Deleting managed objects.")
+        // Delete owned access token secret
+        if err := r.deleteOwnedSecrets(githubApp); err != nil {
+            return ctrl.Result{}, err
+        }
 		return ctrl.Result{}, nil
 	}
 
@@ -127,6 +135,28 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	l.Info("End Reconcile")
 	fmt.Println()
 	return ctrl.Result{}, nil
+}
+
+// Function to delete the access token secret owned by the GithubApp
+func (r *GithubAppReconciler) deleteOwnedSecrets(githubApp *githubappv1.GithubApp) error {
+    // Construct the name of the secret
+    secretName := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
+
+    // Create a new Secret object with the same namespace and name
+    secret := &corev1.Secret{
+        ObjectMeta: metav1.ObjectMeta{
+            Namespace: githubApp.Namespace,
+            Name:      secretName,
+        },
+    }
+
+    // Delete the secret
+    err := r.Delete(context.Background(), secret)
+    if err != nil {
+        return err
+    }
+
+    return nil
 }
 
 // Function to update the status field 'Error' of a GithubApp with an error message
