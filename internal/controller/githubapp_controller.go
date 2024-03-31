@@ -82,7 +82,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if apierrors.IsNotFound(err) {
 			l.Info("GithubApp resource not found. Ignoring since object must be deleted.")
 			// Delete owned access token secret
-			if err := r.deleteOwnedSecrets(githubApp); err != nil {
+			if err := r.deleteOwnedSecrets(ctx, githubApp); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
@@ -99,7 +99,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if !githubApp.ObjectMeta.DeletionTimestamp.IsZero() {
 		l.Info("GithubApp is being deleted. Deleting managed objects.")
         // Delete owned access token secret
-        if err := r.deleteOwnedSecrets(githubApp); err != nil {
+        if err := r.deleteOwnedSecrets(ctx, githubApp); err != nil {
             return ctrl.Result{}, err
         }
 		return ctrl.Result{}, nil
@@ -142,28 +142,21 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 // Function to delete the access token secret owned by the GithubApp
-func (r *GithubAppReconciler) deleteOwnedSecrets(githubApp *githubappv1.GithubApp) error {
-    // Define label selector to select secrets owned by the GithubApp
-    selector := labels.Set{controllerutil.LabelManagedBy: githubApp.Name}
+func (r *GithubAppReconciler) deleteOwnedSecrets(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+	// Create a list of secrets with owner references pointing to the GitHubApp
+	ownedSecrets := &corev1.SecretList{}
+	if err := r.List(ctx, ownedSecrets, client.InNamespace(githubApp.Namespace), client.MatchingFields{ownerKey: githubApp.Name}); err != nil {
+		return err
+	}
 
-    // List secrets owned by the GithubApp
-    secrets := &corev1.SecretList{}
-    err := r.List(context.Background(), secrets, &client.ListOptions{
-        Namespace:     githubApp.Namespace,
-        LabelSelector: metav1.SetAsLabelSelector(selector),
-    })
-    if err != nil {
-        return err
-    }
+	// Delete each owned secret
+	for _, secret := range ownedSecrets.Items {
+		if err := r.Delete(ctx, &secret); err != nil {
+			return err
+		}
+	}
 
-    // Delete each secret
-    for _, secret := range secrets.Items {
-        if err := r.Delete(context.Background(), &secret); err != nil {
-            return err
-        }
-    }
-
-    return nil
+	return nil
 }
 
 // Function to update the status field 'Error' of a GithubApp with an error message
