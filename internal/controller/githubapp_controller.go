@@ -47,7 +47,8 @@ type GithubAppReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	lock sync.Mutex
-	loggingController loggingController
+	loggingController
+	Log logr.Logger
 }
 
 var (
@@ -65,7 +66,7 @@ var (
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;update;create;delete;watch;patch
 
 // Reconcile function
-func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request, log logr.Logger) (ctrl.Result, error) {
+func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
     // Acquire lock for the GitHubApp object
     r.lock.Lock()
 	// Release lock
