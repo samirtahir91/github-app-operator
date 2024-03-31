@@ -122,7 +122,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	}
 	// Check if there are additional keys in the existing secret's data besides accessToken
 	for key := range accessTokenSecret.Data {
-		if key != "token" {
+		if key != "token" && key != "username" {
 			log.Log.Info("Removing invalid key in access token secret", "Key", key)
 			return r.generateOrUpdateAccessToken(ctx, githubApp)
 		}
@@ -273,6 +273,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		},
 		StringData: map[string]string{
 			"token": accessToken,
+			"username": "not-used" // username is ignored in github auth but required 
 		},
 	}
 	accessTokenSecretKey := client.ObjectKey{
@@ -327,6 +328,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 	existingSecret.StringData = map[string]string{
 		"token": accessToken,
+		"username": "not-used",
 	}
 	if err := r.Update(ctx, existingSecret); err != nil {
 		l.Error(err, "Failed to update existing Secret")
@@ -366,7 +368,7 @@ func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler,
 	}
 }
 
-// function to generate new access tokenf or gh app
+// function to generate new access token for gh app
 func generateAccessToken(appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
 	// Parse private key
 	parsedKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
