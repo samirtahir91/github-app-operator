@@ -28,6 +28,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -42,6 +43,8 @@ var _ = Describe("GithubApp controller", func() {
 		appId            = 857468
 		installId        = 48531286
 		githubAppName    = "gh-app-test"
+		githubAppName2   = "gh-app-test-2"
+		podName			 = "foo"
 	)
 
 	var privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
@@ -174,6 +177,57 @@ var _ = Describe("GithubApp controller", func() {
 
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
+		})
+	})
+
+	Context("When reconciling a GithubApp with spec.restartPods.labels.foo as bar", func() {
+		It("Should eventually delete the pod with the matching label foo: bar", func() {
+			By("Creating a pod with the label foo: bar")
+			ctx := context.Background()
+			// Create a pod with label "foo: bar"
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: podName,
+					Namespace:    sourceNamespace,
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  podName,
+							Image: "busybox",
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
+
+			By("Creating a GithubApp with the spec.restartPods.labels foo: bar")
+			githubApp := githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName2,
+					Namespace: sourceNamespace,
+				},
+				Spec: githubappv1.GithubAppSpec{
+					AppId:            appId,
+					InstallId:        installId,
+					PrivateKeySecret: privateKeySecret,
+					RestartPods: githubappv1.RestartPodsSpec{
+						Labels: map[string]string{
+							"foo": "bar",
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
+
+			// Wait for the pod to be deleted by the reconcile loop
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, pod)
+				return apierrors.IsNotFound(err) // Pod is deleted
+			}, time.Minute*1).Should(BeTrue(), "Failed to delete the pod within timeout")
 		})
 	})
 })
