@@ -273,7 +273,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		},
 		StringData: map[string]string{
 			"token": accessToken,
-			"username": "not-used" // username is ignored in github auth but required 
+			"username": "not-used", // username is ignored in github auth but required 
 		},
 	}
 	accessTokenSecretKey := client.ObjectKey{
