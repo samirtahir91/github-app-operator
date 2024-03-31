@@ -316,6 +316,10 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
 				return fmt.Errorf("Failed after creating secret: %v", err)
 			}
+			// Restart the pods is required
+			if err := restartPods(ctx, githubApp); err != nil {
+				return fmt.Errorf("Failed to restart pods after after creating secret: %v", err)
+			}
 			return nil
 		}
 		l.Error(
@@ -349,6 +353,10 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	// Update the status with the new expiresAt time
 	if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
 		return fmt.Errorf("Failed after updating secret: %v", err)
+	}
+	// Restart the pods is required
+	if err := restartPods(ctx, githubApp); err != nil {
+		return fmt.Errorf("Failed to restart pods after updating secret: %v", err)
 	}
 
 	log.Log.Info("Access token updated in the existing Secret successfully")
@@ -438,6 +446,56 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	}
 
 	return accessToken, metav1.NewTime(expiresAt), nil
+}
+
+// Function to bounce pods in the with matching labels if restartPods in GithubApp (in  the same namespace)
+func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+
+    // Get the namespace of the GithubApp
+    namespace := githubApp.Namespace
+
+    // Check if restartPods field is defined
+    if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
+        // No action needed if restartPods is not defined or no labels are specified
+        return nil
+    }
+
+    // Get the labels specified in restartPods
+    labels := githubApp.Spec.RestartPods.Labels
+
+    // Create a label selector from the labels
+    var labelSelectors []metav1.LabelSelectorRequirement
+    for key, value := range labels {
+        labelSelectors = append(labelSelectors, metav1.LabelSelectorRequirement{
+            Key:      key,
+            Operator: metav1.LabelSelectorOpIn,
+            Values:   []string{value},
+        })
+    }
+    labelSelector := metav1.LabelSelector{MatchExpressions: labelSelectors}
+    
+	// Check if the label selector is empty
+    if len(labelSelector.MatchLabels) == 0 {
+        // If label selector is empty, return an error indicating that no pods would be selected
+        return fmt.Errorf("label selector is empty, no pods would be selected")
+    }
+
+    // Get the list of pods matching the label selector in the namespace
+    podList := &corev1.PodList{}
+    if err := r.List(ctx, podList, &client.ListOptions{Namespace: namespace, LabelSelector: labelSelector}); err != nil {
+        return fmt.Errorf("failed to list pods: %v", err)
+    }
+
+    // Restart each pod in the list
+    for _, pod := range podList.Items {
+        // Delete the pod
+        err := r.Delete(ctx, &pod)
+        if err != nil {
+            return reconcile.Result{}, fmt.Errorf("failed to delete pod: %v", err)
+        }
+    }
+
+    return nil
 }
 
 // Define a predicate function to filter create events for access token secrets
