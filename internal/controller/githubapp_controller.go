@@ -450,7 +450,7 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 }
 
 // Function to bounce pods in the with matching labels if restartPods in GithubApp (in  the same namespace)
-func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
 	// Check if restartPods field is defined
 	if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
 		// No action needed if restartPods is not defined or no labels are specified
@@ -478,10 +478,14 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
 				return fmt.Errorf("failed to delete pod %s/%s: %v", pod.Namespace, pod.Name, err)
 			}
 			// Log pod deletion
-			log.Log.Info("Pod marked for deletion", "Namespace", pod.Namespace, "Name", pod.Name)
+			log.Log.Info(
+				"Pod marked for deletion to refresh secret",
+				"GithubApp", req.Name,
+				"Namespace", pod.Namespace,
+				"Name", pod.Name
+			)
 		}
 	}
-
 	return nil
 }
 
