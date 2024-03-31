@@ -205,7 +205,14 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
 
 			By("Creating a GithubApp with the spec.restartPods.labels foo: bar")
-			githubApp := githubappv1.GithubApp{
+			// Create a RestartPodsSpec instance
+			restartPodsSpec := &githubappv1.RestartPodsSpec{
+				Labels: map[string]string{
+					"foo": "bar",
+				},
+			}
+			// Create a GithubApp instance with the RestartPods field initialized
+			githubApp := &githubappv1.GithubApp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      githubAppName2,
 					Namespace: sourceNamespace,
@@ -214,11 +221,7 @@ var _ = Describe("GithubApp controller", func() {
 					AppId:            appId,
 					InstallId:        installId,
 					PrivateKeySecret: privateKeySecret,
-					RestartPods: githubappv1.RestartPodsSpec{
-						Labels: map[string]string{
-							"foo": "bar",
-						},
-					},
+					RestartPods: restartPodsSpec,
 				},
 			}
 			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
