@@ -535,8 +535,9 @@ func accessTokenSecretPredicate() predicate.Predicate {
 
 /*
 Define a predicate function to filter events for GithubApp objects
-Check if the status field in ObjectOld is unset
-Check if ExpiresAt is valid in the new GithubApp
+Check if the status field in ObjectOld is unset return false
+Check if ExpiresAt is valid in the new GithubApp return false
+Check if Error status field is cleared return false
 Ignore status update event for GithubApp
 */
 func githubAppPredicate() predicate.Predicate {
@@ -548,6 +549,10 @@ func githubAppPredicate() predicate.Predicate {
 
 			if oldGithubApp.Status.ExpiresAt.IsZero() &&
 				!newGithubApp.Status.ExpiresAt.IsZero() {
+				return false
+			}
+			if oldGithubApp.Status.Error != "" &&
+				!newGithubApp.Status.Error == "" {
 				return false
 			}
 			return true
