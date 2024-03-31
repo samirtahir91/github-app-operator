@@ -129,11 +129,11 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	}
 
 	// Check if the accessToken field exists and is not empty
-	var accessToken string
-	accessToken = string(accessTokenSecret.Data["token"])
+	accessToken := string(accessTokenSecret.Data["token"])
+	username := string(accessTokenSecret.Data["username"])
 
 	// Check if the access token is a valid github token via gh api auth
-	if !isAccessTokenValid(ctx, accessToken, req) {
+	if !isAccessTokenValid(ctx, username, accessToken, req) {
 		// If accessToken is invalid, generate or update access token
 		return r.generateOrUpdateAccessToken(ctx, githubApp)
 	}
@@ -156,8 +156,19 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Function to check if the access token is valid by making a request to GitHub API
-func isAccessTokenValid(ctx context.Context, accessToken string, req ctrl.Request) bool {
+func isAccessTokenValid(ctx context.Context, username string, accessToken string, req ctrl.Request) bool {
 	l := log.FromContext(ctx)
+
+	// If username has been modified, renew the secret
+	if username != "not-used" {
+		log.Log.Info(
+			"Username key is invalid, will renew",
+			"API Response code", resp.Status,
+			"GithubApp", req.Name,
+			"Namespace", req.Namespace,
+		)
+		return false
+	}
 
 	// GitHub API endpoint for rate limit information
 	url := "https://api.github.com/rate_limit"
