@@ -53,8 +53,11 @@ var (
 	defaultTimeBeforeExpiry = 15 * time.Minute // Default time before expiry
 	reconcileInterval       time.Duration      // Requeue interval (from env var)
 	timeBeforeExpiry        time.Duration      // Expiry threshold (from env var)
-	gitUsername             = "not-used"
 )
+
+cost {
+	gitUsername             = "not-used"
+}
 
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps/status,verbs=get;update;patch
