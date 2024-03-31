@@ -309,13 +309,14 @@ var _ = Describe("GithubApp controller", func() {
 			Eventually(func() bool {
 				// Retrieve the GitHubApp object
 				key := types.NamespacedName{Name: githubAppName3, Namespace: namespace3}
-				err := k8sClient.Get(ctx, key, githubApp)
+				retrievedGithubApp := &githubappv1.GithubApp{}
+				err := k8sClient.Get(ctx, key, retrievedGithubApp)
 				if err != nil {
 					return false // Unable to retrieve the GitHubApp
 				}
 				// Check if the status.Error field contains the expected error message
 				return retrievedGithubApp.Status.Error == "Secret \"gh-app-key-test\" not found"
-			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
+			}, time.Minute*1).Should(BeTrue(), "Failed to set status.Error field within timeout")
 		})
 	})
 })
