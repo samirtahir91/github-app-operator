@@ -173,13 +173,6 @@ var _ = Describe("GithubApp controller", func() {
 			accessTokenSecret.Data["foo"] = []byte(dummyKeyValue)
 			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
 	
-			// Reconcile the resource to trigger the removal of the invalid key
-			request := reconcile.Request{
-				NamespacedName: accessTokenSecretKey,
-			}
-			_, err := r.Reconcile(ctx, request)
-			Expect(err).NotTo(HaveOccurred())
-	
 			// Wait for the accessToken to be updated and the "foo" key to be removed
 			Eventually(func() []byte {
 				updatedSecret := &corev1.Secret{}
