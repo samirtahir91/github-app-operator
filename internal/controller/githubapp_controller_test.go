@@ -205,6 +205,7 @@ var _ = Describe("GithubApp controller", func() {
 		It("Should update the accessToken secret and remove the invalid key on reconciliation", func() {
 			ctx := context.Background()
 	
+			By("Modifying the access token secret with an invalid key")
 			// Define constants for test
 			dummyKeyValue := "dummy_value"
 	
@@ -249,9 +250,6 @@ var _ = Describe("GithubApp controller", func() {
 			// Verify if reconciliation was successful
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
 
-			// Print the result
-			fmt.Println("Reconciliation result:", result)
-
 			// Delete the GitHubApp after reconciliation
 			deleteGitHubAppAndWait(ctx, namespace1, githubAppName)
 		})
@@ -265,11 +263,9 @@ var _ = Describe("GithubApp controller", func() {
 			createNamespace(ctx, namespace2)
 
 			By("Creating the privateKeySecret in namespace2")
-			// Create private key secret
 			createPrivateKeySecret(ctx, namespace2, "privateKey")
 
 			By("Creating a pod with the label foo: bar")
-			// Create a pod with label "foo: bar"
 			pod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: podName,
@@ -290,7 +286,6 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
 
 			By("Creating a GithubApp with the spec.restartPods.labels foo: bar")
-			// Create a RestartPodsSpec instance
 			restartPodsSpec := &githubappv1.RestartPodsSpec{
 				Labels: map[string]string{
 					"foo": "bar",
@@ -318,11 +313,9 @@ var _ = Describe("GithubApp controller", func() {
 			createNamespace(ctx, namespace4)
 
 			By("Creating the privateKeySecret in namespace4 without the 'privateKey' field")
-			// Create private key secret
 			createPrivateKeySecret(ctx, namespace4, "foo")
 
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
-			// Create a GithubApp instance
 			createGitHubAppAndWait(ctx, namespace4, githubAppName4, nil)
 
 			// Check if the status.Error field gets populated with the expected error message
@@ -351,7 +344,6 @@ var _ = Describe("GithubApp controller", func() {
 			createNamespace(ctx, namespace3)
 
 			By("Creating a GithubApp without creating the privateKeySecret")
-			// Create a GithubApp instance
 			createGitHubAppAndWait(ctx, namespace3, githubAppName3, nil)
 
 			// Check if the status.Error field gets populated with the expected error message
@@ -374,7 +366,6 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating the privateKeySecret in namespace3")
-			// Create private key secret
 			createPrivateKeySecret(ctx, namespace3, "privateKey")
 
 			// Wait for the access token Secret to be recreated
