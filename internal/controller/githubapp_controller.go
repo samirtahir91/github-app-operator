@@ -506,8 +506,6 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	if err != nil {
 		return "", metav1.Time{}, fmt.Errorf("failed to perform HTTP request: %v", err)
 	}
-	// Close connection
-	defer resp.Body.Close()
 
 	// Check error in response
 	if resp.StatusCode != http.StatusCreated {
@@ -527,6 +525,14 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	if err != nil {
 		return "", metav1.Time{}, fmt.Errorf("failed to parse expire time: %v", err)
 	}
+
+	// Close the response body to prevent resource leaks
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			// Handle error if closing the response body fails
+			l.Error(err, "error closing response body:")
+		}
+	}()
 
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
