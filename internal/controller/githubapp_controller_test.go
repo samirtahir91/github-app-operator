@@ -118,6 +118,7 @@ var _ = Describe("GithubApp controller", func() {
 		It("Should create GithubApp custom resources", func() {
 			By("Creating the privateKeySecret in the namespace1")
 			ctx := context.Background()
+			// Create private key secret
 			createPrivateKeySecret(ctx, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
@@ -263,10 +264,7 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
 			By("Creating the privateKeySecret in namespace2")
-			// Decode base64-encoded private key
-			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
-			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
-
+			// Create private key secret
 			createPrivateKeySecret(ctx, namespace2, "privateKey")
 
 			By("Creating a pod with the label foo: bar")
@@ -324,6 +322,7 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
 			By("Creating the privateKeySecret in namespace4 without the 'privateKey' field")
+			// Create private key secret
 			createPrivateKeySecret(ctx, namespace4, "foo")
 
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
@@ -384,10 +383,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating the privateKeySecret in namespace3")
-			// Decode base64-encoded private key
-			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
-			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
-
+			// Create private key secret
 			createPrivateKeySecret(ctx, namespace3, "privateKey")
 
 			// Wait for the access token Secret to be recreated
