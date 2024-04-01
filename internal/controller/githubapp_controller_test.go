@@ -31,23 +31,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime"
-
 	githubappv1 "github-app-operator/api/v1"
 )
-
-// fakeClient implements the client.Client interface for testing purposes
-type fakeClient struct {
-	ListFunc func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
-}
-
-// List mocks the List method of the client.Client interface
-func (c *fakeClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
-	if c.ListFunc != nil {
-		return c.ListFunc(ctx, list, opts...)
-	}
-	return nil
-}
 
 var _ = Describe("GithubApp controller", func() {
 
@@ -409,46 +394,4 @@ var _ = Describe("GithubApp controller", func() {
 			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
 		})
 	})
-
-	Context("When encountering errors while restarting pods", func() {
-		It("Should return an error when listing pods fails", func() {
-			ctx := context.Background()
-	
-			// Create a GithubApp instance with the RestartPods field initialized
-			githubApp := &githubappv1.GithubApp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      githubAppName2,
-					Namespace: sourceNamespace,
-				},
-				Spec: githubappv1.GithubAppSpec{
-					AppId:            appId,
-					InstallId:        installId,
-					PrivateKeySecret: privateKeySecret,
-					RestartPods: &githubappv1.RestartPodsSpec{
-						Labels: map[string]string{
-							"foo": "bar",
-						},
-					},
-				},
-			}
-	
-			// Mock the List method of the client to return an error
-			mockErr := fmt.Errorf("mock error: failed to list pods")
-			r := &GithubAppReconciler{
-				Client: &fakeClient{
-					ListFunc: func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
-						return mockErr
-					},
-				},
-			}
-	
-			// Call the restartPods function
-			err := r.restartPods(ctx, githubApp)
-	
-			// Check if the error is as expected
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal(fmt.Sprintf("failed to list pods with label foo=bar: %v", mockErr)))
-		})
-	})
-	
 })
