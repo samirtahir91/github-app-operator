@@ -637,4 +637,46 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch access token secrets owned by GithubApps.
 		Owns(&corev1.Secret{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, accessTokenSecretPredicate())).
 		Complete(r)
+
+	Context("When encountering errors while restarting pods", func() {
+		It("Should return an error when listing pods fails", func() {
+			ctx := context.Background()
+
+			// Create a GithubApp instance with the RestartPods field initialized
+			githubApp := &githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName,
+					Namespace: sourceNamespace,
+				},
+				Spec: githubappv1.GithubAppSpec{
+					AppId:            appId,
+					InstallId:        installId,
+					PrivateKeySecret: privateKeySecret,
+					RestartPods: &githubappv1.RestartPodsSpec{
+						Labels: map[string]string{
+							"foo": "bar",
+						},
+					},
+				},
+			}
+
+			// Mock the List method of the client to return an error
+			mockErr := fmt.Errorf("mock error: failed to list pods")
+			r := &GithubAppReconciler{
+				Client: &fakeClient{
+					ListFunc: func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+						return mockErr
+					},
+				},
+			}
+
+			// Call the restartPods function
+			err := r.restartPods(ctx, githubApp)
+
+			// Check if the error is as expected
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal(fmt.Sprintf("failed to list pods with label foo=bar: %v", mockErr)))
+		})
+	})
+
 }
