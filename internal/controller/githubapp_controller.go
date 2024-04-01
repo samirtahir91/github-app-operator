@@ -453,14 +453,14 @@ func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler,
 		if apierrors.IsConflict(err) {
 			// Conflict error, retry the update
 			if attempts >= maxAttempts {
-				return fmt.Errorf("Maximum retry attempts reached, failed to update GitHubApp status")
+				return fmt.Errorf("maximum retry attempts reached, failed to update GitHubApp status")
 			}
 			// Incremental sleep between attempts
 			time.Sleep(time.Duration(attempts*2) * time.Second)
 			continue
 		}
 		// Other error, return with the error
-		return fmt.Errorf("Failed to update GitHubApp status: %v", err)
+		return fmt.Errorf("failed to update GitHubApp status: %v", err)
 	}
 }
 
