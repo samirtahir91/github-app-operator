@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	//lint:ignore ST1001
+	//lint:ignore ST1001 this is boilerplate code from kubebuilder
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 )
 
