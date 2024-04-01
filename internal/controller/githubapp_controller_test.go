@@ -350,11 +350,6 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
 
 			By("Creating the privateKeySecret in namespace3 without the 'privateKey' field")
-			// Decode base64-encoded private key
-			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
-			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
-
-			// Define constants for test
 			dummyKeyValue := "dummy_value"
 			
 			secret1Obj := corev1.Secret{
