@@ -61,7 +61,7 @@ var _ = Describe("GithubApp controller", func() {
 
 	const (
 		privateKeySecret = "gh-app-key-test"
-		sourceNamespace  = "default"
+		namespace1  	 = "default"
 		appId            = 857468
 		installId        = 48531286
 		githubAppName    = "gh-app-test"
@@ -79,7 +79,7 @@ var _ = Describe("GithubApp controller", func() {
 
 	Context("When setting up the test environment", func() {
 		It("Should create GithubApp custom resources", func() {
-			By("Creating the privateKeySecret in the sourceNamespace")
+			By("Creating the privateKeySecret in the namespace1")
 
 			ctx := context.Background()
 
@@ -90,17 +90,17 @@ var _ = Describe("GithubApp controller", func() {
 			secret1Obj := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      privateKeySecret,
-					Namespace: sourceNamespace,
+					Namespace: namespace1,
 				},
 				Data: map[string][]byte{"privateKey": decodedPrivateKey},
 			}
 			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 
-			By("Creating a first GithubApp custom resource in the sourceNamespace")
+			By("Creating a first GithubApp custom resource in the namespace1")
 			githubApp := githubappv1.GithubApp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      githubAppName,
-					Namespace: sourceNamespace,
+					Namespace: namespace1,
 				},
 				Spec: githubappv1.GithubAppSpec{
 					AppId:            appId,
@@ -123,9 +123,9 @@ var _ = Describe("GithubApp controller", func() {
 
 			// Wait for the Secret to be created
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace1}, &retrievedSecret)
 				return err == nil
-			}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", sourceNamespace, secretName))
+			}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", namespace1, secretName))
 
 		})
 	})
@@ -141,16 +141,16 @@ var _ = Describe("GithubApp controller", func() {
 			err := k8sClient.Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
-					Namespace: sourceNamespace,
+					Namespace: namespace1,
 				},
 			})
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", sourceNamespace, secretName, err))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", namespace1, secretName, err))
 
 			// Wait for the Secret to be recreated
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sourceNamespace}, &retrievedSecret)
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace1}, &retrievedSecret)
 				return err == nil
-			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", sourceNamespace, secretName))
+			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", namespace1, secretName))
 		})
 	})
 
@@ -163,7 +163,7 @@ var _ = Describe("GithubApp controller", func() {
 
 			// Edit the accessToken to a dummy value
 			accessTokenSecretKey := types.NamespacedName{
-				Namespace: sourceNamespace,
+				Namespace: namespace1,
 				Name:      secretName,
 			}
 			accessTokenSecret := &corev1.Secret{}
@@ -190,7 +190,7 @@ var _ = Describe("GithubApp controller", func() {
 	
 			// Edit the accessToken to a dummy value
 			accessTokenSecretKey := types.NamespacedName{
-				Namespace: sourceNamespace,
+				Namespace: namespace1,
 				Name:      secretName,
 			}
 			accessTokenSecret := &corev1.Secret{}
@@ -221,7 +221,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Perform reconciliation for the resource
 			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Namespace: sourceNamespace,
+					Namespace: namespace1,
 					Name:      githubAppName,
 				},
 			})
@@ -233,22 +233,7 @@ var _ = Describe("GithubApp controller", func() {
 			fmt.Println("Reconciliation result:", result)
 
 			// Delete the GitHubApp after reconciliation
-			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      githubAppName,
-					Namespace: sourceNamespace,
-				},
-			})
-			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
-			// Wait for the GitHubApp to be deleted
-			Eventually(func() bool {
-				// Check if the GitHubApp still exists
-				err := k8sClient.Get(ctx, types.NamespacedName{
-					Namespace: sourceNamespace,
-					Name:      githubAppName,
-				}, &githubappv1.GithubApp{})
-				return apierrors.IsNotFound(err) // GitHubApp is deleted
-			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
+			deleteGitHubAppAndWait(ctx, namespace1, githubAppName)
 		})
 	})
 
@@ -328,22 +313,7 @@ var _ = Describe("GithubApp controller", func() {
 			}, "60s", "5s").Should(BeTrue(), "Failed to delete the pod within timeout")
 
 			// Delete the GitHubApp after reconciliation
-			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      githubAppName2,
-					Namespace: namespace2,
-				},
-			})
-			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
-			// Wait for the GitHubApp to be deleted
-			Eventually(func() bool {
-				// Check if the GitHubApp still exists
-				err := k8sClient.Get(ctx, types.NamespacedName{
-					Namespace: namespace2,
-					Name:      githubAppName2,
-				}, &githubappv1.GithubApp{})
-				return apierrors.IsNotFound(err) // GitHubApp is deleted
-			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
+			deleteGitHubAppAndWait(ctx, namespace2, githubAppName2)
 		})
 	})
 
