@@ -300,7 +300,7 @@ var _ = Describe("GithubApp controller", func() {
 				},
 			}
 			// Create a GithubApp instance with the RestartPods field initialized
-			createGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, restartPodsSpec) // With restartPods
+			createGitHubAppAndWait(ctx, namespace2, githubAppName2, restartPodsSpec) // With restartPods
 
 
 			// Wait for the pod to be deleted by the reconcile loop
