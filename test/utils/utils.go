@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
+	//lint:ignore ST1001
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 )
 
