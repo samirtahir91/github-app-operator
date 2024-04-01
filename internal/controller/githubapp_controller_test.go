@@ -36,14 +36,14 @@ import (
 
 const (
 	privateKeySecret = "gh-app-key-test"
-	namespace1  	 = "default"
 	appId            = 857468
 	installId        = 48531286
+	podName          = "foo"
 	githubAppName    = "gh-app-test"
 	githubAppName2   = "gh-app-test-2"
 	githubAppName3   = "gh-app-test-3"
 	githubAppName4   = "gh-app-test-4"
-	podName          = "foo"
+	namespace1  	 = "default"
 	namespace2       = "namespace2"
 	namespace3       = "namespace3"
 	namespace4       = "namespace4"
@@ -112,6 +112,18 @@ func createPrivateKeySecret(ctx context.Context, namespace string, key string) {
 	Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 }
 
+// Function to create a namespace
+func createNamespace(ctx context.Context, namespace string) {
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+	Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+}
+
+// Tests
 var _ = Describe("GithubApp controller", func() {
 
 	Context("When setting up the test environment", func() {
@@ -132,9 +144,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Retrieving the access token secret")
-
 			var retrievedSecret corev1.Secret
-
 			// Wait for the Secret to be created
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace1}, &retrievedSecret)
@@ -148,9 +158,7 @@ var _ = Describe("GithubApp controller", func() {
 		It("should successfully reconcile the secret again", func() {
 			By("Deleting the access token secret")
 			ctx := context.Background()
-
 			var retrievedSecret corev1.Secret
-
 			// Delete the Secret if it exists
 			err := k8sClient.Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -171,7 +179,6 @@ var _ = Describe("GithubApp controller", func() {
 	Context("When manually changing accessToken secret to an invalid value", func() {
 		It("Should update the accessToken on reconciliation", func() {
 			ctx := context.Background()
-
 			// Define constants for test
 			dummyAccessToken := "dummy_access_token"
 
@@ -256,12 +263,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
-			ns := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace2,
-				},
-			}
-			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+			createNamespace(ctx, namespace2)
 
 			By("Creating the privateKeySecret in namespace2")
 			// Create private key secret
@@ -314,12 +316,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
-			ns := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace4,
-				},
-			}
-			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+			createNamespace(ctx, namespace4)
 
 			By("Creating the privateKeySecret in namespace4 without the 'privateKey' field")
 			// Create private key secret
@@ -352,12 +349,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
-			ns := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace3,
-				},
-			}
-			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+			createNamespace(ctx, namespace3)
 
 			By("Creating a GithubApp without creating the privateKeySecret")
 			// Create a GithubApp instance
