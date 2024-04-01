@@ -240,6 +240,14 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 func isAccessTokenValid(ctx context.Context, username string, accessToken string) bool {
 	l := log.FromContext(ctx)
 
+	// Close the response body to prevent resource leaks
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			// Handle error if closing the response body fails
+			l.Error(err, "error closing response body:")
+		}
+	}()
+
 	// If username has been modified, renew the secret
 	if username != gitUsername {
 		l.Info(
@@ -257,7 +265,7 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 	// Create a new request
 	ghReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		l.Error(err, "Error creating request to GitHub API for rate limit")
+		l.Error(err, "error creating request to GitHub API for rate limit")
 		return false
 	}
 
@@ -270,8 +278,6 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 		l.Error(err, "Error sending request to GitHub API for rate limit")
 		return false
 	}
-	// close connection
-	defer resp.Body.Close()
 
 	// Check if the response status code is 200 (OK)
 	if resp.StatusCode != http.StatusOK {
