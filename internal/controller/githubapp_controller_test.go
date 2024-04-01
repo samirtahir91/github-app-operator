@@ -34,6 +34,29 @@ import (
 	githubappv1 "github-app-operator/api/v1"
 )
 
+// Function to delete a GitHubApp and wait for its deletion
+func deleteGitHubAppAndWait(ctx context.Context, namespace, name string) {
+    // Delete the GitHubApp
+    err := k8sClient.Delete(ctx, &githubappv1.GithubApp{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      name,
+            Namespace: namespace,
+        },
+    })
+    Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
+    
+    // Wait for the GitHubApp to be deleted
+    Eventually(func() bool {
+        // Check if the GitHubApp still exists
+        err := k8sClient.Get(ctx, types.NamespacedName{
+            Namespace: namespace,
+            Name:      name,
+        }, &githubappv1.GithubApp{})
+        return apierrors.IsNotFound(err) // GitHubApp is deleted
+    }, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
+}
+
+
 var _ = Describe("GithubApp controller", func() {
 
 	const (
@@ -324,7 +347,7 @@ var _ = Describe("GithubApp controller", func() {
 		})
 	})
 
-	Context("When reconciling a GithubApp with using a app secret with no privateKey field", func() {
+	Context("When reconciling a GithubApp with an app secret with no privateKey field", func() {
 		It("Should raise an error message 'privateKey not found in Secret'", func() {
 			ctx := context.Background()
 
@@ -493,6 +516,7 @@ var _ = Describe("GithubApp controller", func() {
 				}, &githubappv1.GithubApp{})
 				return apierrors.IsNotFound(err) // GitHubApp is deleted
 			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
+			deleteGitHubAppAndWait(ctx, namespace3, githubAppName3)
 		})
 	})
 })
