@@ -75,12 +75,11 @@ var _ = BeforeSuite(func() {
 			fmt.Sprintf("1.28.3-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
 
-	if osEnvErr := os.Setenv("CHECK_INTERVAL", "5s"); osEnvErr != nil {
-		return fmt.Errorf("failed to set os env var for CHECK_INTERVAL: %v", err)
-	}
-	if osEnvErr := os.Setenv("EXPIRY_THRESHOLD", "15m"); osEnvErr != nil {
-		return fmt.Errorf("failed to set os env var for EXPIRY_THRESHOLD: %v", err)
-	}
+	osEnvErr := os.Setenv("CHECK_INTERVAL", "5s")
+	Expect(osEnvErr).NotTo(HaveOccurred())
+
+	osEnvErr = os.Setenv("EXPIRY_THRESHOLD", "15m")
+	Expect(osEnvErr).NotTo(HaveOccurred())
 
 	var err error
 	// cfg is defined in this file globally.
