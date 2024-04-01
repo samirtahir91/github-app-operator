@@ -26,12 +26,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	githubappv1 "github-app-operator/api/v1"
 )
 
 const (
@@ -43,7 +43,7 @@ const (
 	githubAppName2   = "gh-app-test-2"
 	githubAppName3   = "gh-app-test-3"
 	githubAppName4   = "gh-app-test-4"
-	namespace1  	 = "default"
+	namespace1       = "default"
 	namespace2       = "namespace2"
 	namespace3       = "namespace3"
 	namespace4       = "namespace4"
@@ -56,29 +56,29 @@ var (
 
 // Function to delete a GitHubApp and wait for its deletion
 func deleteGitHubAppAndWait(ctx context.Context, namespace, name string) {
-    // Delete the GitHubApp
-    err := k8sClient.Delete(ctx, &githubappv1.GithubApp{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:      name,
-            Namespace: namespace,
-        },
-    })
-    Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
-    
-    // Wait for the GitHubApp to be deleted
-    Eventually(func() bool {
-        // Check if the GitHubApp still exists
-        err := k8sClient.Get(ctx, types.NamespacedName{
-            Namespace: namespace,
-            Name:      name,
-        }, &githubappv1.GithubApp{})
-        return apierrors.IsNotFound(err) // GitHubApp is deleted
-    }, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
+	// Delete the GitHubApp
+	err := k8sClient.Delete(ctx, &githubappv1.GithubApp{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	})
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
+
+	// Wait for the GitHubApp to be deleted
+	Eventually(func() bool {
+		// Check if the GitHubApp still exists
+		err := k8sClient.Get(ctx, types.NamespacedName{
+			Namespace: namespace,
+			Name:      name,
+		}, &githubappv1.GithubApp{})
+		return apierrors.IsNotFound(err) // GitHubApp is deleted
+	}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
 }
 
 // Function to create a GitHubApp and wait for its creation
 func createGitHubAppAndWait(ctx context.Context, namespace, name string, restartPodsSpec *githubappv1.RestartPodsSpec) {
-    // create the GitHubApp
+	// create the GitHubApp
 	githubApp := githubappv1.GithubApp{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -88,7 +88,7 @@ func createGitHubAppAndWait(ctx context.Context, namespace, name string, restart
 			AppId:            appId,
 			InstallId:        installId,
 			PrivateKeySecret: privateKeySecret,
-            RestartPods:      restartPodsSpec, // Optionally pass restartPods
+			RestartPods:      restartPodsSpec, // Optionally pass restartPods
 		},
 	}
 	Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
@@ -101,7 +101,7 @@ func createPrivateKeySecret(ctx context.Context, namespace string, key string) {
 	decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
 	Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
 
-    // create the GitHubApp
+	// create the GitHubApp
 	secret1Obj := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      privateKeySecret,
@@ -205,11 +205,11 @@ var _ = Describe("GithubApp controller", func() {
 	Context("When adding an invalid key to the accessToken secret", func() {
 		It("Should update the accessToken secret and remove the invalid key on reconciliation", func() {
 			ctx := context.Background()
-	
+
 			By("Modifying the access token secret with an invalid key")
 			// Define constants for test
 			dummyKeyValue := "dummy_value"
-	
+
 			// Edit the accessToken to a dummy value
 			accessTokenSecretKey := types.NamespacedName{
 				Namespace: namespace1,
@@ -219,7 +219,7 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
 			accessTokenSecret.Data["foo"] = []byte(dummyKeyValue)
 			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
-	
+
 			// Wait for the accessToken to be updated and the "foo" key to be removed
 			Eventually(func() []byte {
 				updatedSecret := &corev1.Secret{}
@@ -253,7 +253,7 @@ var _ = Describe("GithubApp controller", func() {
 
 			// Print the result
 			fmt.Println("Reconciliation result:", result)
-			
+
 			// Delete the GitHubApp after reconciliation
 			deleteGitHubAppAndWait(ctx, namespace1, githubAppName)
 		})

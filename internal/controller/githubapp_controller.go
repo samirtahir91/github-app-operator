@@ -122,11 +122,11 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Clear the error field if no errors
 	if githubApp.Status.Error != "" {
-	    githubApp.Status.Error = ""
-	    if err := r.Status().Update(ctx, githubApp); err != nil {
-		    l.Error(err, "failed to clear status field 'Error' for GithubApp")
-		    return ctrl.Result{}, err
-	    }
+		githubApp.Status.Error = ""
+		if err := r.Status().Update(ctx, githubApp); err != nil {
+			l.Error(err, "failed to clear status field 'Error' for GithubApp")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Log and return
@@ -305,7 +305,7 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 }
 
 // Function to check expiry and requeue
-func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result) {
+func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp) ctrl.Result {
 	l := log.FromContext(ctx)
 
 	// Get the expiresAt status field
