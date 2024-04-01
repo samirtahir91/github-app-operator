@@ -77,7 +77,7 @@ func deleteGitHubAppAndWait(ctx context.Context, namespace, name string) {
 }
 
 // Function to create a GitHubApp and wait for its creation
-func createGitHubAppAndWait(ctx context.Context, namespace, name string) {
+func createGitHubAppAndWait(ctx context.Context, namespace, name string, restartPodsSpec *githubappv1.RestartPodsSpec) {
     // create the GitHubApp
 	githubApp := githubappv1.GithubApp{
 		ObjectMeta: metav1.ObjectMeta{
@@ -88,6 +88,7 @@ func createGitHubAppAndWait(ctx context.Context, namespace, name string) {
 			AppId:            appId,
 			InstallId:        installId,
 			PrivateKeySecret: privateKeySecret,
+            RestartPods:      restartPodsSpec, // Optionally pass restartPods
 		},
 	}
 	Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
@@ -115,7 +116,7 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 
 			By("Creating a first GithubApp custom resource in the namespace1")
-			createGitHubAppAndWait(ctx, namespace1, githubAppName)
+			createGitHubAppAndWait(ctx, namespace1, githubAppName, nil)
 		})
 	})
 
@@ -299,19 +300,8 @@ var _ = Describe("GithubApp controller", func() {
 				},
 			}
 			// Create a GithubApp instance with the RestartPods field initialized
-			githubApp := githubappv1.GithubApp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      githubAppName2,
-					Namespace: namespace2,
-				},
-				Spec: githubappv1.GithubAppSpec{
-					AppId:            appId,
-					InstallId:        installId,
-					PrivateKeySecret: privateKeySecret,
-					RestartPods:      restartPodsSpec,
-				},
-			}
-			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
+			createGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, restartPodsSpec) // With restartPods
+
 
 			// Wait for the pod to be deleted by the reconcile loop
 			Eventually(func() bool {
@@ -350,7 +340,7 @@ var _ = Describe("GithubApp controller", func() {
 
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
 			// Create a GithubApp instance
-			createGitHubAppAndWait(ctx, namespace4, githubAppName4)
+			createGitHubAppAndWait(ctx, namespace4, githubAppName4, nil)
 
 			// Check if the status.Error field gets populated with the expected error message
 			Eventually(func() bool {
@@ -384,7 +374,7 @@ var _ = Describe("GithubApp controller", func() {
 
 			By("Creating a GithubApp without creating the privateKeySecret")
 			// Create a GithubApp instance
-			createGitHubAppAndWait(ctx, namespace3, githubAppName3)
+			createGitHubAppAndWait(ctx, namespace3, githubAppName3, nil)
 
 			// Check if the status.Error field gets populated with the expected error message
 			Eventually(func() bool {
