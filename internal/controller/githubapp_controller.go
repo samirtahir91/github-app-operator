@@ -394,7 +394,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				return fmt.Errorf("failed after creating secret: %v", err)
 			}
 			// Restart the pods is required
-			if err := r.restartPods(ctx, githubApp, req); err != nil {
+			if err := r.restartPods(ctx, githubApp); err != nil {
 				return fmt.Errorf("failed to restart pods after after creating secret: %v", err)
 			}
 			return nil
@@ -432,7 +432,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		return fmt.Errorf("failed after updating secret: %v", err)
 	}
 	// Restart the pods is required
-	if err := r.restartPods(ctx, githubApp, req); err != nil {
+	if err := r.restartPods(ctx, githubApp); err != nil {
 		return fmt.Errorf("failed to restart pods after updating secret: %v", err)
 	}
 
@@ -526,7 +526,7 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 }
 
 // Function to bounce pods as per `spec.restartPods.labels` in GithubApp (in the same namespace)
-func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
 
 	// Check if restartPods field is defined
