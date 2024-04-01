@@ -334,21 +334,6 @@ var _ = Describe("GithubApp controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
-			By("Creating a GithubApp wihtout creating the privateKeySecret")
-			// Create a GithubApp instance with the RestartPods field initialized
-			githubApp := githubappv1.GithubApp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      githubAppName3,
-					Namespace: namespace3,
-				},
-				Spec: githubappv1.GithubAppSpec{
-					AppId:            appId,
-					InstallId:        installId,
-					PrivateKeySecret: privateKeySecret,
-				},
-			}
-			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
-
 			By("Creating the privateKeySecret in namespace3 without the 'privateKey' field")
 			dummyKeyValue := "dummy_value"
 			
@@ -368,6 +353,20 @@ var _ = Describe("GithubApp controller", func() {
 				return err == nil
 			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not created", namespace3, secretName))
 
+			By("Creating a GithubApp wihtout creating the privateKeySecret")
+			// Create a GithubApp instance with the RestartPods field initialized
+			githubApp := githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName3,
+					Namespace: namespace3,
+				},
+				Spec: githubappv1.GithubAppSpec{
+					AppId:            appId,
+					InstallId:        installId,
+					PrivateKeySecret: privateKeySecret,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
 
 			// Check if the status.Error field gets populated with the expected error message
 			Eventually(func() bool {
