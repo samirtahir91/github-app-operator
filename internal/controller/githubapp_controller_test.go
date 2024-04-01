@@ -363,7 +363,7 @@ var _ = Describe("GithubApp controller", func() {
 			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
 
 			// Delete the GitHubApp after reconciliation
-			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
+			err := k8sClient.Delete(ctx, &githubappv1.GithubApp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      githubAppName3,
 					Namespace: namespace3,
