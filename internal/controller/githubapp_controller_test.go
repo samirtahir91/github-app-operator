@@ -68,7 +68,7 @@ var _ = Describe("GithubApp controller", func() {
 					Name:      privateKeySecret,
 					Namespace: sourceNamespace,
 				},
-				Data: map[string][]byte{"privateKey": []byte(decodedPrivateKey)},
+				Data: map[string][]byte{"privateKey": decodedPrivateKey},
 			}
 			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 
@@ -223,7 +223,7 @@ var _ = Describe("GithubApp controller", func() {
 					Name:      privateKeySecret,
 					Namespace: namespace2,
 				},
-				Data: map[string][]byte{"privateKey": []byte(decodedPrivateKey)},
+				Data: map[string][]byte{"privateKey": decodedPrivateKey},
 			}
 			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 
@@ -334,7 +334,7 @@ var _ = Describe("GithubApp controller", func() {
 					Name:      privateKeySecret,
 					Namespace: namespace3,
 				},
-				Data: map[string][]byte{"privateKey": []byte(decodedPrivateKey)},
+				Data: map[string][]byte{"privateKey": decodedPrivateKey},
 			}
 			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 

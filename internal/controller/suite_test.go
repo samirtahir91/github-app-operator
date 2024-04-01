@@ -74,8 +74,12 @@ var _ = BeforeSuite(func() {
 		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s",
 			fmt.Sprintf("1.28.3-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
-	os.Setenv("CHECK_INTERVAL", "5s")
-	os.Setenv("EXPIRY_THRESHOLD", "15m")
+
+	// set check interval and expiry threshold for test env
+	osEnvErr := os.Setenv("CHECK_INTERVAL", "5s")
+	Expect(osEnvErr).NotTo(HaveOccurred())
+	osEnvErr = os.Setenv("EXPIRY_THRESHOLD", "15m")
+	Expect(osEnvErr).NotTo(HaveOccurred())
 
 	var err error
 	// cfg is defined in this file globally.
