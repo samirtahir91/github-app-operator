@@ -349,7 +349,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		privateKey,
 	)
 	if err != nil {
-		return fmt.Errorf("Failed to generate access token: %v", err)
+		return fmt.Errorf("failed to generate access token: %v", err)
 
 	}
 
@@ -372,7 +372,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 
 	// Set owner reference to GithubApp object
 	if err := controllerutil.SetControllerReference(githubApp, newSecret, r.Scheme); err != nil {
-		l.Error(err, "Failed to set owner reference for access token secret")
+		l.Error(err, "failed to set owner reference for access token secret")
 		return err
 	}
 
@@ -382,7 +382,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		if apierrors.IsNotFound(err) {
 			// Secret doesn't exist, create a new one
 			if err := r.Create(ctx, newSecret); err != nil {
-				l.Error(err, "Failed to create Secret for access token")
+				l.Error(err, "failed to create Secret for access token")
 				return err
 			}
 			l.Info(
@@ -391,11 +391,11 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			)
 			// Update the status with the new expiresAt time
 			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
-				return fmt.Errorf("Failed after creating secret: %v", err)
+				return fmt.Errorf("failed after creating secret: %v", err)
 			}
 			// Restart the pods is required
 			if err := r.restartPods(ctx, githubApp, req); err != nil {
-				return fmt.Errorf("Failed to restart pods after after creating secret: %v", err)
+				return fmt.Errorf("failed to restart pods after after creating secret: %v", err)
 			}
 			return nil
 		}
@@ -405,13 +405,13 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			"Namespace", githubApp.Namespace,
 			"Secret", accessTokenSecret,
 		)
-		return fmt.Errorf("Failed to get access token secret: %v", err)
+		return fmt.Errorf("failed to get access token secret: %v", err)
 	}
 
 	// Secret exists, update its data
 	// Set owner reference to GithubApp object
 	if err := controllerutil.SetControllerReference(githubApp, existingSecret, r.Scheme); err != nil {
-		l.Error(err, "Failed to set owner reference for access token secret")
+		l.Error(err, "failed to set owner reference for access token secret")
 		return err
 	}
 	// Clear existing data and set new access token data
@@ -423,17 +423,17 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		"username": gitUsername,
 	}
 	if err := r.Update(ctx, existingSecret); err != nil {
-		l.Error(err, "Failed to update existing Secret")
+		l.Error(err, "failed to update existing Secret")
 		return err
 	}
 
 	// Update the status with the new expiresAt time
 	if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
-		return fmt.Errorf("Failed after updating secret: %v", err)
+		return fmt.Errorf("failed after updating secret: %v", err)
 	}
 	// Restart the pods is required
 	if err := r.restartPods(ctx, githubApp, req); err != nil {
-		return fmt.Errorf("Failed to restart pods after updating secret: %v", err)
+		return fmt.Errorf("failed to restart pods after updating secret: %v", err)
 	}
 
 	l.Info("Access token updated in the existing Secret successfully")
