@@ -128,8 +128,9 @@ var _ = Describe("GithubApp controller", func() {
 
 	Context("When setting up the test environment", func() {
 		It("Should create GithubApp custom resources", func() {
-			By("Creating the privateKeySecret in the namespace1")
 			ctx := context.Background()
+
+			By("Creating the privateKeySecret in the namespace1")
 			createPrivateKeySecret(ctx, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
@@ -139,7 +140,6 @@ var _ = Describe("GithubApp controller", func() {
 
 	Context("When reconciling a GithubApp", func() {
 		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
 			ctx := context.Background()
 
 			By("Retrieving the access token secret")
@@ -154,8 +154,9 @@ var _ = Describe("GithubApp controller", func() {
 
 	Context("When deleting an access token secret", func() {
 		It("should successfully reconcile the secret again", func() {
-			By("Deleting the access token secret")
 			ctx := context.Background()
+
+			By("Deleting the access token secret")
 			var retrievedSecret corev1.Secret
 			err := k8sClient.Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -231,16 +232,16 @@ var _ = Describe("GithubApp controller", func() {
 
 	Context("When requeing a reconcile for a GithubApp that is not expired", func() {
 		It("should successfully reconcile the resource and get the rate limit", func() {
-			By("Reconciling the created resource")
 			ctx := context.Background()
 
+			By("Reconciling the created resource")
 			controllerReconciler := &GithubAppReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
 
 			// Perform reconciliation for the resource
-			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace1,
 					Name:      githubAppName,
