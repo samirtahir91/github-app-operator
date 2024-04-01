@@ -44,9 +44,11 @@ var _ = Describe("GithubApp controller", func() {
 		githubAppName    = "gh-app-test"
 		githubAppName2   = "gh-app-test-2"
 		githubAppName3   = "gh-app-test-3"
+		githubAppName3   = "gh-app-test-4"
 		podName          = "foo"
 		namespace2       = "namespace2"
 		namespace3       = "namespace3"
+		namespace4       = "namespace4"
 	)
 
 	var privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
@@ -329,36 +331,29 @@ var _ = Describe("GithubApp controller", func() {
 			By("Creating a new namespace")
 			ns := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace3,
+					Name: namespace4,
 				},
 			}
 			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
-			By("Creating the privateKeySecret in namespace3 without the 'privateKey' field")
+			By("Creating the privateKeySecret in namespace4 without the 'privateKey' field")
 			dummyKeyValue := "dummy_value"
 			
 			secret1Obj := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      privateKeySecret,
-					Namespace: namespace3,
+					Namespace: namespace4,
 				},
 				Data: map[string][]byte{"foo": []byte(dummyKeyValue)},
 			}
 			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
 
-			// Wait for the access token Secret to be recreated
-			var retrievedSecret corev1.Secret
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace3}, &retrievedSecret)
-				return err == nil
-			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not created", namespace3, secretName))
-
-			By("Creating a GithubApp wihtout creating the privateKeySecret")
+			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
 			// Create a GithubApp instance with the RestartPods field initialized
 			githubApp := githubappv1.GithubApp{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      githubAppName3,
-					Namespace: namespace3,
+					Name:      githubAppName4,
+					Namespace: namespace4,
 				},
 				Spec: githubappv1.GithubAppSpec{
 					AppId:            appId,
@@ -371,7 +366,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Check if the status.Error field gets populated with the expected error message
 			Eventually(func() bool {
 				// Retrieve the GitHubApp object
-				key := types.NamespacedName{Name: githubAppName3, Namespace: namespace3}
+				key := types.NamespacedName{Name: githubAppName4, Namespace: namespace4}
 				retrievedGithubApp := &githubappv1.GithubApp{}
 				err := k8sClient.Get(ctx, key, retrievedGithubApp)
 				if err != nil {
@@ -384,8 +379,8 @@ var _ = Describe("GithubApp controller", func() {
 			// Delete the GitHubApp after reconciliation
 			err := k8sClient.Delete(ctx, &githubappv1.GithubApp{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      githubAppName3,
-					Namespace: namespace3,
+					Name:      githubAppName4,
+					Namespace: namespace4,
 				},
 			})
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
@@ -393,8 +388,8 @@ var _ = Describe("GithubApp controller", func() {
 			Eventually(func() bool {
 				// Check if the GitHubApp still exists
 				err := k8sClient.Get(ctx, types.NamespacedName{
-					Namespace: namespace3,
-					Name:      githubAppName3,
+					Namespace: namespace4,
+					Name:      githubAppName4,
 				}, &githubappv1.GithubApp{})
 				return apierrors.IsNotFound(err) // GitHubApp is deleted
 			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
@@ -404,6 +399,14 @@ var _ = Describe("GithubApp controller", func() {
 	Context("When reconciling a GithubApp with an error", func() {
 		It("Should reflect the error message in the status.Error field of the object", func() {
 			ctx := context.Background()
+
+			By("Creating a new namespace")
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace3,
+				},
+			}
+			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
 			By("Creating a GithubApp wihtout creating the privateKeySecret")
 			// Create a GithubApp instance with the RestartPods field initialized
