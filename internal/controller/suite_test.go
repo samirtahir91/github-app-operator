@@ -75,9 +75,9 @@ var _ = BeforeSuite(func() {
 			fmt.Sprintf("1.28.3-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
 
+	// set check interval and expiry threshold for test env
 	osEnvErr := os.Setenv("CHECK_INTERVAL", "5s")
 	Expect(osEnvErr).NotTo(HaveOccurred())
-
 	osEnvErr = os.Setenv("EXPIRY_THRESHOLD", "15m")
 	Expect(osEnvErr).NotTo(HaveOccurred())
 
