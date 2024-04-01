@@ -240,14 +240,6 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 func isAccessTokenValid(ctx context.Context, username string, accessToken string) bool {
 	l := log.FromContext(ctx)
 
-	// Close the response body to prevent resource leaks
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			// Handle error if closing the response body fails
-			l.Error(err, "error closing response body:")
-		}
-	}()
-
 	// If username has been modified, renew the secret
 	if username != gitUsername {
 		l.Info(
@@ -306,6 +298,14 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 		l.Info("Rate limit exceeded for access token")
 		return false
 	}
+
+	// Close the response body to prevent resource leaks
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			// Handle error if closing the response body fails
+			l.Error(err, "error closing response body:")
+		}
+	}()
 
 	// Rate limit is valid
 	l.Info("Rate limit is valid", "Remaining requests:", remaining)
