@@ -361,6 +361,24 @@ var _ = Describe("GithubApp controller", func() {
 				// Check if the status.Error field contains the expected error message
 				return retrievedGithubApp.Status.Error == "privateKey not found in Secret"
 			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
+
+			// Delete the GitHubApp after reconciliation
+			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName3,
+					Namespace: namespace3,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
+			// Wait for the GitHubApp to be deleted
+			Eventually(func() bool {
+				// Check if the GitHubApp still exists
+				err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace3,
+					Name:      githubAppName3,
+				}, &githubappv1.GithubApp{})
+				return apierrors.IsNotFound(err) // GitHubApp is deleted
+			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
 		})
 	})
 
@@ -395,24 +413,6 @@ var _ = Describe("GithubApp controller", func() {
 				// Check if the status.Error field contains the expected error message
 				return retrievedGithubApp.Status.Error == "Secret \"gh-app-key-test\" not found"
 			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
-
-			// Delete the GitHubApp after reconciliation
-			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      githubAppName3,
-					Namespace: namespace3,
-				},
-			})
-			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
-			// Wait for the GitHubApp to be deleted
-			Eventually(func() bool {
-				// Check if the GitHubApp still exists
-				err := k8sClient.Get(ctx, types.NamespacedName{
-					Namespace: namespace3,
-					Name:      githubAppName3,
-				}, &githubappv1.GithubApp{})
-				return apierrors.IsNotFound(err) // GitHubApp is deleted
-			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
 		})
 	})
 
