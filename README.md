@@ -1,5 +1,9 @@
+[![Lint](https://github.com/samirtahir91/github-app-operator/actions/workflows/lint.yml/badge.svg)](https://github.com/samirtahir91/github-app-operator/actions/workflows/lint.yml)
 [![Unit tests](https://github.com/samirtahir91/github-app-operator/actions/workflows/tests.yaml/badge.svg)](https://github.com/samirtahir91/github-app-operator/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/samirtahir91/github-app-operator/badge.svg?branch=main)](https://coveralls.io/github/samirtahir91/github-app-operator?branch=main)
+[![Build and push](https://github.com/samirtahir91/github-app-operator/actions/workflows/build-and-push.yaml/badge.svg)](https://github.com/samirtahir91/github-app-operator/actions/workflows/build-and-push.yaml)
+[![Trivy image scan](https://github.com/samirtahir91/github-app-operator/actions/workflows/trivy.yml/badge.svg)](https://github.com/samirtahir91/github-app-operator/actions/workflows/trivy.yml)
+[![Helm](https://github.com/samirtahir91/github-app-operator/actions/workflows/helm-release.yml/badge.svg)](https://github.com/samirtahir91/github-app-operator/actions/workflows/helm-release.yml)
 
 # github-app-operator
 This is a Kubernetes operator that will generate an access token for a GithubApp and store it in a secret to use for authenticated requests to Github as the GithubApp. \
