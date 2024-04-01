@@ -119,13 +119,8 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Call the function to check expiry and renew the access token if required
 	// Always requeue the githubApp for reconcile as per `reconcileInterval`
 	requeueResult := r.checkExpiryAndRequeue(ctx, githubApp)
-	// Update status field 'Error' with the error message
-	if err := r.updateStatusWithError(ctx, githubApp, err.Error()); err != nil {
-		l.Error(err, "failed to update status field 'Error'")
-		return ctrl.Result{}, err
-	}
 
-	// Clear the error field
+	// Clear the error field and clear it
 	if githubApp.Status.Error != "" {
 	    githubApp.Status.Error = ""
 	    if err := r.Status().Update(ctx, githubApp); err != nil {
