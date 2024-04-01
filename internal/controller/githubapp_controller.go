@@ -306,7 +306,7 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 	return true
 }
 
-// Fucntion to check expiry and requeue
+// Function to check expiry and requeue
 func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 
