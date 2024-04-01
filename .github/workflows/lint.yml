@@ -7,7 +7,7 @@ on:
 
 jobs:
   lint:
-    name: golangci-lint
+    name: golangci-lint and staticcheck
     runs-on: ubuntu-latest
     # Pull requests from the same repository won't trigger this checks as they were already triggered by the push
     if: (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
