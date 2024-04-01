@@ -275,6 +275,24 @@ var _ = Describe("GithubApp controller", func() {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, pod)
 				return apierrors.IsNotFound(err) // Pod is deleted
 			}, "60s", "5s").Should(BeTrue(), "Failed to delete the pod within timeout")
+
+			// Delete the GitHubApp after reconciliation
+			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName2,
+					Namespace: namespace2,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
+			// Wait for the GitHubApp to be deleted
+			Eventually(func() bool {
+				// Check if the GitHubApp still exists
+				err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace2,
+					Name:      githubAppName2,
+				}, &githubappv1.GithubApp{})
+				return apierrors.IsNotFound(err) // GitHubApp is deleted
+			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
 		})
 	})
 
@@ -357,6 +375,24 @@ var _ = Describe("GithubApp controller", func() {
 				// Check if the status.Error field has been cleared of errors
 				return retrievedGithubApp.Status.Error == ""
 			}, "30s", "5s").Should(BeTrue(), "Failed to clear status.Error field within timeout")
+
+			// Delete the GitHubApp after reconciliation
+			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName3,
+					Namespace: namespace3,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
+			// Wait for the GitHubApp to be deleted
+			Eventually(func() bool {
+				// Check if the GitHubApp still exists
+				err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace3,
+					Name:      githubAppName3,
+				}, &githubappv1.GithubApp{})
+				return apierrors.IsNotFound(err) // GitHubApp is deleted
+			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
 		})
 	})
 })
