@@ -186,7 +186,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If expiresAt status field is not present or expiry time has already passed, generate or renew access token
 	if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
-		return r.generateOrUpdateAccessToken(ctx, githubApp, req)
+		return r.generateOrUpdateAccessToken(ctx, githubApp)
 	}
 
 	// Check if the access token secret exists if not reconcile immediately
@@ -198,7 +198,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Secret doesn't exist, reconcile straight away
-			return r.generateOrUpdateAccessToken(ctx, githubApp, req)
+			return r.generateOrUpdateAccessToken(ctx, githubApp)
 		}
 		// Error other than NotFound, return error
 		return err
@@ -207,7 +207,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	for key := range accessTokenSecret.Data {
 		if key != "token" && key != "username" {
 			l.Info("Removing invalid key in access token secret", "Key", key)
-			return r.generateOrUpdateAccessToken(ctx, githubApp, req)
+			return r.generateOrUpdateAccessToken(ctx, githubApp)
 		}
 	}
 
@@ -216,9 +216,9 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	username := string(accessTokenSecret.Data["username"])
 
 	// Check if the access token is a valid github token via gh api auth
-	if !isAccessTokenValid(ctx, username, accessToken, req) {
+	if !isAccessTokenValid(ctx, username, accessToken) {
 		// If accessToken is invalid, generate or update access token
-		return r.generateOrUpdateAccessToken(ctx, githubApp, req)
+		return r.generateOrUpdateAccessToken(ctx, githubApp)
 	}
 
 	// Access token exists, calculate the duration until expiry
@@ -229,7 +229,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 		l.Info(
 			"Expiry threshold reached - renewing",
 		)
-		err := r.generateOrUpdateAccessToken(ctx, githubApp, req)
+		err := r.generateOrUpdateAccessToken(ctx, githubApp)
 		return err
 	}
 
@@ -323,7 +323,7 @@ func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubA
 }
 
 // Function to generate or update access token
-func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
 
 	// Get the private key from the Secret
