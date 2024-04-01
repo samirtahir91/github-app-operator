@@ -107,7 +107,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Call the function to check if access token required
 	// Will either create the access token secret or update it
-	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
+	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp); err != nil {
 		l.Error(err, "failed to check expiry and update access token")
 		// Update status field 'Error' with the error message
 		if updateErr := r.updateStatusWithError(ctx, githubApp, err.Error()); updateErr != nil {
