@@ -237,7 +237,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Function to check if the access token is valid by making a request to GitHub API
-func isAccessTokenValid(ctx context.Context, username string, accessToken string, req ctrl.Request) bool {
+func isAccessTokenValid(ctx context.Context, username string, accessToken string) bool {
 	l := log.FromContext(ctx)
 
 	// If username has been modified, renew the secret
@@ -484,7 +484,7 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 	if err != nil {
 		return "", metav1.Time{}, fmt.Errorf("failed to sign JWT: %v", err)
 	}
-	
+
 	// Create HTTP client and perform request to get installation token
 	httpClient := &http.Client{}
 	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installationID)
