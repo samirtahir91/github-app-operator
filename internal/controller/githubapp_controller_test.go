@@ -156,6 +156,40 @@ var _ = Describe("GithubApp controller", func() {
 		})
 	})
 
+	Context("When adding an invalid key to the accessToken secret", func() {
+		It("Should update the accessToken secret and remove the invalid key on reconciliation", func() {
+			ctx := context.Background()
+	
+			// Define constants for test
+			dummyKeyValue := "dummy_value"
+	
+			// Edit the accessToken to a dummy value
+			accessTokenSecretKey := types.NamespacedName{
+				Namespace: sourceNamespace,
+				Name:      secretName,
+			}
+			accessTokenSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
+			accessTokenSecret.Data["foo"] = []byte(dummyKeyValue)
+			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
+	
+			// Reconcile the resource to trigger the removal of the invalid key
+			request := reconcile.Request{
+				NamespacedName: accessTokenSecretKey,
+			}
+			_, err := r.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+	
+			// Wait for the accessToken to be updated and the "foo" key to be removed
+			Eventually(func() []byte {
+				updatedSecret := &corev1.Secret{}
+				err := k8sClient.Get(ctx, accessTokenSecretKey, updatedSecret)
+				Expect(err).To(Succeed())
+				return updatedSecret.Data["foo"]
+			}, "60s", "5s").Should(BeNil())
+		})
+	})
+
 	Context("When requeing a reconcile for a GithubApp that is not expired", func() {
 		It("should successfully reconcile the resource and get the rate limit", func() {
 			By("Reconciling the created resource")
