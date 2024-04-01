@@ -508,14 +508,6 @@ var _ = Describe("GithubApp controller", func() {
 			})
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
 			// Wait for the GitHubApp to be deleted
-			Eventually(func() bool {
-				// Check if the GitHubApp still exists
-				err := k8sClient.Get(ctx, types.NamespacedName{
-					Namespace: namespace3,
-					Name:      githubAppName3,
-				}, &githubappv1.GithubApp{})
-				return apierrors.IsNotFound(err) // GitHubApp is deleted
-			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
 			deleteGitHubAppAndWait(ctx, namespace3, githubAppName3)
 		})
 	})
