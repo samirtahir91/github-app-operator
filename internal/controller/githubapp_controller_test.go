@@ -94,26 +94,31 @@ func createGitHubAppAndWait(ctx context.Context, namespace, name string, restart
 	Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
 }
 
+// Function to create a privateKey Secret and wait for its creation
+func createPrivateKeySecret(ctx context.Context, namespace string, key string) {
+
+	// Decode base64-encoded private key
+	decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
+	Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
+
+    // create the GitHubApp
+	secret1Obj := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      privateKeySecret,
+			Namespace: namespace3,
+		},
+		Data: map[string][]byte{key: decodedPrivateKey},
+	}
+	Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+}
+
 var _ = Describe("GithubApp controller", func() {
 
 	Context("When setting up the test environment", func() {
 		It("Should create GithubApp custom resources", func() {
 			By("Creating the privateKeySecret in the namespace1")
-
 			ctx := context.Background()
-
-			// Decode base64-encoded private key
-			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
-			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
-
-			secret1Obj := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      privateKeySecret,
-					Namespace: namespace1,
-				},
-				Data: map[string][]byte{"privateKey": decodedPrivateKey},
-			}
-			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+			createPrivateKeySecret(ctx, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
 			createGitHubAppAndWait(ctx, namespace1, githubAppName, nil)
@@ -262,14 +267,7 @@ var _ = Describe("GithubApp controller", func() {
 			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
 			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
 
-			secret1Obj := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      privateKeySecret,
-					Namespace: namespace2,
-				},
-				Data: map[string][]byte{"privateKey": decodedPrivateKey},
-			}
-			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+			createPrivateKeySecret(ctx, namespace2, "privateKey")
 
 			By("Creating a pod with the label foo: bar")
 			// Create a pod with label "foo: bar"
@@ -302,7 +300,6 @@ var _ = Describe("GithubApp controller", func() {
 			// Create a GithubApp instance with the RestartPods field initialized
 			createGitHubAppAndWait(ctx, namespace2, githubAppName2, restartPodsSpec) // With restartPods
 
-
 			// Wait for the pod to be deleted by the reconcile loop
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, pod)
@@ -327,16 +324,7 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
 			By("Creating the privateKeySecret in namespace4 without the 'privateKey' field")
-			dummyKeyValue := "dummy_value"
-			
-			secret1Obj := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      privateKeySecret,
-					Namespace: namespace4,
-				},
-				Data: map[string][]byte{"foo": []byte(dummyKeyValue)},
-			}
-			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+			createPrivateKeySecret(ctx, namespace4, "foo")
 
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
 			// Create a GithubApp instance
@@ -400,14 +388,7 @@ var _ = Describe("GithubApp controller", func() {
 			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
 			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
 
-			secret1Obj := corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      privateKeySecret,
-					Namespace: namespace3,
-				},
-				Data: map[string][]byte{"privateKey": decodedPrivateKey},
-			}
-			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+			createPrivateKeySecret(ctx, namespace3, "privateKey")
 
 			// Wait for the access token Secret to be recreated
 			var retrievedSecret corev1.Secret
