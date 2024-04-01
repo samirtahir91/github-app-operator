@@ -322,8 +322,8 @@ var _ = Describe("GithubApp controller", func() {
 		})
 	})
 
-	Context("When reconciling a GithubApp with an error", func() {
-		It("Should reflect the error message in the status.Error field of the object", func() {
+	Context("When reconciling a GithubApp with using a app secret with no privateKey field", func() {
+		It("Should raise an error message 'privateKey not found in Secret'", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
@@ -359,8 +359,60 @@ var _ = Describe("GithubApp controller", func() {
 					return false // Unable to retrieve the GitHubApp
 				}
 				// Check if the status.Error field contains the expected error message
+				return retrievedGithubApp.Status.Error == "privateKey not found in Secret"
+			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
+		})
+	})
+
+	Context("When reconciling a GithubApp with an error", func() {
+		It("Should reflect the error message in the status.Error field of the object", func() {
+			ctx := context.Background()
+
+			By("Creating a GithubApp wihtout creating the privateKeySecret")
+			// Create a GithubApp instance with the RestartPods field initialized
+			githubApp := githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName3,
+					Namespace: namespace3,
+				},
+				Spec: githubappv1.GithubAppSpec{
+					AppId:            appId,
+					InstallId:        installId,
+					PrivateKeySecret: privateKeySecret,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
+
+			// Check if the status.Error field gets populated with the expected error message
+			Eventually(func() bool {
+				// Retrieve the GitHubApp object
+				key := types.NamespacedName{Name: githubAppName3, Namespace: namespace3}
+				retrievedGithubApp := &githubappv1.GithubApp{}
+				err := k8sClient.Get(ctx, key, retrievedGithubApp)
+				if err != nil {
+					return false // Unable to retrieve the GitHubApp
+				}
+				// Check if the status.Error field contains the expected error message
 				return retrievedGithubApp.Status.Error == "Secret \"gh-app-key-test\" not found"
 			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
+
+			// Delete the GitHubApp after reconciliation
+			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      githubAppName3,
+					Namespace: namespace3,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
+			// Wait for the GitHubApp to be deleted
+			Eventually(func() bool {
+				// Check if the GitHubApp still exists
+				err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace3,
+					Name:      githubAppName3,
+				}, &githubappv1.GithubApp{})
+				return apierrors.IsNotFound(err) // GitHubApp is deleted
+			}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
 		})
 	})
 
