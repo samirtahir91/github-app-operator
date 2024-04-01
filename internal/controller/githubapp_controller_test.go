@@ -241,7 +241,7 @@ var _ = Describe("GithubApp controller", func() {
 			}
 
 			// Perform reconciliation for the resource
-			err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: namespace1,
 					Name:      githubAppName,
@@ -251,6 +251,9 @@ var _ = Describe("GithubApp controller", func() {
 			// Verify if reconciliation was successful
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
 
+			// Print the result
+			fmt.Println("Reconciliation result:", result)
+			
 			// Delete the GitHubApp after reconciliation
 			deleteGitHubAppAndWait(ctx, namespace1, githubAppName)
 		})
