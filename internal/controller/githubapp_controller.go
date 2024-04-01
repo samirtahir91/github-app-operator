@@ -474,17 +474,17 @@ func generateAccessToken(appID int, installationID int, privateKey []byte) (stri
 
 	// Generate JWT
 	now := time.Now()
-	claims := jwt.StandardClaims{
+	claims := jwt.RegisteredClaims{
 		Issuer:    fmt.Sprintf("%d", appID),
-		IssuedAt:  now.Unix(),
-		ExpiresAt: now.Add(10 * time.Minute).Unix(), // Expiry time is 10 minutes from now
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)), // Expiry time is 10 minutes from now
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	signedToken, err := token.SignedString(parsedKey)
 	if err != nil {
 		return "", metav1.Time{}, fmt.Errorf("failed to sign JWT: %v", err)
 	}
-
+	
 	// Create HTTP client and perform request to get installation token
 	httpClient := &http.Client{}
 	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installationID)
