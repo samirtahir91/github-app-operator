@@ -349,6 +349,31 @@ var _ = Describe("GithubApp controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
 
+			By("Creating the privateKeySecret in namespace3 without the 'privateKey' field")
+			// Decode base64-encoded private key
+			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
+			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
+
+			// Define constants for test
+			dummyKeyValue := "dummy_value"
+			
+			secret1Obj := corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      privateKeySecret,
+					Namespace: namespace3,
+				},
+				Data: map[string][]byte{"foo": dummyKeyValue},
+			}
+			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+
+			// Wait for the access token Secret to be recreated
+			var retrievedSecret corev1.Secret
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace3}, &retrievedSecret)
+				return err == nil
+			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not created", namespace3, secretName))
+
+
 			// Check if the status.Error field gets populated with the expected error message
 			Eventually(func() bool {
 				// Retrieve the GitHubApp object
@@ -363,7 +388,7 @@ var _ = Describe("GithubApp controller", func() {
 			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
 
 			// Delete the GitHubApp after reconciliation
-			err := k8sClient.Delete(ctx, &githubappv1.GithubApp{
+			err = k8sClient.Delete(ctx, &githubappv1.GithubApp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      githubAppName3,
 					Namespace: namespace3,
