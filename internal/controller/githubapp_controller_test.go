@@ -105,7 +105,7 @@ func createPrivateKeySecret(ctx context.Context, namespace string, key string) {
 	secret1Obj := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      privateKeySecret,
-			Namespace: namespace3,
+			Namespace: namespace,
 		},
 		Data: map[string][]byte{key: decodedPrivateKey},
 	}
