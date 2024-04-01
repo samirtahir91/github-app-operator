@@ -350,6 +350,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 
 	// Generate or renew access token
 	accessToken, expiresAt, err := generateAccessToken(
+		ctx,
 		githubApp.Spec.AppId,
 		githubApp.Spec.InstallId,
 		privateKey,
@@ -471,7 +472,10 @@ func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler,
 }
 
 // function to generate new access token for gh app
-func generateAccessToken(appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
+func generateAccessToken(ctx context.Context, appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
+
+	l := log.FromContext(ctx)
+
 	// Parse private key
 	parsedKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
 	if err != nil {
