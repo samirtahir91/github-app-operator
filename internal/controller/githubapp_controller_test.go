@@ -35,6 +35,19 @@ import (
 	githubappv1 "github-app-operator/api/v1"
 )
 
+// fakeClient implements the client.Client interface for testing purposes
+type fakeClient struct {
+	ListFunc func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
+}
+
+// List mocks the List method of the client.Client interface
+func (c *fakeClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+	if c.ListFunc != nil {
+		return c.ListFunc(ctx, list, opts...)
+	}
+	return nil
+}
+
 var _ = Describe("GithubApp controller", func() {
 
 	const (
