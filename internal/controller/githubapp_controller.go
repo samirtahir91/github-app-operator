@@ -87,7 +87,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			}
 			return ctrl.Result{}, nil
 		}
-		l.Error(err, "Failed to get GithubApp")
+		l.Error(err, "failed to get GithubApp")
 		return ctrl.Result{}, err
 	}
 
@@ -108,23 +108,20 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Call the function to check if access token required
 	// Will either create the access token secret or update it
 	if err := r.checkExpiryAndUpdateAccessToken(ctx, githubApp, req); err != nil {
-		l.Error(err, "Failed to check expiry and update access token")
+		l.Error(err, "failed to check expiry and update access token")
 		// Update status field 'Error' with the error message
 		if updateErr := r.updateStatusWithError(ctx, githubApp, err.Error()); updateErr != nil {
-			l.Error(updateErr, "Failed to update status field 'Error'")
+			l.Error(updateErr, "failed to update status field 'Error'")
 		}
 		return ctrl.Result{}, err
 	}
 
 	// Call the function to check expiry and renew the access token if required
 	// Always requeue the githubApp for reconcile as per `reconcileInterval`
-	requeueResult, err := r.checkExpiryAndRequeue(ctx, githubApp)
-	if err != nil {
-		l.Error(err, "Failed to check expiry and requeue")
-		// Update status field 'Error' with the error message
-		if updateErr := r.updateStatusWithError(ctx, githubApp, err.Error()); updateErr != nil {
-			l.Error(updateErr, "Failed to update status field 'Error'")
-		}
+	requeueResult := r.checkExpiryAndRequeue(ctx, githubApp)
+	// Update status field 'Error' with the error message
+	if err := r.updateStatusWithError(ctx, githubApp, err.Error()); err != nil {
+		l.Error(err, "failed to update status field 'Error'")
 		return ctrl.Result{}, err
 	}
 
@@ -132,7 +129,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if githubApp.Status.Error != "" {
 	    githubApp.Status.Error = ""
 	    if err := r.Status().Update(ctx, githubApp); err != nil {
-		    l.Error(err, "Failed to clear status field 'Error' for GithubApp")
+		    l.Error(err, "failed to clear status field 'Error' for GithubApp")
 		    return ctrl.Result{}, err
 	    }
 	}
@@ -177,7 +174,7 @@ func (r *GithubAppReconciler) updateStatusWithError(ctx context.Context, githubA
 }
 
 // Function to check expiry and update access token
-func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp, req ctrl.Request) error {
+func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 
 	l := log.FromContext(ctx)
 
@@ -313,7 +310,7 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 }
 
 // Function to check expiry and requeue
-func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result, error) {
+func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubApp *githubappv1.GithubApp) (ctrl.Result) {
 	l := log.FromContext(ctx)
 
 	// Get the expiresAt status field
@@ -325,7 +322,7 @@ func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubA
 	// Return result with no error and request reconciliation after x minutes
 	l.Info("Expiry threshold:", "Time", timeBeforeExpiry)
 	l.Info("Requeue after:", "Time", reconcileInterval)
-	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
+	return ctrl.Result{RequeueAfter: reconcileInterval}
 }
 
 // Function to generate or update access token
@@ -338,7 +335,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	secret := &corev1.Secret{}
 	err := r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, secret)
 	if err != nil {
-		l.Error(err, "Failed to get Secret")
+		l.Error(err, "failed to get Secret")
 		return err
 	}
 
@@ -408,7 +405,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		}
 		l.Error(
 			err,
-			"Failed to get access token secret",
+			"failed to get access token secret",
 			"Namespace", githubApp.Namespace,
 			"Secret", accessTokenSecret,
 		)
@@ -626,7 +623,7 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	reconcileInterval, err = time.ParseDuration(reconcileIntervalStr)
 	if err != nil {
 		// Handle case where environment variable is not set or invalid
-		log.Log.Error(err, "Failed to set reconcileInterval, defaulting")
+		log.Log.Error(err, "failed to set reconcileInterval, defaulting")
 		reconcileInterval = defaultRequeueAfter
 	}
 
@@ -635,7 +632,7 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	timeBeforeExpiry, err = time.ParseDuration(timeBeforeExpiryStr)
 	if err != nil {
 		// Handle case where environment variable is not set or invalid
-		log.Log.Error(err, "Failed to set timeBeforeExpiry, defaulting")
+		log.Log.Error(err, "failed to set timeBeforeExpiry, defaulting")
 		timeBeforeExpiry = defaultTimeBeforeExpiry
 	}
 
