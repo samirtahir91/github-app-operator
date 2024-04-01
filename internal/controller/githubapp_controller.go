@@ -222,7 +222,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	}
 
 	// Access token exists, calculate the duration until expiry
-	durationUntilExpiry := expiresAt.Sub(time.Now())
+	durationUntilExpiry := expiresAt.Until(time.Now())
 
 	// If the expiry threshold met, generate or renew access token
 	if durationUntilExpiry <= timeBeforeExpiry {
