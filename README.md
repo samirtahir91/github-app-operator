@@ -134,10 +134,12 @@ kubectl apply -k config/samples/
 ### Testing
 
 Current integration tests cover the scenarios:
-- Modifying an access token secret triggers reconcile of new access token
-- Deleting an access token secret triggers reconcile of a new access token secret
-- Reconcile of access token is valid
-
+- Modifying an access token secret triggers reconcile of new access token.
+- Deleting an access token secret triggers reconcile of a new access token secret.
+- Reconcile of access token is valid.
+- Reconcile error is recorded in a `GithubApp` object's `status.error` field
+- The `status.error` field is cleared on succesful reconcile for a `GithubApp` object.
+- Pods are deleted matching a label if defined in `spec.restartPods.labels` for a `GithubApp`.
 
 **Run the controller in the foreground for testing:**
 ```sh

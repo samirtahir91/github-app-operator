@@ -319,4 +319,44 @@ var _ = Describe("GithubApp controller", func() {
 			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
 		})
 	})
+
+	Context("When reconciling a GithubApp that is in error state after fixing the error", func() {
+		It("Should reflect reconcile with no errors and clear the `status.error` field", func() {
+			ctx := context.Background()
+
+			By("Creating the privateKeySecret in namespace3")
+			// Decode base64-encoded private key
+			decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
+			Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
+
+			secret1Obj := corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      privateKeySecret,
+					Namespace: namespace3,
+				},
+				Data: map[string][]byte{"privateKey": []byte(decodedPrivateKey)},
+			}
+			Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+
+			// Wait for the access token Secret to be recreated
+			var retrievedSecret corev1.Secret
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace3}, &retrievedSecret)
+				return err == nil
+			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", namespace3, secretName))
+
+			// Check if the status.Error field gets populated with the expected error message
+			Eventually(func() bool {
+				// Retrieve the GitHubApp object
+				key := types.NamespacedName{Name: githubAppName3, Namespace: namespace3}
+				retrievedGithubApp := &githubappv1.GithubApp{}
+				err := k8sClient.Get(ctx, key, retrievedGithubApp)
+				if err != nil {
+					return false // Unable to retrieve the GitHubApp
+				}
+				// Check if the status.Error field has been cleared of errors
+				return retrievedGithubApp.Status.Error == ""
+			}, "30s", "5s").Should(BeTrue(), "Failed to clear status.Error field within timeout")
+		})
+	})
 })
