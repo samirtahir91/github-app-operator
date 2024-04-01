@@ -130,7 +130,6 @@ var _ = Describe("GithubApp controller", func() {
 		It("Should create GithubApp custom resources", func() {
 			By("Creating the privateKeySecret in the namespace1")
 			ctx := context.Background()
-			// Create private key secret
 			createPrivateKeySecret(ctx, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
@@ -145,7 +144,6 @@ var _ = Describe("GithubApp controller", func() {
 
 			By("Retrieving the access token secret")
 			var retrievedSecret corev1.Secret
-			// Wait for the Secret to be created
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace1}, &retrievedSecret)
 				return err == nil
@@ -159,7 +157,6 @@ var _ = Describe("GithubApp controller", func() {
 			By("Deleting the access token secret")
 			ctx := context.Background()
 			var retrievedSecret corev1.Secret
-			// Delete the Secret if it exists
 			err := k8sClient.Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
@@ -168,7 +165,7 @@ var _ = Describe("GithubApp controller", func() {
 			})
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", namespace1, secretName, err))
 
-			// Wait for the Secret to be recreated
+			By("Waiting for the access token secret to be re-created")
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace1}, &retrievedSecret)
 				return err == nil
@@ -179,6 +176,8 @@ var _ = Describe("GithubApp controller", func() {
 	Context("When manually changing accessToken secret to an invalid value", func() {
 		It("Should update the accessToken on reconciliation", func() {
 			ctx := context.Background()
+
+			By("Modifying the access token secret with an invalid token")
 			// Define constants for test
 			dummyAccessToken := "dummy_access_token"
 
