@@ -34,6 +34,26 @@ import (
 	githubappv1 "github-app-operator/api/v1"
 )
 
+const (
+	privateKeySecret = "gh-app-key-test"
+	namespace1  	 = "default"
+	appId            = 857468
+	installId        = 48531286
+	githubAppName    = "gh-app-test"
+	githubAppName2   = "gh-app-test-2"
+	githubAppName3   = "gh-app-test-3"
+	githubAppName4   = "gh-app-test-4"
+	podName          = "foo"
+	namespace2       = "namespace2"
+	namespace3       = "namespace3"
+	namespace4       = "namespace4"
+)
+
+var (
+	privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
+	secretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
+)
+
 // Function to delete a GitHubApp and wait for its deletion
 func deleteGitHubAppAndWait(ctx context.Context, namespace, name string) {
     // Delete the GitHubApp
@@ -74,24 +94,6 @@ func createGitHubAppAndWait(ctx context.Context, namespace, name string) {
 }
 
 var _ = Describe("GithubApp controller", func() {
-
-	const (
-		privateKeySecret = "gh-app-key-test"
-		namespace1  	 = "default"
-		appId            = 857468
-		installId        = 48531286
-		githubAppName    = "gh-app-test"
-		githubAppName2   = "gh-app-test-2"
-		githubAppName3   = "gh-app-test-3"
-		githubAppName4   = "gh-app-test-4"
-		podName          = "foo"
-		namespace2       = "namespace2"
-		namespace3       = "namespace3"
-		namespace4       = "namespace4"
-	)
-
-	var privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
-	var secretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 
 	Context("When setting up the test environment", func() {
 		It("Should create GithubApp custom resources", func() {
