@@ -23,3 +23,7 @@ jobs:
         with:
           version: v1.54
           args: --timeout=2m --fix
+      - name: Run staticcheck
+        uses: dominikh/staticcheck-action@v1
+        with:
+          version: "latest"
