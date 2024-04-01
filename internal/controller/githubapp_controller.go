@@ -120,7 +120,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Always requeue the githubApp for reconcile as per `reconcileInterval`
 	requeueResult := r.checkExpiryAndRequeue(ctx, githubApp)
 
-	// Clear the error field and clear it
+	// Clear the error field if no errors
 	if githubApp.Status.Error != "" {
 	    githubApp.Status.Error = ""
 	    if err := r.Status().Update(ctx, githubApp); err != nil {
