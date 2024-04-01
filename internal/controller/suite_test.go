@@ -74,8 +74,13 @@ var _ = BeforeSuite(func() {
 		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s",
 			fmt.Sprintf("1.28.3-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
-	os.Setenv("CHECK_INTERVAL", "5s")
-	os.Setenv("EXPIRY_THRESHOLD", "15m")
+
+	if osEnvErr := os.Setenv("CHECK_INTERVAL", "5s"); osEnvErr != nil {
+		return fmt.Errorf("failed to set os env var for CHECK_INTERVAL: %v", err)
+	}
+	if osEnvErr := os.Setenv("EXPIRY_THRESHOLD", "15m"); osEnvErr != nil {
+		return fmt.Errorf("failed to set os env var for EXPIRY_THRESHOLD: %v", err)
+	}
 
 	var err error
 	// cfg is defined in this file globally.
