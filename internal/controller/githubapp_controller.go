@@ -125,7 +125,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if updateErr := r.updateStatusWithError(ctx, githubApp, err.Error()); updateErr != nil {
 			l.Error(updateErr, "Failed to update status field 'Error'")
 		}
-		return requeueResult, err
+		return ctrl.Result{}, err
 	}
 
 	// Clear the error field
@@ -140,7 +140,7 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Log and return
 	l.Info("End Reconcile")
 	fmt.Println()
-	return ctrl.Result{}, nil
+	return requeueResult, nil
 }
 
 // Function to delete the access token secret owned by the GithubApp
