@@ -129,10 +129,12 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Clear the error field
-	githubApp.Status.Error = ""
-	if err := r.Status().Update(ctx, githubApp); err != nil {
-		l.Error(err, "Failed to clear status field 'Error' for GithubApp")
-		return ctrl.Result{}, err
+	if githubApp.Status.Error != "" {
+	    githubApp.Status.Error = ""
+	    if err := r.Status().Update(ctx, githubApp); err != nil {
+		    l.Error(err, "Failed to clear status field 'Error' for GithubApp")
+		    return ctrl.Result{}, err
+	    }
 	}
 
 	// Log and return
