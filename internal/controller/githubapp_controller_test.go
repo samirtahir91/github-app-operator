@@ -199,7 +199,13 @@ var _ = Describe("GithubApp controller", func() {
 					Namespace: namespace1,
 				},
 			})
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", namespace1, acessTokenSecretName, err))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf(
+				"Failed to delete Secret %s/%s: %v",
+				namespace1,
+				acessTokenSecretName,
+				err
+				)
+			)
 
 			By("Waiting for the access token secret to be created")
 			waitForAccessTokenSecret(ctx, namespace1)
