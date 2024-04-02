@@ -51,7 +51,7 @@ const (
 
 var (
 	privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
-	secretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
+	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 )
 
 // Function to delete a GitHubApp and wait for its deletion
@@ -123,6 +123,15 @@ func createNamespace(ctx context.Context, namespace string) {
 	Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 }
 
+// Function to create a namespace
+func waitForAccessTokenSecret(ctx context.Context, namespace string) {
+	var retrievedSecret corev1.Secret
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, types.NamespacedName{Name: acessTokenSecretName, Namespace: namespace}, &retrievedSecret)
+		return err == nil
+	}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", namespace, acessTokenSecretName))
+}
+
 // Tests
 var _ = Describe("GithubApp controller", func() {
 
@@ -143,12 +152,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Retrieving the access token secret")
-			var retrievedSecret corev1.Secret
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace1}, &retrievedSecret)
-				return err == nil
-			}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", namespace1, secretName))
-
+			waitForAccessTokenSecret(ctx, namespace1)
 		})
 	})
 
@@ -160,17 +164,14 @@ var _ = Describe("GithubApp controller", func() {
 			var retrievedSecret corev1.Secret
 			err := k8sClient.Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      secretName,
+					Name:      acessTokenSecretName,
 					Namespace: namespace1,
 				},
 			})
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", namespace1, secretName, err))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", namespace1, acessTokenSecretName, err))
 
 			By("Waiting for the access token secret to be re-created")
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace1}, &retrievedSecret)
-				return err == nil
-			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", namespace1, secretName))
+			waitForAccessTokenSecret(ctx, namespace1)
 		})
 	})
 
@@ -185,7 +186,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Edit the accessToken to a dummy value
 			accessTokenSecretKey := types.NamespacedName{
 				Namespace: namespace1,
-				Name:      secretName,
+				Name:      acessTokenSecretName,
 			}
 			accessTokenSecret := &corev1.Secret{}
 			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
@@ -213,7 +214,7 @@ var _ = Describe("GithubApp controller", func() {
 			// Edit the accessToken to a dummy value
 			accessTokenSecretKey := types.NamespacedName{
 				Namespace: namespace1,
-				Name:      secretName,
+				Name:      acessTokenSecretName,
 			}
 			accessTokenSecret := &corev1.Secret{}
 			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
@@ -373,12 +374,8 @@ var _ = Describe("GithubApp controller", func() {
 			createPrivateKeySecret(ctx, namespace3, "privateKey")
 
 			// Wait for the access token Secret to be recreated
-			var retrievedSecret corev1.Secret
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace3}, &retrievedSecret)
-				return err == nil
-			}, "30s", "5s").Should(BeTrue(), fmt.Sprintf("Expected Secret %s/%s not recreated", namespace3, secretName))
-
+			waitForAccessTokenSecret(ctx, namespace3)
+			
 			// Check if the status.Error field gets populated with the expected error message
 			Eventually(func() bool {
 				// Retrieve the GitHubApp object
