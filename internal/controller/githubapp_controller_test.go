@@ -123,7 +123,7 @@ func createNamespace(ctx context.Context, namespace string) {
 	Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 }
 
-// Function to create a namespace
+// Function to wait for access token secret to be created
 func waitForAccessTokenSecret(ctx context.Context, namespace string) {
 	var retrievedSecret corev1.Secret
 	Eventually(func() bool {
@@ -132,6 +132,19 @@ func waitForAccessTokenSecret(ctx context.Context, namespace string) {
 	}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", namespace, acessTokenSecretName))
 }
 
+// Function to update access token secret data with dummy data
+func waitForAccessTokenSecret(ctx context.Context, namespace string, key string, dummyKeyValue string) {
+			// Update the accessToken to a dummy value
+			accessTokenSecretKey := types.NamespacedName{
+				Namespace: namespace,
+				Name:      acessTokenSecretName,
+			}
+			accessTokenSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
+			accessTokenSecret.Data[key] = []byte(dummyKeyValue)
+			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
+}
+		
 // Tests
 var _ = Describe("GithubApp controller", func() {
 
@@ -182,16 +195,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Modifying the access token secret with an invalid token")
 			// Define constants for test
 			dummyAccessToken := "dummy_access_token"
-
-			// Edit the accessToken to a dummy value
-			accessTokenSecretKey := types.NamespacedName{
-				Namespace: namespace1,
-				Name:      acessTokenSecretName,
-			}
-			accessTokenSecret := &corev1.Secret{}
-			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
-			accessTokenSecret.Data["token"] = []byte(dummyAccessToken)
-			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
+			waitForAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
 
 			// Wait for the accessToken to be updated
 			Eventually(func() string {
@@ -210,16 +214,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Modifying the access token secret with an invalid key")
 			// Define constants for test
 			dummyKeyValue := "dummy_value"
-
-			// Edit the accessToken to a dummy value
-			accessTokenSecretKey := types.NamespacedName{
-				Namespace: namespace1,
-				Name:      acessTokenSecretName,
-			}
-			accessTokenSecret := &corev1.Secret{}
-			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
-			accessTokenSecret.Data["foo"] = []byte(dummyKeyValue)
-			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
+			waitForAccessTokenSecret(ctx, namespace1, "foo", dummyKeyValue)
 
 			// Wait for the accessToken to be updated and the "foo" key to be removed
 			Eventually(func() []byte {
