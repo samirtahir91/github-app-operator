@@ -53,7 +53,13 @@ func DeleteGitHubAppAndWait(ctx context.Context, k8sClient client.Client, namesp
 }
 
 // Function to create a GitHubApp and wait for its creation
-func CreateGitHubAppAndWait(ctx context.Context, k8sClient client.Client, namespace, name string, restartPodsSpec *githubappv1.RestartPodsSpec) {
+func CreateGitHubAppAndWait(
+	ctx context.Context,
+	k8sClient client.Client,
+	namespace,
+	name string,
+	restartPodsSpec *githubappv1.RestartPodsSpec,
+	) {
 	// create the GitHubApp
 	githubApp := githubappv1.GithubApp{
 		ObjectMeta: metav1.ObjectMeta{
@@ -109,7 +115,13 @@ func WaitForAccessTokenSecret(ctx context.Context, k8sClient client.Client, name
 }
 
 // Function to update access token secret data with dummy data
-func UpdateAccessTokenSecret(ctx context.Context, k8sClient client.Client, namespace string, key string, dummyKeyValue string)  types.NamespacedName {
+func UpdateAccessTokenSecret(
+	ctx context.Context,
+	k8sClient client.Client,
+	namespace string,
+	key string,
+	dummyKeyValue string,
+	)  types.NamespacedName {
 	// Update the accessToken to a dummy value
 	accessTokenSecretKey := types.NamespacedName{
 		Namespace: namespace,
@@ -124,7 +136,13 @@ func UpdateAccessTokenSecret(ctx context.Context, k8sClient client.Client, names
 }
 
 // Function to validate an err message from a githubApp
-func CheckGithubAppStatusError(ctx context.Context, k8sClient client.Client, githubAppName string, namespace string, errMsg string) {
+func CheckGithubAppStatusError(
+	ctx context.Context,
+	k8sClient client.Client,
+	githubAppName string,
+	namespace string,
+	errMsg string,
+	) {
 
 	// Check if the status.Error field gets populated with the expected error message
 	Eventually(func() bool {
@@ -141,7 +159,14 @@ func CheckGithubAppStatusError(ctx context.Context, k8sClient client.Client, git
 }
 
 // Funtion to create a busybox pod with a label
-func CreatePodWithLabel(ctx context.Context, k8sClient client.Client, podName string, namespace string, labeKey string, labelValue string) *corev1.Pod {
+func CreatePodWithLabel(
+	ctx context.Context,
+	k8sClient client.Client,
+	podName string,
+	namespace string,
+	labeKey string,
+	labelValue string,
+	) *corev1.Pod {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: podName,
