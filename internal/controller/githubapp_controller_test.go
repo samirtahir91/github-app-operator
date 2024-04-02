@@ -146,6 +146,23 @@ func updateAccessTokenSecret(ctx context.Context, namespace string, key string, 
 
 	return accessTokenSecretKey
 }
+
+// Function to validate an err message from a githubApp
+func checkGithubAppStatusError(ctx context.Context, githubAppName string, namespace string, errMsg string) {
+
+	// Check if the status.Error field gets populated with the expected error message
+	Eventually(func() bool {
+		// Retrieve the GitHubApp object
+		key := types.NamespacedName{Name: githubAppName, Namespace: namespace}
+		retrievedGithubApp := &githubappv1.GithubApp{}
+		err := k8sClient.Get(ctx, key, retrievedGithubApp)
+		if err != nil {
+			return false // Unable to retrieve the GitHubApp
+		}
+		// Check if the status.Error field contains the expected error message
+		return retrievedGithubApp.Status.Error == errMsg
+	}, "30s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
+}
 		
 // Tests
 var _ = Describe("GithubApp controller", func() {
@@ -319,18 +336,8 @@ var _ = Describe("GithubApp controller", func() {
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
 			createGitHubAppAndWait(ctx, namespace4, githubAppName4, nil)
 
-			// Check if the status.Error field gets populated with the expected error message
-			Eventually(func() bool {
-				// Retrieve the GitHubApp object
-				key := types.NamespacedName{Name: githubAppName4, Namespace: namespace4}
-				retrievedGithubApp := &githubappv1.GithubApp{}
-				err := k8sClient.Get(ctx, key, retrievedGithubApp)
-				if err != nil {
-					return false // Unable to retrieve the GitHubApp
-				}
-				// Check if the status.Error field contains the expected error message
-				return retrievedGithubApp.Status.Error == "privateKey not found in Secret"
-			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
+			By("Checking the githubApp `status.error` value is as expected")
+			checkGithubAppStatusError(ct,, githubAppName4, namespace4, "privateKey not found in Secret")
 
 			// Delete the GitHubApp after reconciliation
 			deleteGitHubAppAndWait(ctx, namespace4, githubAppName4)
@@ -347,18 +354,8 @@ var _ = Describe("GithubApp controller", func() {
 			By("Creating a GithubApp without creating the privateKeySecret")
 			createGitHubAppAndWait(ctx, namespace3, githubAppName3, nil)
 
-			// Check if the status.Error field gets populated with the expected error message
-			Eventually(func() bool {
-				// Retrieve the GitHubApp object
-				key := types.NamespacedName{Name: githubAppName3, Namespace: namespace3}
-				retrievedGithubApp := &githubappv1.GithubApp{}
-				err := k8sClient.Get(ctx, key, retrievedGithubApp)
-				if err != nil {
-					return false // Unable to retrieve the GitHubApp
-				}
-				// Check if the status.Error field contains the expected error message
-				return retrievedGithubApp.Status.Error == "Secret \"gh-app-key-test\" not found"
-			}, "60s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
+			By("Checking the githubApp `status.error` value is as expected")
+			checkGithubAppStatusError(ct,, githubAppName3, namespace3, "Secret \"gh-app-key-test\" not found")
 		})
 	})
 
@@ -371,19 +368,9 @@ var _ = Describe("GithubApp controller", func() {
 
 			// Wait for the access token Secret to be recreated
 			waitForAccessTokenSecret(ctx, namespace3)
-			
-			// Check if the status.Error field gets populated with the expected error message
-			Eventually(func() bool {
-				// Retrieve the GitHubApp object
-				key := types.NamespacedName{Name: githubAppName3, Namespace: namespace3}
-				retrievedGithubApp := &githubappv1.GithubApp{}
-				err := k8sClient.Get(ctx, key, retrievedGithubApp)
-				if err != nil {
-					return false // Unable to retrieve the GitHubApp
-				}
-				// Check if the status.Error field has been cleared of errors
-				return retrievedGithubApp.Status.Error == ""
-			}, "30s", "5s").Should(BeTrue(), "Failed to clear status.Error field within timeout")
+
+			By("Checking the githubApp `status.error` value is as expected")
+			checkGithubAppStatusError(ct,, githubAppName3, namespace3, "")
 
 			// Delete the GitHubApp after reconciliation
 			deleteGitHubAppAndWait(ctx, namespace3, githubAppName3)
