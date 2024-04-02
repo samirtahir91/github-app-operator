@@ -1,6 +1,6 @@
 // test_helpers.go
 
-package test_helpers
+package controller
 
 import (
 	"context"

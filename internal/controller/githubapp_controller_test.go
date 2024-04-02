@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	test_helpers "./test_helpers"
 )
 
 const (
@@ -62,10 +61,10 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating the privateKeySecret in the namespace1")
-			test_helpers.createPrivateKeySecret(ctx, namespace1, "privateKey")
+			createPrivateKeySecret(ctx, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
-			test_helpers.createGitHubAppAndWait(ctx, namespace1, githubAppName, nil)
+			createGitHubAppAndWait(ctx, namespace1, githubAppName, nil)
 		})
 	})
 
@@ -74,7 +73,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Waiting for the access token secret to be created")
-			test_helpers.waitForAccessTokenSecret(ctx, namespace1)
+			waitForAccessTokenSecret(ctx, namespace1)
 		})
 	})
 
@@ -98,7 +97,7 @@ var _ = Describe("GithubApp controller", func() {
 			)
 
 			By("Waiting for the access token secret to be created")
-			test_helpers.waitForAccessTokenSecret(ctx, namespace1)
+			waitForAccessTokenSecret(ctx, namespace1)
 		})
 	})
 
@@ -108,7 +107,7 @@ var _ = Describe("GithubApp controller", func() {
 
 			By("Modifying the access token secret with an invalid token")
 			dummyAccessToken := "dummy_access_token"
-			accessTokenSecretKey := test_helpers.updateAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
+			accessTokenSecretKey := updateAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
 
 			// Wait for the accessToken to be updated
 			Eventually(func() string {
@@ -125,7 +124,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Modifying the access token secret with an invalid key")
-			accessTokenSecretKey := test_helpers.updateAccessTokenSecret(ctx, namespace1, "foo", "dummy_value")
+			accessTokenSecretKey := updateAccessTokenSecret(ctx, namespace1, "foo", "dummy_value")
 
 			// Wait for the accessToken to be updated and the "foo" key to be removed
 			Eventually(func() []byte {
@@ -162,7 +161,7 @@ var _ = Describe("GithubApp controller", func() {
 			fmt.Println("Reconciliation result:", result)
 
 			// Delete the GitHubApp after reconciliation
-			test_helpers.deleteGitHubAppAndWait(ctx, namespace1, githubAppName)
+			deleteGitHubAppAndWait(ctx, namespace1, githubAppName)
 		})
 	})
 
@@ -171,16 +170,16 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
-			test_helpers.createNamespace(ctx, namespace2)
+			createNamespace(ctx, namespace2)
 
 			By("Creating the privateKeySecret in namespace2")
-			test_helpers.createPrivateKeySecret(ctx, namespace2, "privateKey")
+			createPrivateKeySecret(ctx, namespace2, "privateKey")
 
 			By("Creating a pod with the label foo: bar")
-			pod1 := test_helpers.createPodWithLabel(ctx, "foo", namespace2, "foo", "bar")
+			pod1 := createPodWithLabel(ctx, "foo", namespace2, "foo", "bar")
 
 			By("Creating a pod with the label foo: bar2")
-			pod2 := test_helpers.createPodWithLabel(ctx, "foo", namespace2, "foo", "bar2")
+			pod2 := createPodWithLabel(ctx, "foo", namespace2, "foo", "bar2")
 
 			By("Creating a GithubApp with the spec.restartPods.labels foo: bar")
 			restartPodsSpec := &githubappv1.RestartPodsSpec{
@@ -189,7 +188,7 @@ var _ = Describe("GithubApp controller", func() {
 				},
 			}
 			// Create a GithubApp instance with the RestartPods field initialized
-			test_helpers.createGitHubAppAndWait(ctx, namespace2, githubAppName2, restartPodsSpec)
+			createGitHubAppAndWait(ctx, namespace2, githubAppName2, restartPodsSpec)
 
 			By("Waiting for pod1 with the label 'foo: bar' to be deleted")
 			// Wait for the pod to be deleted by the reconcile loop
@@ -214,7 +213,7 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to delete pod2: %v", err)
 
 			// Delete the GitHubApp after reconciliation
-			test_helpers.deleteGitHubAppAndWait(ctx, namespace2, githubAppName2)
+			deleteGitHubAppAndWait(ctx, namespace2, githubAppName2)
 		})
 	})
 
@@ -223,19 +222,19 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
-			test_helpers.createNamespace(ctx, namespace4)
+			createNamespace(ctx, namespace4)
 
 			By("Creating the privateKeySecret in namespace4 without the 'privateKey' field")
-			test_helpers.createPrivateKeySecret(ctx, namespace4, "foo")
+			createPrivateKeySecret(ctx, namespace4, "foo")
 
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
-			test_helpers.createGitHubAppAndWait(ctx, namespace4, githubAppName4, nil)
+			createGitHubAppAndWait(ctx, namespace4, githubAppName4, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			test_helpers.checkGithubAppStatusError(ctx, githubAppName4, namespace4, "privateKey not found in Secret")
+			checkGithubAppStatusError(ctx, githubAppName4, namespace4, "privateKey not found in Secret")
 
 			// Delete the GitHubApp after reconciliation
-			test_helpers.deleteGitHubAppAndWait(ctx, namespace4, githubAppName4)
+			deleteGitHubAppAndWait(ctx, namespace4, githubAppName4)
 		})
 	})
 
@@ -244,13 +243,13 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
-			test_helpers.createNamespace(ctx, namespace3)
+			createNamespace(ctx, namespace3)
 
 			By("Creating a GithubApp without creating the privateKeySecret")
-			test_helpers.createGitHubAppAndWait(ctx, namespace3, githubAppName3, nil)
+			createGitHubAppAndWait(ctx, namespace3, githubAppName3, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			test_helpers.checkGithubAppStatusError(ctx, githubAppName3, namespace3, "Secret \"gh-app-key-test\" not found")
+			checkGithubAppStatusError(ctx, githubAppName3, namespace3, "Secret \"gh-app-key-test\" not found")
 		})
 	})
 
@@ -259,16 +258,16 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating the privateKeySecret in namespace3")
-			test_helpers.createPrivateKeySecret(ctx, namespace3, "privateKey")
+			createPrivateKeySecret(ctx, namespace3, "privateKey")
 
 			By("Waiting for the access token secret to be created")
-			test_helpers.waitForAccessTokenSecret(ctx, namespace3)
+			waitForAccessTokenSecret(ctx, namespace3)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			test_helpers.checkGithubAppStatusError(ctx, githubAppName3, namespace3, "")
+			checkGithubAppStatusError(ctx, githubAppName3, namespace3, "")
 
 			// Delete the GitHubApp after reconciliation
-			test_helpers.deleteGitHubAppAndWait(ctx, namespace3, githubAppName3)
+			deleteGitHubAppAndWait(ctx, namespace3, githubAppName3)
 		})
 	})
 })
