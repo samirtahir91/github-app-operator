@@ -38,7 +38,6 @@ const (
 	privateKeySecret = "gh-app-key-test"
 	appId            = 857468
 	installId        = 48531286
-	podName          = "foo"
 	githubAppName    = "gh-app-test"
 	githubAppName2   = "gh-app-test-2"
 	githubAppName3   = "gh-app-test-3"
@@ -162,6 +161,30 @@ func checkGithubAppStatusError(ctx context.Context, githubAppName string, namesp
 		// Check if the status.Error field contains the expected error message
 		return retrievedGithubApp.Status.Error == errMsg
 	}, "30s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
+}
+
+// Funtion to create a busybox pod with a label
+func createPodWithLabel(ctx context.Context, podName string, namespace string, labeKey string, labelValue string) pod corev1.Pod {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: podName,
+			Namespace:    namespace,
+			Labels: map[string]string{
+				labeKey: labelValue,
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  podName,
+					Image: "busybox",
+				},
+			},
+		},
+	}
+	Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
+
+	return pod
 }
 		
 // Tests
@@ -287,24 +310,10 @@ var _ = Describe("GithubApp controller", func() {
 			createPrivateKeySecret(ctx, namespace2, "privateKey")
 
 			By("Creating a pod with the label foo: bar")
-			pod := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: podName,
-					Namespace:    namespace2,
-					Labels: map[string]string{
-						"foo": "bar",
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  podName,
-							Image: "busybox",
-						},
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
+			pod := createPodWithLabel(ctx, "foo", namespace2, "foo", "bar")
+
+			By("Creating a pod with the label foo: bar2")
+			pod2 := createPodWithLabel(ctx, "foo", namespace2, "foo", "bar2")
 
 			By("Creating a GithubApp with the spec.restartPods.labels foo: bar")
 			restartPodsSpec := &githubappv1.RestartPodsSpec{
