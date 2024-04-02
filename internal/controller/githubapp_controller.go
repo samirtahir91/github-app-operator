@@ -563,12 +563,12 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
 		// creates the in-cluster config
 		config, err := rest.InClusterConfig()
 		if err != nil {
-			return fmt.Errorf("failed to create in-cluster config", err)
+			return fmt.Errorf("failed to create in-cluster config: %v", err)
 		}
 		// creates the clientset
 		clientset, err := kubernetes.NewForConfig(config)
 		if err != nil {
-			return fmt.Errorf("failed to create clientset", err)
+			return fmt.Errorf("failed to create clientset: %v", err)
 		}
 		
         // Evict each pod
