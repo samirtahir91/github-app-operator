@@ -337,7 +337,7 @@ var _ = Describe("GithubApp controller", func() {
 			createGitHubAppAndWait(ctx, namespace4, githubAppName4, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			checkGithubAppStatusError(ct,, githubAppName4, namespace4, "privateKey not found in Secret")
+			checkGithubAppStatusError(ctx, githubAppName4, namespace4, "privateKey not found in Secret")
 
 			// Delete the GitHubApp after reconciliation
 			deleteGitHubAppAndWait(ctx, namespace4, githubAppName4)
@@ -355,7 +355,7 @@ var _ = Describe("GithubApp controller", func() {
 			createGitHubAppAndWait(ctx, namespace3, githubAppName3, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			checkGithubAppStatusError(ct,, githubAppName3, namespace3, "Secret \"gh-app-key-test\" not found")
+			checkGithubAppStatusError(ctx, githubAppName3, namespace3, "Secret \"gh-app-key-test\" not found")
 		})
 	})
 
@@ -370,7 +370,7 @@ var _ = Describe("GithubApp controller", func() {
 			waitForAccessTokenSecret(ctx, namespace3)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			checkGithubAppStatusError(ct,, githubAppName3, namespace3, "")
+			checkGithubAppStatusError(ctx, githubAppName3, namespace3, "")
 
 			// Delete the GitHubApp after reconciliation
 			deleteGitHubAppAndWait(ctx, namespace3, githubAppName3)
