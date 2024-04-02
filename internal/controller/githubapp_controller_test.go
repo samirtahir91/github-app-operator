@@ -62,7 +62,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating the privateKeySecret in the namespace1")
-			(ctx, namespace1, "privateKey")
+			test_helpers.createPrivateKeySecret(ctx, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
 			test_helpers.createGitHubAppAndWait(ctx, namespace1, githubAppName, nil)
