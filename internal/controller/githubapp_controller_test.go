@@ -106,7 +106,13 @@ var _ = Describe("GithubApp controller", func() {
 
 			By("Modifying the access token secret with an invalid token")
 			dummyAccessToken := "dummy_access_token"
-			accessTokenSecretKey := test_helpers.UpdateAccessTokenSecret(ctx, k8sClient, namespace1, "token", dummyAccessToken)
+			accessTokenSecretKey := test_helpers.UpdateAccessTokenSecret(
+				ctx,
+				k8sClient,
+				namespace1,
+				"token",
+				dummyAccessToken,
+			)
 
 			// Wait for the accessToken to be updated
 			Eventually(func() string {
@@ -123,7 +129,13 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Modifying the access token secret with an invalid key")
-			accessTokenSecretKey := test_helpers.UpdateAccessTokenSecret(ctx, k8sClient, namespace1, "foo", "dummy_value")
+			accessTokenSecretKey := test_helpers.UpdateAccessTokenSecret(
+				ctx,
+				k8sClient,
+				namespace1,
+				"foo",
+				"dummy_value",
+			)
 
 			// Wait for the accessToken to be updated and the "foo" key to be removed
 			Eventually(func() []byte {
@@ -230,7 +242,13 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			test_helpers.CheckGithubAppStatusError(ctx, k8sClient, githubAppName4, namespace4, "privateKey not found in Secret")
+			test_helpers.CheckGithubAppStatusError(
+				ctx,
+				k8sClient,
+				githubAppName4,
+				namespace4,
+				"privateKey not found in Secret",
+			)
 
 			// Delete the GitHubApp after reconciliation
 			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4)
@@ -248,7 +266,13 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace3, githubAppName3, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			test_helpers.CheckGithubAppStatusError(ctx, k8sClient, githubAppName3, namespace3, "Secret \"gh-app-key-test\" not found")
+			test_helpers.CheckGithubAppStatusError(
+				ctx,
+				k8sClient,
+				githubAppName3,
+				namespace3,
+				"Secret \"gh-app-key-test\" not found",
+			)
 		})
 	})
 
