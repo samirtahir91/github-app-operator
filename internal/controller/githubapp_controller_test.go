@@ -133,16 +133,18 @@ func waitForAccessTokenSecret(ctx context.Context, namespace string) {
 }
 
 // Function to update access token secret data with dummy data
-func updateAccessTokenSecret(ctx context.Context, namespace string, key string, dummyKeyValue string) {
-			// Update the accessToken to a dummy value
-			accessTokenSecretKey := types.NamespacedName{
-				Namespace: namespace,
-				Name:      acessTokenSecretName,
-			}
-			accessTokenSecret := &corev1.Secret{}
-			Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
-			accessTokenSecret.Data[key] = []byte(dummyKeyValue)
-			Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
+func updateAccessTokenSecret(ctx context.Context, namespace string, key string, dummyKeyValue string)  types.NamespacedName {
+	// Update the accessToken to a dummy value
+	accessTokenSecretKey := types.NamespacedName{
+		Namespace: namespace,
+		Name:      acessTokenSecretName,
+	}
+	accessTokenSecret := &corev1.Secret{}
+	Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
+	accessTokenSecret.Data[key] = []byte(dummyKeyValue)
+	Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
+
+	return accessTokenSecretKey
 }
 		
 // Tests
@@ -194,7 +196,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Modifying the access token secret with an invalid token")
 			// Define constants for test
 			dummyAccessToken := "dummy_access_token"
-			updateAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
+			accessTokenSecretKey = updateAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
 
 			// Wait for the accessToken to be updated
 			Eventually(func() string {
@@ -213,7 +215,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Modifying the access token secret with an invalid key")
 			// Define constants for test
 			dummyKeyValue := "dummy_value"
-			updateAccessTokenSecret(ctx, namespace1, "foo", dummyKeyValue)
+			accessTokenSecretKey = updateAccessTokenSecret(ctx, namespace1, "foo", dummyKeyValue)
 
 			// Wait for the accessToken to be updated and the "foo" key to be removed
 			Eventually(func() []byte {
