@@ -127,9 +127,19 @@ func CreateNamespace(ctx context.Context, k8sClient client.Client, namespace str
 func WaitForAccessTokenSecret(ctx context.Context, k8sClient client.Client, namespace string) {
 	var retrievedSecret corev1.Secret
 	gomega.Eventually(func() bool {
-		err := k8sClient.Get(ctx, types.NamespacedName{Name: acessTokenSecretName, Namespace: namespace}, &retrievedSecret)
+		err := k8sClient.Get(ctx, types.NamespacedName{
+			Name: acessTokenSecretName,
+			Namespace: namespace,
+			},
+			&retrievedSecret,
+		)
 		return err == nil
-	}, "20s", "5s").Should(gomega.BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", namespace, acessTokenSecretName))
+	}, "20s", "5s").Should(gomega.BeTrue(), fmt.Sprintf(
+		"Access token secret %s/%s not created",
+		namespace,
+		acessTokenSecretName,
+		),
+	)
 }
 
 // Function to update access token secret data with dummy data
