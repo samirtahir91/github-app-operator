@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"os"
 	"strconv"
@@ -51,7 +50,6 @@ const (
 )
 
 var (
-	privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
 	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 )
 	
