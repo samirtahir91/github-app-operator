@@ -574,7 +574,7 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
         // Evict each pod
         for _, pod := range podList.Items {
             // Construct the pod eviction object
-            eviction := &policyv1beta1.Eviction{
+            eviction := &policyv1.Eviction{
                 ObjectMeta: metav1.ObjectMeta{
                     Name:      pod.Name,
                     Namespace: pod.Namespace,
