@@ -338,7 +338,7 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to retrieve pod2: %v", err)
 	
 			// Delete pod2
-			err := k8sClient.Delete(ctx, pod2)
+			err = k8sClient.Delete(ctx, pod2)
 			Expect(err).ToNot(HaveOccurred(), "Failed to delete pod2: %v", err)
 
 			// Delete the GitHubApp after reconciliation
