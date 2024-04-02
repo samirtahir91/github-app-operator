@@ -196,7 +196,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Modifying the access token secret with an invalid token")
 			// Define constants for test
 			dummyAccessToken := "dummy_access_token"
-			accessTokenSecretKey = updateAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
+			accessTokenSecretKey := updateAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
 
 			// Wait for the accessToken to be updated
 			Eventually(func() string {
@@ -215,7 +215,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Modifying the access token secret with an invalid key")
 			// Define constants for test
 			dummyKeyValue := "dummy_value"
-			accessTokenSecretKey = updateAccessTokenSecret(ctx, namespace1, "foo", dummyKeyValue)
+			accessTokenSecretKey := updateAccessTokenSecret(ctx, namespace1, "foo", dummyKeyValue)
 
 			// Wait for the accessToken to be updated and the "foo" key to be removed
 			Eventually(func() []byte {
