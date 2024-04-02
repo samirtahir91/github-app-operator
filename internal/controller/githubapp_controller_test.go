@@ -204,7 +204,7 @@ var _ = Describe("GithubApp controller", func() {
 				namespace1,
 				acessTokenSecretName,
 				err,
-				)
+				),
 			)
 
 			By("Waiting for the access token secret to be created")
