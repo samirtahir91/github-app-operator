@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 
-	. "github.com/onsi/gomega"
+	//. "github.com/onsi/gomega"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	githubappv1 "github-app-operator/api/v1"
