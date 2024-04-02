@@ -203,7 +203,7 @@ var _ = Describe("GithubApp controller", func() {
 				"Failed to delete Secret %s/%s: %v",
 				namespace1,
 				acessTokenSecretName,
-				err
+				err,
 				)
 			)
 
