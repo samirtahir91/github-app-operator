@@ -33,14 +33,14 @@ import (
 )
 
 const (
-	githubAppName    = "gh-app-test"
-	githubAppName2   = "gh-app-test-2"
-	githubAppName3   = "gh-app-test-3"
-	githubAppName4   = "gh-app-test-4"
-	namespace1       = "default"
-	namespace2       = "namespace2"
-	namespace3       = "namespace3"
-	namespace4       = "namespace4"
+	githubAppName  = "gh-app-test"
+	githubAppName2 = "gh-app-test-2"
+	githubAppName3 = "gh-app-test-3"
+	githubAppName4 = "gh-app-test-4"
+	namespace1     = "default"
+	namespace2     = "namespace2"
+	namespace3     = "namespace3"
+	namespace4     = "namespace4"
 )
 
 // Tests
@@ -197,7 +197,7 @@ var _ = Describe("GithubApp controller", func() {
 				// Check if pod2 has a deletion timestamp
 				return pod2.DeletionTimestamp == nil
 			}, "10s", "2s").Should(BeTrue(), "Pod2 is marked for deletion")
-	
+
 			// Delete pod2
 			err := k8sClient.Delete(ctx, pod2)
 			Expect(err).ToNot(HaveOccurred(), "Failed to delete pod2: %v", err)
