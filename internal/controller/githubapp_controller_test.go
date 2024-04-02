@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
