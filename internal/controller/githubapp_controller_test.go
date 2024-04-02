@@ -35,7 +35,6 @@ import (
 )
 
 const (
-	privateKeySecret = "gh-app-key-test"
 	appId            = 857468
 	installId        = 48531286
 	githubAppName    = "gh-app-test"
@@ -63,7 +62,7 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace1, githubAppName, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace1, githubAppName, installId, nil)
 		})
 	})
 
@@ -199,7 +198,7 @@ var _ = Describe("GithubApp controller", func() {
 				},
 			}
 			// Create a GithubApp instance with the RestartPods field initialized
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, restartPodsSpec)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, installId, restartPodsSpec)
 
 			By("Waiting for pod1 with the label 'foo: bar' to be deleted")
 			// Wait for the pod to be deleted by the reconcile loop
@@ -239,7 +238,7 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace4, "foo")
 
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4, installId, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
 			test_helpers.CheckGithubAppStatusError(
@@ -263,7 +262,7 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreateNamespace(ctx, k8sClient, namespace3)
 
 			By("Creating a GithubApp without creating the privateKeySecret")
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace3, githubAppName3, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace3, githubAppName3, installId, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
 			test_helpers.CheckGithubAppStatusError(

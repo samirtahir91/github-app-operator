@@ -22,7 +22,6 @@ import (
 const (
 	privateKeySecret = "gh-app-key-test"
 	appId            = 857468
-	installId        = 48531286
 )
 
 var (
@@ -58,6 +57,7 @@ func CreateGitHubAppAndWait(
 	k8sClient client.Client,
 	namespace,
 	name string,
+	installId int,
 	restartPodsSpec *githubappv1.RestartPodsSpec,
 	) {
 	// create the GitHubApp
