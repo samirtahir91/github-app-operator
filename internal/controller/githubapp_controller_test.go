@@ -164,7 +164,7 @@ func checkGithubAppStatusError(ctx context.Context, githubAppName string, namesp
 }
 
 // Funtion to create a busybox pod with a label
-func createPodWithLabel(ctx context.Context, podName string, namespace string, labeKey string, labelValue string) pod corev1.Pod {
+func createPodWithLabel(ctx context.Context, podName string, namespace string, labeKey string, labelValue string) corev1.Pod {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: podName,
