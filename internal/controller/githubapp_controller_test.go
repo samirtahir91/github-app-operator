@@ -174,7 +174,6 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Deleting the access token secret")
-			var retrievedSecret corev1.Secret
 			err := k8sClient.Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      acessTokenSecretName,
