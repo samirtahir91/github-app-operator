@@ -175,10 +175,10 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace2, "privateKey")
 
 			By("Creating a pod with the label foo: bar")
-			pod1 := test_helpers.CreatePodWithLabel(ctx, "foo", namespace2, "foo", "bar")
+			pod1 := test_helpers.CreatePodWithLabel(ctx, k8sClient, "foo", namespace2, "foo", "bar")
 
 			By("Creating a pod with the label foo: bar2")
-			pod2 := test_helpers.CreatePodWithLabel(ctx, "foo", namespace2, "foo", "bar2")
+			pod2 := test_helpers.CreatePodWithLabel(ctx, k8sClient, "foo", namespace2, "foo", "bar2")
 
 			By("Creating a GithubApp with the spec.restartPods.labels foo: bar")
 			restartPodsSpec := &githubappv1.RestartPodsSpec{
