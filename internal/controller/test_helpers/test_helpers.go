@@ -7,9 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"strconv"
 
-	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,6 +27,7 @@ const (
 var (
 	privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
 	k8sClient client.Client
+	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 	//ctx       context.Context
 )
 
