@@ -30,6 +30,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/client-go/kubernetes"
+    policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -535,42 +537,52 @@ func generateAccessToken(ctx context.Context, appID int, installationID int, pri
 
 // Function to bounce pods as per `spec.restartPods.labels` in GithubApp (in the same namespace)
 func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp) error {
-	l := log.FromContext(ctx)
+    l := log.FromContext(ctx)
 
-	// Check if restartPods field is defined
-	if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
-		// No action needed if restartPods is not defined or no labels are specified
-		return nil
-	}
+    // Check if restartPods field is defined
+    if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
+        // No action needed if restartPods is not defined or no labels are specified
+        return nil
+    }
 
-	// Loop through each label specified in restartPods.labels and restart pods matching each label
-	for key, value := range githubApp.Spec.RestartPods.Labels {
-		// Create a list options with label selector
-		listOptions := &client.ListOptions{
-			Namespace:     githubApp.Namespace,
-			LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
-		}
+    // Loop through each label specified in restartPods.labels and restart pods matching each label
+    for key, value := range githubApp.Spec.RestartPods.Labels {
+        // Create a list options with label selector
+        listOptions := &client.ListOptions{
+            Namespace:     githubApp.Namespace,
+            LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
+        }
 
-		// List pods with the label selector
-		podList := &corev1.PodList{}
-		if err := r.List(ctx, podList, listOptions); err != nil {
-			return fmt.Errorf("failed to list pods with label %s=%s: %v", key, value, err)
-		}
+        // List pods with the label selector
+        podList := &corev1.PodList{}
+        if err := r.List(ctx, podList, listOptions); err != nil {
+            return fmt.Errorf("failed to list pods with label %s=%s: %v", key, value, err)
+        }
 
-		// Restart each pod by deleting it
-		for _, pod := range podList.Items {
-			// Set deletion timestamp on the pod
-			if err := r.Delete(ctx, &pod); err != nil {
-				return fmt.Errorf("failed to delete pod %s/%s: %v", pod.Namespace, pod.Name, err)
-			}
-			// Log pod deletion
-			l.Info(
-				"Pod marked for deletion to refresh secret",
-				"Pod Name", pod.Name,
-			)
-		}
-	}
-	return nil
+        // Evict each pod
+        for _, pod := range podList.Items {
+            // Construct the pod eviction object
+            eviction := &policyv1beta1.Eviction{
+                ObjectMeta: metav1.ObjectMeta{
+                    Name:      pod.Name,
+                    Namespace: pod.Namespace,
+                },
+            }
+
+            // Evict the pod
+            if err := r.Client.PolicyV1beta1().Evictions(pod.Namespace).Evict(ctx, eviction); err != nil {
+                // If the pod is already gone, ignore the error
+                if apierrors.IsNotFound(err) {
+                    l.Info("Pod not found, skipping eviction", "Pod Name", pod.Name)
+                    continue
+                }
+                return fmt.Errorf("failed to evict pod %s/%s: %v", pod.Namespace, pod.Name, err)
+            }
+            // Log pod eviction
+            l.Info("Pod marked for eviction to refresh secret", "Pod Name", pod.Name)
+        }
+    }
+    return nil
 }
 
 // Define a predicate function to filter create events for access token secrets
