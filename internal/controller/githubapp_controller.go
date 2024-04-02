@@ -31,7 +31,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	config "sigs.k8s.io/controller-runtime/pkg/client/config"
     policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -561,12 +561,12 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
         }
 
 		// creates the in-cluster config
-		config, err := rest.InClusterConfig()
+		kubeConfig, err := config.GetConfig()
 		if err != nil {
-			return fmt.Errorf("failed to create in-cluster config: %v", err)
+			return nil, fmt.Errorf("failed to create in-cluster config: %v", err)
 		}
 		// creates the clientset
-		clientset, err := kubernetes.NewForConfig(config)
+		clientset, err := kubernetes.NewForConfig(kubeConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create clientset: %v", err)
 		}
