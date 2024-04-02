@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +28,8 @@ const (
 
 var (
 	privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
+	k8sClient client.Client
+	//ctx       context.Context
 )
 
 // Function to delete a GitHubApp and wait for its deletion
