@@ -31,7 +31,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/kubernetes"
-    policyv1beta1 "k8s.io/api/policy/v1beta1"
+	"k8s.io/client-go/rest"
+    policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -559,8 +560,16 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
             return fmt.Errorf("failed to list pods with label %s=%s: %v", key, value, err)
         }
 
-		// Get Kubernetes clientset from the reconciler
-		clientset := r.Clientset
+		// creates the in-cluster config
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			return fmt.Errorf("failed to create in-cluster config", err)
+		}
+		// creates the clientset
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return fmt.Errorf("failed to create clientset", err)
+		}
 		
         // Evict each pod
         for _, pod := range podList.Items {
