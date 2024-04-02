@@ -582,7 +582,7 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
             }
 
             // Evict the pod
-            if err := clientset.PolicyV1beta1().Evictions(pod.Namespace).Evict(ctx, eviction); err != nil {
+            if err := clientset.PolicyV1().Evictions(pod.Namespace).Evict(ctx, eviction); err != nil {
                 // If the pod is already gone, ignore the error
                 if apierrors.IsNotFound(err) {
                     l.Info("Pod not found, skipping eviction", "Pod Name", pod.Name)
