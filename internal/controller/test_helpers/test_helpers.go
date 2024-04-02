@@ -32,7 +32,7 @@ var (
 )
 
 // Function to delete accessToken Secret
-func DeleteAccessTokenSecret(ctx context.Context, k8sClient client.Client, namespace, name string) {
+func DeleteAccessTokenSecret(ctx context.Context, k8sClient client.Client, namespace string) {
 	err := k8sClient.Delete(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      acessTokenSecretName,
@@ -49,7 +49,7 @@ func DeleteAccessTokenSecret(ctx context.Context, k8sClient client.Client, names
 }
 
 // Function to delete a GitHubApp and wait for its deletion
-func DeleteGitHubAppAndWait(ctx context.Context, k8sClient client.Client, namespace, name string) {
+func DeleteGitHubAppAndWait(ctx context.Context, k8sClient client.Client, namespace string, name string) {
 	// Delete the GitHubApp
 	err := k8sClient.Delete(ctx, &githubappv1.GithubApp{
 		ObjectMeta: metav1.ObjectMeta{
