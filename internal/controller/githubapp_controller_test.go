@@ -310,7 +310,7 @@ var _ = Describe("GithubApp controller", func() {
 			createPrivateKeySecret(ctx, namespace2, "privateKey")
 
 			By("Creating a pod with the label foo: bar")
-			pod := createPodWithLabel(ctx, "foo", namespace2, "foo", "bar")
+			pod1 := createPodWithLabel(ctx, "foo", namespace2, "foo", "bar")
 
 			By("Creating a pod with the label foo: bar2")
 			pod2 := createPodWithLabel(ctx, "foo", namespace2, "foo", "bar2")
@@ -324,11 +324,18 @@ var _ = Describe("GithubApp controller", func() {
 			// Create a GithubApp instance with the RestartPods field initialized
 			createGitHubAppAndWait(ctx, namespace2, githubAppName2, restartPodsSpec) // With restartPods
 
+			By("Waiting for pod1 with the label 'foo: bar' to be deleted")
 			// Wait for the pod to be deleted by the reconcile loop
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, pod)
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod1.Name, Namespace: pod1.Namespace}, pod1)
 				return apierrors.IsNotFound(err) // Pod is deleted
 			}, "60s", "5s").Should(BeTrue(), "Failed to delete the pod within timeout")
+
+			By("Checking pod2 with the label 'foo: bar2' still exists")
+			podKey := types.NamespacedName{Name: pod2.Name, Namespace: pod2.Namespace}
+			retrievedPod := &corev1.Pod{}
+			err := k8sClient.Get(ctx, podKey, retrievedPod)
+			Expect(err).ToNot(HaveOccurred(), "Failed to retrieve pod2: %v", err)
 
 			// Delete the GitHubApp after reconciliation
 			deleteGitHubAppAndWait(ctx, namespace2, githubAppName2)
