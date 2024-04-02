@@ -183,7 +183,7 @@ var _ = Describe("GithubApp controller", func() {
 		It("should successfully reconcile the resource", func() {
 			ctx := context.Background()
 
-			By("Retrieving the access token secret")
+			By("Waiting for the access token secret to be created")
 			waitForAccessTokenSecret(ctx, namespace1)
 		})
 	})
@@ -201,7 +201,7 @@ var _ = Describe("GithubApp controller", func() {
 			})
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to delete Secret %s/%s: %v", namespace1, acessTokenSecretName, err))
 
-			By("Waiting for the access token secret to be re-created")
+			By("Waiting for the access token secret to be created")
 			waitForAccessTokenSecret(ctx, namespace1)
 		})
 	})
@@ -366,7 +366,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Creating the privateKeySecret in namespace3")
 			createPrivateKeySecret(ctx, namespace3, "privateKey")
 
-			// Wait for the access token Secret to be recreated
+			By("Waiting for the access token secret to be created")
 			waitForAccessTokenSecret(ctx, namespace3)
 
 			By("Checking the githubApp `status.error` value is as expected")
