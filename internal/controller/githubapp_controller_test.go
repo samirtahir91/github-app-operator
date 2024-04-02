@@ -133,7 +133,7 @@ func waitForAccessTokenSecret(ctx context.Context, namespace string) {
 }
 
 // Function to update access token secret data with dummy data
-func waitForAccessTokenSecret(ctx context.Context, namespace string, key string, dummyKeyValue string) {
+func updateAccessTokenSecret(ctx context.Context, namespace string, key string, dummyKeyValue string) {
 			// Update the accessToken to a dummy value
 			accessTokenSecretKey := types.NamespacedName{
 				Namespace: namespace,
@@ -195,7 +195,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Modifying the access token secret with an invalid token")
 			// Define constants for test
 			dummyAccessToken := "dummy_access_token"
-			waitForAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
+			updateAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
 
 			// Wait for the accessToken to be updated
 			Eventually(func() string {
@@ -214,7 +214,7 @@ var _ = Describe("GithubApp controller", func() {
 			By("Modifying the access token secret with an invalid key")
 			// Define constants for test
 			dummyKeyValue := "dummy_value"
-			waitForAccessTokenSecret(ctx, namespace1, "foo", dummyKeyValue)
+			updateAccessTokenSecret(ctx, namespace1, "foo", dummyKeyValue)
 
 			// Wait for the accessToken to be updated and the "foo" key to be removed
 			Eventually(func() []byte {
