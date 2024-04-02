@@ -33,7 +33,7 @@ var (
 )
 
 // Function to delete a GitHubApp and wait for its deletion
-func deleteGitHubAppAndWait(ctx context.Context, namespace, name string) {
+func DeleteGitHubAppAndWait(ctx context.Context, namespace, name string) {
 	// Delete the GitHubApp
 	err := k8sClient.Delete(ctx, &githubappv1.GithubApp{
 		ObjectMeta: metav1.ObjectMeta{
@@ -55,7 +55,7 @@ func deleteGitHubAppAndWait(ctx context.Context, namespace, name string) {
 }
 
 // Function to create a GitHubApp and wait for its creation
-func createGitHubAppAndWait(ctx context.Context, namespace, name string, restartPodsSpec *githubappv1.RestartPodsSpec) {
+func CreateGitHubAppAndWait(ctx context.Context, namespace, name string, restartPodsSpec *githubappv1.RestartPodsSpec) {
 	// create the GitHubApp
 	githubApp := githubappv1.GithubApp{
 		ObjectMeta: metav1.ObjectMeta{
@@ -73,7 +73,7 @@ func createGitHubAppAndWait(ctx context.Context, namespace, name string, restart
 }
 
 // Function to create a privateKey Secret and wait for its creation
-func createPrivateKeySecret(ctx context.Context, namespace string, key string) {
+func CreatePrivateKeySecret(ctx context.Context, namespace string, key string) {
 
 	// Decode base64-encoded private key
 	decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
@@ -91,7 +91,7 @@ func createPrivateKeySecret(ctx context.Context, namespace string, key string) {
 }
 
 // Function to create a namespace
-func createNamespace(ctx context.Context, namespace string) {
+func CreateNamespace(ctx context.Context, namespace string) {
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +102,7 @@ func createNamespace(ctx context.Context, namespace string) {
 }
 
 // Function to wait for access token secret to be created
-func waitForAccessTokenSecret(ctx context.Context, namespace string) {
+func WaitForAccessTokenSecret(ctx context.Context, namespace string) {
 	var retrievedSecret corev1.Secret
 	Eventually(func() bool {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: acessTokenSecretName, Namespace: namespace}, &retrievedSecret)
@@ -111,7 +111,7 @@ func waitForAccessTokenSecret(ctx context.Context, namespace string) {
 }
 
 // Function to update access token secret data with dummy data
-func updateAccessTokenSecret(ctx context.Context, namespace string, key string, dummyKeyValue string)  types.NamespacedName {
+func UpdateAccessTokenSecret(ctx context.Context, namespace string, key string, dummyKeyValue string)  types.NamespacedName {
 	// Update the accessToken to a dummy value
 	accessTokenSecretKey := types.NamespacedName{
 		Namespace: namespace,
@@ -126,7 +126,7 @@ func updateAccessTokenSecret(ctx context.Context, namespace string, key string, 
 }
 
 // Function to validate an err message from a githubApp
-func checkGithubAppStatusError(ctx context.Context, githubAppName string, namespace string, errMsg string) {
+func CheckGithubAppStatusError(ctx context.Context, githubAppName string, namespace string, errMsg string) {
 
 	// Check if the status.Error field gets populated with the expected error message
 	Eventually(func() bool {
@@ -143,7 +143,7 @@ func checkGithubAppStatusError(ctx context.Context, githubAppName string, namesp
 }
 
 // Funtion to create a busybox pod with a label
-func createPodWithLabel(ctx context.Context, podName string, namespace string, labeKey string, labelValue string) *corev1.Pod {
+func CreatePodWithLabel(ctx context.Context, podName string, namespace string, labeKey string, labelValue string) *corev1.Pod {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: podName,
