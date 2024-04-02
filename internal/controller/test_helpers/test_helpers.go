@@ -9,14 +9,14 @@ import (
 	"os"
 	"strconv"
 
-	//. "github.com/onsi/gomega"
+    gomega "github.com/onsi/gomega"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
+	privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
 	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 )
 
@@ -39,12 +39,12 @@ func DeleteAccessTokenSecret(ctx context.Context, k8sClient client.Client, names
 			Namespace: namespace,
 		},
 	})
-	Expect(err).ToNot(HaveOccurred(), fmt.Sprintf(
+	gomega.Expect(err).ToNot(gomega.HaveOccurred(), fmt.Sprintf(
 		"Failed to delete Secret %s/%s: %v",
 		namespace,
 		acessTokenSecretName,
 		err,
-	),
+		),
 	)
 }
 
@@ -57,17 +57,17 @@ func DeleteGitHubAppAndWait(ctx context.Context, k8sClient client.Client, namesp
 			Namespace: namespace,
 		},
 	})
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("Failed to delete GitHubApp: %v", err))
 
 	// Wait for the GitHubApp to be deleted
-	Eventually(func() bool {
+	gomega.Eventually(func() bool {
 		// Check if the GitHubApp still exists
 		err := k8sClient.Get(ctx, types.NamespacedName{
 			Namespace: namespace,
 			Name:      name,
 		}, &githubappv1.GithubApp{})
 		return apierrors.IsNotFound(err) // GitHubApp is deleted
-	}, "60s", "5s").Should(BeTrue(), "Failed to delete GitHubApp within timeout")
+	}, "60s", "5s").Should(gomega.BeTrue(), "Failed to delete GitHubApp within timeout")
 }
 
 // Function to create a GitHubApp and wait for its creation
@@ -77,7 +77,7 @@ func CreateGitHubAppAndWait(
 	namespace,
 	name string,
 	restartPodsSpec *githubappv1.RestartPodsSpec,
-) {
+	) {
 	// create the GitHubApp
 	githubApp := githubappv1.GithubApp{
 		ObjectMeta: metav1.ObjectMeta{
@@ -91,7 +91,7 @@ func CreateGitHubAppAndWait(
 			RestartPods:      restartPodsSpec, // Optionally pass restartPods
 		},
 	}
-	Expect(k8sClient.Create(ctx, &githubApp)).Should(Succeed())
+	gomega.Expect(k8sClient.Create(ctx, &githubApp)).Should(gomega.Succeed())
 }
 
 // Function to create a privateKey Secret and wait for its creation
@@ -99,7 +99,7 @@ func CreatePrivateKeySecret(ctx context.Context, k8sClient client.Client, namesp
 
 	// Decode base64-encoded private key
 	decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
-	Expect(err).NotTo(HaveOccurred(), "error decoding base64-encoded private key")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "error decoding base64-encoded private key")
 
 	// create the GitHubApp
 	secret1Obj := corev1.Secret{
@@ -109,7 +109,7 @@ func CreatePrivateKeySecret(ctx context.Context, k8sClient client.Client, namesp
 		},
 		Data: map[string][]byte{key: decodedPrivateKey},
 	}
-	Expect(k8sClient.Create(ctx, &secret1Obj)).Should(Succeed())
+	gomega.Expect(k8sClient.Create(ctx, &secret1Obj)).Should(gomega.Succeed())
 }
 
 // Function to create a namespace
@@ -120,16 +120,16 @@ func CreateNamespace(ctx context.Context, k8sClient client.Client, namespace str
 			Name: namespace,
 		},
 	}
-	Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+	gomega.Expect(k8sClient.Create(ctx, ns)).Should(gomega.Succeed())
 }
 
 // Function to wait for access token secret to be created
 func WaitForAccessTokenSecret(ctx context.Context, k8sClient client.Client, namespace string) {
 	var retrievedSecret corev1.Secret
-	Eventually(func() bool {
+	gomega.Eventually(func() bool {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: acessTokenSecretName, Namespace: namespace}, &retrievedSecret)
 		return err == nil
-	}, "20s", "5s").Should(BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", namespace, acessTokenSecretName))
+	}, "20s", "5s").Should(gomega.BeTrue(), fmt.Sprintf("Access token secret %s/%s not created", namespace, acessTokenSecretName))
 }
 
 // Function to update access token secret data with dummy data
@@ -139,16 +139,16 @@ func UpdateAccessTokenSecret(
 	namespace string,
 	key string,
 	dummyKeyValue string,
-) types.NamespacedName {
+	)  types.NamespacedName {
 	// Update the accessToken to a dummy value
 	accessTokenSecretKey := types.NamespacedName{
 		Namespace: namespace,
 		Name:      acessTokenSecretName,
 	}
 	accessTokenSecret := &corev1.Secret{}
-	Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(Succeed())
+	gomega.Expect(k8sClient.Get(ctx, accessTokenSecretKey, accessTokenSecret)).To(gomega.Succeed())
 	accessTokenSecret.Data[key] = []byte(dummyKeyValue)
-	Expect(k8sClient.Update(ctx, accessTokenSecret)).To(Succeed())
+	gomega.Expect(k8sClient.Update(ctx, accessTokenSecret)).To(gomega.Succeed())
 
 	return accessTokenSecretKey
 }
@@ -160,10 +160,10 @@ func CheckGithubAppStatusError(
 	githubAppName string,
 	namespace string,
 	errMsg string,
-) {
+	) {
 
 	// Check if the status.Error field gets populated with the expected error message
-	Eventually(func() bool {
+	gomega.Eventually(func() bool {
 		// Retrieve the GitHubApp object
 		key := types.NamespacedName{Name: githubAppName, Namespace: namespace}
 		retrievedGithubApp := &githubappv1.GithubApp{}
@@ -173,7 +173,7 @@ func CheckGithubAppStatusError(
 		}
 		// Check if the status.Error field contains the expected error message
 		return retrievedGithubApp.Status.Error == errMsg
-	}, "30s", "5s").Should(BeTrue(), "Failed to set status.Error field within timeout")
+	}, "30s", "5s").Should(gomega.BeTrue(), "Failed to set status.Error field within timeout")
 }
 
 // Funtion to create a busybox pod with a label
@@ -184,7 +184,7 @@ func CreatePodWithLabel(
 	namespace string,
 	labeKey string,
 	labelValue string,
-) *corev1.Pod {
+	) *corev1.Pod {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: podName,
@@ -202,7 +202,7 @@ func CreatePodWithLabel(
 			},
 		},
 	}
-	Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
+	gomega.Expect(k8sClient.Create(ctx, pod)).Should(gomega.Succeed())
 
 	return pod
 }
