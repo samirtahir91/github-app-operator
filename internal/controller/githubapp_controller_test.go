@@ -331,11 +331,16 @@ var _ = Describe("GithubApp controller", func() {
 				return apierrors.IsNotFound(err) // Pod is deleted
 			}, "60s", "5s").Should(BeTrue(), "Failed to delete the pod within timeout")
 
-			By("Checking pod2 with the label 'foo: bar2' still exists")
-			podKey := types.NamespacedName{Name: pod2.Name, Namespace: pod2.Namespace}
-			retrievedPod := &corev1.Pod{}
-			err := k8sClient.Get(ctx, podKey, retrievedPod)
-			Expect(err).ToNot(HaveOccurred(), "Failed to retrieve pod2: %v", err)
+			By("Checking pod2 with the label 'foo: bar2' still exists and not marked for deletion")
+			Consistently(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod2.Name, Namespace: pod2.Namespace}, pod2)
+				if err != nil && apierrors.IsNotFound(err) {
+					// Pod2 is deleted
+					return false
+				}
+				// Check if pod2 has a deletion timestamp
+				return pod2.DeletionTimestamp == nil
+			}, "10s", "2s").Should(BeTrue(), "Pod2 is marked for deletion")
 	
 			// Delete pod2
 			err = k8sClient.Delete(ctx, pod2)
