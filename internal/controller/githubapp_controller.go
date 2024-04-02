@@ -559,6 +559,9 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
             return fmt.Errorf("failed to list pods with label %s=%s: %v", key, value, err)
         }
 
+		// Get Kubernetes clientset from the reconciler
+		clientset := r.Clientset
+		
         // Evict each pod
         for _, pod := range podList.Items {
             // Construct the pod eviction object
@@ -570,7 +573,7 @@ func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *github
             }
 
             // Evict the pod
-            if err := r.Client.PolicyV1beta1().Evictions(pod.Namespace).Evict(ctx, eviction); err != nil {
+            if err := clientset.PolicyV1beta1().Evictions(pod.Namespace).Evict(ctx, eviction); err != nil {
                 // If the pod is already gone, ignore the error
                 if apierrors.IsNotFound(err) {
                     l.Info("Pod not found, skipping eviction", "Pod Name", pod.Name)
