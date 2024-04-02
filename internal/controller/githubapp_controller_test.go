@@ -35,8 +35,6 @@ import (
 )
 
 const (
-	appId            = 857468
-	installId        = 48531286
 	githubAppName    = "gh-app-test"
 	githubAppName2   = "gh-app-test-2"
 	githubAppName3   = "gh-app-test-3"
@@ -47,10 +45,6 @@ const (
 	namespace4       = "namespace4"
 )
 
-var (
-	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
-)
-	
 // Tests
 var _ = Describe("GithubApp controller", func() {
 
@@ -62,7 +56,7 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace1, githubAppName, installId, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace1, githubAppName, nil)
 		})
 	})
 
@@ -80,19 +74,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Deleting the access token secret")
-			err := k8sClient.Delete(ctx, &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      acessTokenSecretName,
-					Namespace: namespace1,
-				},
-			})
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf(
-				"Failed to delete Secret %s/%s: %v",
-				namespace1,
-				acessTokenSecretName,
-				err,
-				),
-			)
+			test_helpers.DeleteAccessTokenSecret(ctx, k8sClient, namespace1)
 
 			By("Waiting for the access token secret to be created")
 			test_helpers.WaitForAccessTokenSecret(ctx, k8sClient, namespace1)
@@ -198,7 +180,7 @@ var _ = Describe("GithubApp controller", func() {
 				},
 			}
 			// Create a GithubApp instance with the RestartPods field initialized
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, installId, restartPodsSpec)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, restartPodsSpec)
 
 			By("Waiting for pod1 with the label 'foo: bar' to be deleted")
 			// Wait for the pod to be deleted by the reconcile loop
@@ -238,7 +220,7 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace4, "foo")
 
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4, installId, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
 			test_helpers.CheckGithubAppStatusError(
@@ -262,7 +244,7 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreateNamespace(ctx, k8sClient, namespace3)
 
 			By("Creating a GithubApp without creating the privateKeySecret")
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace3, githubAppName3, installId, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace3, githubAppName3, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
 			test_helpers.CheckGithubAppStatusError(

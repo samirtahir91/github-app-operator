@@ -20,14 +20,33 @@ import (
 )
 
 const (
+	// github app details
 	privateKeySecret = "gh-app-key-test"
 	appId            = 857468
+	installId        = 48531286
 )
 
 var (
 	privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
 	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 )
+
+// Function to delete accessToken Secret
+func DeleteAccessTokenSecret(ctx context.Context, k8sClient client.Client, namespace, name string) {
+	err := k8sClient.Delete(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      acessTokenSecretName,
+			Namespace: namespace,
+		},
+	})
+	Expect(err).ToNot(HaveOccurred(), fmt.Sprintf(
+		"Failed to delete Secret %s/%s: %v",
+		namespace,
+		acessTokenSecretName,
+		err,
+		),
+	)
+}
 
 // Function to delete a GitHubApp and wait for its deletion
 func DeleteGitHubAppAndWait(ctx context.Context, k8sClient client.Client, namespace, name string) {
@@ -57,7 +76,6 @@ func CreateGitHubAppAndWait(
 	k8sClient client.Client,
 	namespace,
 	name string,
-	installId int,
 	restartPodsSpec *githubappv1.RestartPodsSpec,
 	) {
 	// create the GitHubApp
