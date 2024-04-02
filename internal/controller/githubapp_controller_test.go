@@ -60,10 +60,10 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating the privateKeySecret in the namespace1")
-			test_helpers.CreatePrivateKeySecret(ctx, namespace1, "privateKey")
+			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
-			test_helpers.CreateGitHubAppAndWait(ctx, namespace1, githubAppName, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace1, githubAppName, nil)
 		})
 	})
 
@@ -72,7 +72,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Waiting for the access token secret to be created")
-			test_helpers.WaitForAccessTokenSecret(ctx, namespace1)
+			test_helpers.WaitForAccessTokenSecret(ctx, k8sClient, namespace1)
 		})
 	})
 
@@ -96,7 +96,7 @@ var _ = Describe("GithubApp controller", func() {
 			)
 
 			By("Waiting for the access token secret to be created")
-			test_helpers.WaitForAccessTokenSecret(ctx, namespace1)
+			test_helpers.WaitForAccessTokenSecret(ctx, k8sClient, namespace1)
 		})
 	})
 
@@ -106,7 +106,7 @@ var _ = Describe("GithubApp controller", func() {
 
 			By("Modifying the access token secret with an invalid token")
 			dummyAccessToken := "dummy_access_token"
-			accessTokenSecretKey := test_helpers.UpdateAccessTokenSecret(ctx, namespace1, "token", dummyAccessToken)
+			accessTokenSecretKey := test_helpers.UpdateAccessTokenSecret(ctx, k8sClient, namespace1, "token", dummyAccessToken)
 
 			// Wait for the accessToken to be updated
 			Eventually(func() string {
@@ -123,7 +123,7 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Modifying the access token secret with an invalid key")
-			accessTokenSecretKey := test_helpers.UpdateAccessTokenSecret(ctx, namespace1, "foo", "dummy_value")
+			accessTokenSecretKey := test_helpers.UpdateAccessTokenSecret(ctx, k8sClient, namespace1, "foo", "dummy_value")
 
 			// Wait for the accessToken to be updated and the "foo" key to be removed
 			Eventually(func() []byte {
@@ -160,7 +160,7 @@ var _ = Describe("GithubApp controller", func() {
 			fmt.Println("Reconciliation result:", result)
 
 			// Delete the GitHubApp after reconciliation
-			test_helpers.DeleteGitHubAppAndWait(ctx, namespace1, githubAppName)
+			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace1, githubAppName)
 		})
 	})
 
@@ -169,10 +169,10 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
-			test_helpers.CreateNamespace(ctx, namespace2)
+			test_helpers.CreateNamespace(ctx, k8sClient, namespace2)
 
 			By("Creating the privateKeySecret in namespace2")
-			test_helpers.CreatePrivateKeySecret(ctx, namespace2, "privateKey")
+			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace2, "privateKey")
 
 			By("Creating a pod with the label foo: bar")
 			pod1 := test_helpers.CreatePodWithLabel(ctx, "foo", namespace2, "foo", "bar")
@@ -187,7 +187,7 @@ var _ = Describe("GithubApp controller", func() {
 				},
 			}
 			// Create a GithubApp instance with the RestartPods field initialized
-			test_helpers.CreateGitHubAppAndWait(ctx, namespace2, githubAppName2, restartPodsSpec)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, restartPodsSpec)
 
 			By("Waiting for pod1 with the label 'foo: bar' to be deleted")
 			// Wait for the pod to be deleted by the reconcile loop
@@ -212,7 +212,7 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to delete pod2: %v", err)
 
 			// Delete the GitHubApp after reconciliation
-			test_helpers.DeleteGitHubAppAndWait(ctx, namespace2, githubAppName2)
+			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2)
 		})
 	})
 
@@ -221,19 +221,19 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
-			test_helpers.CreateNamespace(ctx, namespace4)
+			test_helpers.CreateNamespace(ctx, k8sClient, namespace4)
 
 			By("Creating the privateKeySecret in namespace4 without the 'privateKey' field")
-			test_helpers.CreatePrivateKeySecret(ctx, namespace4, "foo")
+			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace4, "foo")
 
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
-			test_helpers.CreateGitHubAppAndWait(ctx, namespace4, githubAppName4, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			test_helpers.CheckGithubAppStatusError(ctx, githubAppName4, namespace4, "privateKey not found in Secret")
+			test_helpers.CheckGithubAppStatusError(ctx, k8sClient, githubAppName4, namespace4, "privateKey not found in Secret")
 
 			// Delete the GitHubApp after reconciliation
-			test_helpers.DeleteGitHubAppAndWait(ctx, namespace4, githubAppName4)
+			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4)
 		})
 	})
 
@@ -242,13 +242,13 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating a new namespace")
-			test_helpers.CreateNamespace(ctx, namespace3)
+			test_helpers.CreateNamespace(ctx, k8sClient, namespace3)
 
 			By("Creating a GithubApp without creating the privateKeySecret")
-			test_helpers.CreateGitHubAppAndWait(ctx, namespace3, githubAppName3, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace3, githubAppName3, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			test_helpers.CheckGithubAppStatusError(ctx, githubAppName3, namespace3, "Secret \"gh-app-key-test\" not found")
+			test_helpers.CheckGithubAppStatusError(ctx, k8sClient, githubAppName3, namespace3, "Secret \"gh-app-key-test\" not found")
 		})
 	})
 
@@ -257,16 +257,16 @@ var _ = Describe("GithubApp controller", func() {
 			ctx := context.Background()
 
 			By("Creating the privateKeySecret in namespace3")
-			test_helpers.CreatePrivateKeySecret(ctx, namespace3, "privateKey")
+			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace3, "privateKey")
 
 			By("Waiting for the access token secret to be created")
-			test_helpers.WaitForAccessTokenSecret(ctx, namespace3)
+			test_helpers.WaitForAccessTokenSecret(ctx, k8sClient, namespace3)
 
 			By("Checking the githubApp `status.error` value is as expected")
-			test_helpers.CheckGithubAppStatusError(ctx, githubAppName3, namespace3, "")
+			test_helpers.CheckGithubAppStatusError(ctx, k8sClient, githubAppName3, namespace3, "")
 
 			// Delete the GitHubApp after reconciliation
-			test_helpers.DeleteGitHubAppAndWait(ctx, namespace3, githubAppName3)
+			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace3, githubAppName3)
 		})
 	})
 })
