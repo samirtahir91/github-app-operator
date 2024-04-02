@@ -343,7 +343,7 @@ var _ = Describe("GithubApp controller", func() {
 			}, "10s", "2s").Should(BeTrue(), "Pod2 is marked for deletion")
 	
 			// Delete pod2
-			err = k8sClient.Delete(ctx, pod2)
+			err := k8sClient.Delete(ctx, pod2)
 			Expect(err).ToNot(HaveOccurred(), "Failed to delete pod2: %v", err)
 
 			// Delete the GitHubApp after reconciliation
