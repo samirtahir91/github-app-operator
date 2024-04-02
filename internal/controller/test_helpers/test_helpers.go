@@ -11,12 +11,12 @@ import (
 
 	//. "github.com/onsi/gomega"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	githubappv1 "github-app-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	privateKey = os.Getenv("GITHUB_PRIVATE_KEY")
+	privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
 	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 )
 
@@ -44,7 +44,7 @@ func DeleteAccessTokenSecret(ctx context.Context, k8sClient client.Client, names
 		namespace,
 		acessTokenSecretName,
 		err,
-		),
+	),
 	)
 }
 
@@ -77,7 +77,7 @@ func CreateGitHubAppAndWait(
 	namespace,
 	name string,
 	restartPodsSpec *githubappv1.RestartPodsSpec,
-	) {
+) {
 	// create the GitHubApp
 	githubApp := githubappv1.GithubApp{
 		ObjectMeta: metav1.ObjectMeta{
@@ -139,7 +139,7 @@ func UpdateAccessTokenSecret(
 	namespace string,
 	key string,
 	dummyKeyValue string,
-	)  types.NamespacedName {
+) types.NamespacedName {
 	// Update the accessToken to a dummy value
 	accessTokenSecretKey := types.NamespacedName{
 		Namespace: namespace,
@@ -160,7 +160,7 @@ func CheckGithubAppStatusError(
 	githubAppName string,
 	namespace string,
 	errMsg string,
-	) {
+) {
 
 	// Check if the status.Error field gets populated with the expected error message
 	Eventually(func() bool {
@@ -184,7 +184,7 @@ func CreatePodWithLabel(
 	namespace string,
 	labeKey string,
 	labelValue string,
-	) *corev1.Pod {
+) *corev1.Pod {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: podName,
