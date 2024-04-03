@@ -166,10 +166,10 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace2, "privateKey")
 
 			By("Creating a deployment with the label foo: bar")
-			pod1 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo", namespace2, "foo", "bar")
+			deploy1, pod1 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo", namespace2, "foo", "bar")
 
 			By("Creating a deployment with the label foo: bar2")
-			pod2 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo2", namespace2, "foo", "bar2")
+			deploy2, pod2 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo2", namespace2, "foo", "bar2")
 
 			By("Creating a GithubApp with the spec.rolloutDeployment.labels foo: bar")
 			rolloutDeploymentSpec := &githubappv1.RolloutDeploymentSpec{
@@ -198,9 +198,13 @@ var _ = Describe("GithubApp controller", func() {
 				return pod2.DeletionTimestamp == nil
 			}, "10s", "2s").Should(BeTrue(), "Pod2 is marked for deletion")
 
-			// Delete pod2
-			err := k8sClient.Delete(ctx, pod2)
-			Expect(err).ToNot(HaveOccurred(), "Failed to delete pod2: %v", err)
+			// Delete deploy1
+			err := k8sClient.Delete(ctx, deploy1)
+			Expect(err).ToNot(HaveOccurred(), "Failed to delete deploy1: %v", err)
+
+			// Delete deploy2
+			err := k8sClient.Delete(ctx, deploy2)
+			Expect(err).ToNot(HaveOccurred(), "Failed to delete deploy2: %v", err)
 
 			// Delete the GitHubApp after reconciliation
 			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2)
