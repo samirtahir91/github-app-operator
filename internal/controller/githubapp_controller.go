@@ -395,7 +395,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 			}
 			// Restart the pods is required
 			if err := r.rolloutDeployment(ctx, githubApp); err != nil {
-				return fmt.Errorf("failed to restart pods after after creating secret: %v", err)
+				return fmt.Errorf("failed to rollout deployment after after creating secret: %v", err)
 			}
 			return nil
 		}
@@ -433,7 +433,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 	// Restart the pods is required
 	if err := r.rolloutDeployment(ctx, githubApp); err != nil {
-		return fmt.Errorf("failed to restart pods after updating secret: %v", err)
+		return fmt.Errorf("failed to rollout deployment after updating secret: %v", err)
 	}
 
 	l.Info("Access token updated in the existing Secret successfully")
