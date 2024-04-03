@@ -196,7 +196,7 @@ func CreateDeploymentWithLabel(
 	namespace string,
 	labelKey string,
 	labelValue string,
-) (string) {
+) ( *appsv1.Deployment, string ) {
 
 	// just create 1 replica
 	replicas := int32(1)
@@ -253,5 +253,5 @@ func CreateDeploymentWithLabel(
 	pod := &podList.Items[0]
 
 	// Return the pod name
-	return pod.Name
+	return deployment, pod.Name
 }
