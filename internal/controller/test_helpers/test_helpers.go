@@ -188,7 +188,11 @@ func CheckGithubAppStatusError(
 	}, "30s", "5s").Should(gomega.BeTrue(), "Failed to set status.Error field within timeout")
 }
 
-// Function to create a Deployment with a pod template and label
+/*
+Function to create a Deployment with a pod template and label
+This will only work on a real cluster and NOT envtest since
+it requires the Deployment controller
+*/
 func CreateDeploymentWithLabel(
 	ctx context.Context,
 	k8sClient client.Client,

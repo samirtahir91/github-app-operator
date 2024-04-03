@@ -157,6 +157,9 @@ var _ = Describe("GithubApp controller", func() {
 
 	Context("When reconciling a GithubApp with spec.rolloutDeployment.labels.foo as bar", func() {
 		It("Should eventually delete the pod with the matching label foo: bar", func() {
+			if os.Getenv("ENVTEST") != "" {
+				return // Skip the test case in envtest since required deployment controller
+			}
 			ctx := context.Background()
 
 			By("Creating a new namespace")
