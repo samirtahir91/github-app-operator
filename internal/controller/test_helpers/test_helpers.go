@@ -228,7 +228,7 @@ func CreateDeploymentWithLabel(
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: replicas,
+			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": deploymentName,
