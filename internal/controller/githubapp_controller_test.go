@@ -157,7 +157,7 @@ var _ = Describe("GithubApp controller", func() {
 	})
 
 	Context("When reconciling a GithubApp with spec.rolloutDeployment.labels.foo as bar", func() {
-		It("Should eventually delete the pod with the matching label foo: bar", func() {
+		It("Should eventually upgrade the deployment matching label foo: bar", func() {
 			if os.Getenv("ENVTEST") != "" {
 				fmt.Println("Skipping deployment rollout test case as not a real cluster...")
 				return // Skip the test case in envtest since required deployment controller
