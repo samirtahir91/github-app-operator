@@ -12,9 +12,11 @@ import (
 	gomega "github.com/onsi/gomega"
 
 	githubappv1 "github-app-operator/api/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -76,7 +78,7 @@ func CreateGitHubAppAndWait(
 	k8sClient client.Client,
 	namespace,
 	name string,
-	restartPodsSpec *githubappv1.RestartPodsSpec,
+	rolloutDeploymentSpec *githubappv1.RolloutDeploymentSpec,
 ) {
 	// create the GitHubApp
 	githubApp := githubappv1.GithubApp{
@@ -85,10 +87,10 @@ func CreateGitHubAppAndWait(
 			Namespace: namespace,
 		},
 		Spec: githubappv1.GithubAppSpec{
-			AppId:            appId,
-			InstallId:        installId,
-			PrivateKeySecret: privateKeySecret,
-			RestartPods:      restartPodsSpec, // Optionally pass restartPods
+			AppId:             appId,
+			InstallId:         installId,
+			PrivateKeySecret:  privateKeySecret,
+			RolloutDeployment: rolloutDeploymentSpec, // Optionally pass rolloutDeployment
 		},
 	}
 	gomega.Expect(k8sClient.Create(ctx, &githubApp)).Should(gomega.Succeed())
@@ -186,33 +188,77 @@ func CheckGithubAppStatusError(
 	}, "30s", "5s").Should(gomega.BeTrue(), "Failed to set status.Error field within timeout")
 }
 
-// Funtion to create a busybox pod with a label
-func CreatePodWithLabel(
+/*
+Function to create a Deployment with a pod template and label
+This will only work on a real cluster and NOT envtest since
+it requires the Deployment controller
+*/
+func CreateDeploymentWithLabel(
 	ctx context.Context,
 	k8sClient client.Client,
-	podName string,
+	deploymentName string,
 	namespace string,
-	labeKey string,
+	labelKey string,
 	labelValue string,
-) *corev1.Pod {
-	pod := &corev1.Pod{
+) (*appsv1.Deployment, *corev1.Pod) {
+
+	// just create 1 replica
+	replicas := int32(1)
+
+	// Pod template
+	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: podName,
-			Namespace:    namespace,
 			Labels: map[string]string{
-				labeKey: labelValue,
+				"app": deploymentName,
 			},
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:  podName,
+					Name:  deploymentName,
 					Image: "busybox",
 				},
 			},
 		},
 	}
-	gomega.Expect(k8sClient.Create(ctx, pod)).Should(gomega.Succeed())
 
-	return pod
+	// Deployment spec
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deploymentName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				labelKey: labelValue,
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": deploymentName,
+				},
+			},
+			Template: podTemplate,
+		},
+	}
+
+	// Create the Deployment
+	gomega.Expect(k8sClient.Create(ctx, deployment)).Should(gomega.Succeed())
+
+	// Create a list options with label selector
+	listOptions := &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(map[string]string{"app": deploymentName}),
+	}
+	podList := &corev1.PodList{}
+	// Wait for the pod list to be populated
+	gomega.Eventually(func() []corev1.Pod {
+		gomega.Expect(k8sClient.List(ctx, podList, listOptions)).Should(gomega.Succeed())
+		return podList.Items
+	}, "30s", "5s").ShouldNot(gomega.BeEmpty())
+
+	pod := &podList.Items[0]
+
+	// Return the pod name
+	return deployment, pod
 }

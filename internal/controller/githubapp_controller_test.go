@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -155,8 +156,12 @@ var _ = Describe("GithubApp controller", func() {
 		})
 	})
 
-	Context("When reconciling a GithubApp with spec.restartPods.labels.foo as bar", func() {
-		It("Should eventually delete the pod with the matching label foo: bar", func() {
+	Context("When reconciling a GithubApp with spec.rolloutDeployment.labels.foo as bar", func() {
+		It("Should eventually upgrade the deployment matching label foo: bar", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") == "" {
+				fmt.Println("Skipping deployment rollout test case as not a real cluster...")
+				return // Skip the test case in envtest since required deployment controller
+			}
 			ctx := context.Background()
 
 			By("Creating a new namespace")
@@ -165,20 +170,20 @@ var _ = Describe("GithubApp controller", func() {
 			By("Creating the privateKeySecret in namespace2")
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace2, "privateKey")
 
-			By("Creating a pod with the label foo: bar")
-			pod1 := test_helpers.CreatePodWithLabel(ctx, k8sClient, "foo", namespace2, "foo", "bar")
+			By("Creating a deployment with the label foo: bar")
+			deploy1, pod1 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo", namespace2, "foo", "bar")
 
-			By("Creating a pod with the label foo: bar2")
-			pod2 := test_helpers.CreatePodWithLabel(ctx, k8sClient, "foo", namespace2, "foo", "bar2")
+			By("Creating a deployment with the label foo: bar2")
+			deploy2, pod2 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo2", namespace2, "foo", "bar2")
 
-			By("Creating a GithubApp with the spec.restartPods.labels foo: bar")
-			restartPodsSpec := &githubappv1.RestartPodsSpec{
+			By("Creating a GithubApp with the spec.rolloutDeployment.labels foo: bar")
+			rolloutDeploymentSpec := &githubappv1.RolloutDeploymentSpec{
 				Labels: map[string]string{
 					"foo": "bar",
 				},
 			}
-			// Create a GithubApp instance with the RestartPods field initialized
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, restartPodsSpec)
+			// Create a GithubApp instance with the RolloutDeployment field initialized
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, rolloutDeploymentSpec)
 
 			By("Waiting for pod1 with the label 'foo: bar' to be deleted")
 			// Wait for the pod to be deleted by the reconcile loop
@@ -198,9 +203,13 @@ var _ = Describe("GithubApp controller", func() {
 				return pod2.DeletionTimestamp == nil
 			}, "10s", "2s").Should(BeTrue(), "Pod2 is marked for deletion")
 
-			// Delete pod2
-			err := k8sClient.Delete(ctx, pod2)
-			Expect(err).ToNot(HaveOccurred(), "Failed to delete pod2: %v", err)
+			// Delete deploy1
+			err := k8sClient.Delete(ctx, deploy1)
+			Expect(err).ToNot(HaveOccurred(), "Failed to delete deploy1: %v", err)
+
+			// Delete deploy2
+			err = k8sClient.Delete(ctx, deploy2)
+			Expect(err).ToNot(HaveOccurred(), "Failed to delete deploy2: %v", err)
 
 			// Delete the GitHubApp after reconciliation
 			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2)

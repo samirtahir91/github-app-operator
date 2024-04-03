@@ -22,10 +22,10 @@ import (
 
 // GithubAppSpec defines the desired state of GithubApp
 type GithubAppSpec struct {
-	AppId            int              `json:"appId"`
-	InstallId        int              `json:"installId"`
-	PrivateKeySecret string           `json:"privateKeySecret"`
-	RestartPods      *RestartPodsSpec `json:"restartPods,omitempty"`
+	AppId             int                    `json:"appId"`
+	InstallId         int                    `json:"installId"`
+	PrivateKeySecret  string                 `json:"privateKeySecret"`
+	RolloutDeployment *RolloutDeploymentSpec `json:"rolloutDeployment,omitempty"`
 }
 
 // GithubAppStatus defines the observed state of GithubApp
@@ -48,8 +48,8 @@ type GithubApp struct {
 	Status GithubAppStatus `json:"status,omitempty"`
 }
 
-// RestartPodsSpec defines the specification for restarting pods
-type RestartPodsSpec struct {
+// RolloutDeploymentSpec defines the specification for restarting pods
+type RolloutDeploymentSpec struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 

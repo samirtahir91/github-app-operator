@@ -27,6 +27,7 @@ import (
 	"time"
 
 	githubappv1 "github-app-operator/api/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,7 +64,7 @@ const (
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;update;create;delete;watch;patch
-//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;update;create;delete;watch;patch
+//+kubebuilder:rbac:groups="",resources=deployments,verbs=get;list;update;watch;patch
 
 // Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -393,8 +394,8 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				return fmt.Errorf("failed after creating secret: %v", err)
 			}
 			// Restart the pods is required
-			if err := r.restartPods(ctx, githubApp); err != nil {
-				return fmt.Errorf("failed to restart pods after after creating secret: %v", err)
+			if err := r.rolloutDeployment(ctx, githubApp); err != nil {
+				return fmt.Errorf("failed to rollout deployment after after creating secret: %v", err)
 			}
 			return nil
 		}
@@ -431,8 +432,8 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		return fmt.Errorf("failed after updating secret: %v", err)
 	}
 	// Restart the pods is required
-	if err := r.restartPods(ctx, githubApp); err != nil {
-		return fmt.Errorf("failed to restart pods after updating secret: %v", err)
+	if err := r.rolloutDeployment(ctx, githubApp); err != nil {
+		return fmt.Errorf("failed to rollout deployment after updating secret: %v", err)
 	}
 
 	l.Info("Access token updated in the existing Secret successfully")
@@ -533,40 +534,53 @@ func generateAccessToken(ctx context.Context, appID int, installationID int, pri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
-// Function to bounce pods as per `spec.restartPods.labels` in GithubApp (in the same namespace)
-func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+// Function to bounce pods as per `spec.rolloutDeployment.labels` in GithubApp (in the same namespace)
+func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
 
-	// Check if restartPods field is defined
-	if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
-		// No action needed if restartPods is not defined or no labels are specified
+	// Check if rolloutDeployment field is defined
+	if githubApp.Spec.RolloutDeployment == nil || len(githubApp.Spec.RolloutDeployment.Labels) == 0 {
+		// No action needed if rolloutDeployment is not defined or no labels are specified
 		return nil
 	}
 
-	// Loop through each label specified in restartPods.labels and restart pods matching each label
-	for key, value := range githubApp.Spec.RestartPods.Labels {
+	// Loop through each label specified in rolloutDeployment.labels and restart pods matching each label
+	for key, value := range githubApp.Spec.RolloutDeployment.Labels {
 		// Create a list options with label selector
 		listOptions := &client.ListOptions{
 			Namespace:     githubApp.Namespace,
 			LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
 		}
 
-		// List pods with the label selector
-		podList := &corev1.PodList{}
-		if err := r.List(ctx, podList, listOptions); err != nil {
-			return fmt.Errorf("failed to list pods with label %s=%s: %v", key, value, err)
+		// List Deployments with the label selector
+		deploymentList := &appsv1.DeploymentList{}
+		if err := r.List(ctx, deploymentList, listOptions); err != nil {
+			return fmt.Errorf("failed to list Deployments with label %s=%s: %v", key, value, err)
 		}
 
-		// Restart each pod by deleting it
-		for _, pod := range podList.Items {
-			// Set deletion timestamp on the pod
-			if err := r.Delete(ctx, &pod); err != nil {
-				return fmt.Errorf("failed to delete pod %s/%s: %v", pod.Namespace, pod.Name, err)
+		// Trigger rolling upgrade for matching deployments
+		for _, deployment := range deploymentList.Items {
+
+			// Add a timestamp label to trigger a rolling upgrade
+			deployment.Spec.Template.ObjectMeta.Labels["ghApplastUpdateTime"] = time.Now().Format("20060102150405")
+
+			// Patch the Deployment
+			if err := r.Update(ctx, &deployment); err != nil {
+				return fmt.Errorf(
+					"failed to upgrade deployment %s/%s: %v",
+					deployment.Namespace,
+					deployment.Name,
+					err,
+				)
 			}
-			// Log pod deletion
+
+			// Log deployment upgrade
 			l.Info(
-				"Pod marked for deletion to refresh secret",
-				"Pod Name", pod.Name,
+				"Deployment rolling upgrade triggered",
+				"Name",
+				deployment.Name,
+				"Namespace",
+				deployment.Namespace,
 			)
 		}
 	}

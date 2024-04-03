@@ -30,7 +30,7 @@ Key features:
     - It will default to `5m` if not set
   - `EXPIRY_THRESHOLD` - i.e. to reconcile a new access token if there is less than 10 mins left from expiry, set the value to `10m`
     - It will default to `15m` if not set
-- Optionally, you can enable restart of pods in the same namespace as the `GithubApp` that match any of the labels you define in `spec.restartPods.labels`
+- Optionally, you can enable rolling upgrade to deployments in the same namespace as the `GithubApp` that match any of the labels you define in `spec.rolloutDeployment.labels`
   - This is useful where pods need to be recreated to pickup the new secret data.
 
 ## Example creating a secret to hold a GitHub App private key
@@ -66,8 +66,8 @@ spec:
 EOF
 ```
 
-## Example GithubApp object with pod restart on token renew
-- Below example will restart the pods in the `team-1` namespace when the github token is modified, matching any of labels:
+## Example GithubApp object with pod restart (deployment rolling upgrade) on token renew
+- Below example will upgrade deployments in the `team-1` namespace when the github token is modified, matching any of labels:
   - foo: bar
   - foo2: bar2
 ```sh
@@ -81,7 +81,7 @@ spec:
   appId: 123123
   installId: 12312312
   privateKeySecret: github-app-secret
-  restartPods:
+  rolloutDeployment:
     labels:
       foo: bar
       foo2: bar2
@@ -143,7 +143,7 @@ Current integration tests cover the scenarios:
 - Reconcile of access token is valid.
 - Reconcile error is recorded in a `GithubApp` object's `status.error` field
 - The `status.error` field is cleared on succesful reconcile for a `GithubApp` object.
-- Pods are deleted matching a label if defined in `spec.restartPods.labels` for a `GithubApp`.
+- Pods are deleted matching a label if defined in `spec.rolloutDeployment.labels` for a `GithubApp`.
 
 **Run the controller in the foreground for testing:**
 ```sh
