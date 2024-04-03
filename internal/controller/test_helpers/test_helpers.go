@@ -12,8 +12,8 @@ import (
 	gomega "github.com/onsi/gomega"
 
 	githubappv1 "github-app-operator/api/v1"
-	corev1 "k8s.io/api/core/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -87,10 +87,10 @@ func CreateGitHubAppAndWait(
 			Namespace: namespace,
 		},
 		Spec: githubappv1.GithubAppSpec{
-			AppId:            appId,
-			InstallId:        installId,
-			PrivateKeySecret: privateKeySecret,
-			RolloutDeployment:      rolloutDeploymentSpec, // Optionally pass rolloutDeployment
+			AppId:             appId,
+			InstallId:         installId,
+			PrivateKeySecret:  privateKeySecret,
+			RolloutDeployment: rolloutDeploymentSpec, // Optionally pass rolloutDeployment
 		},
 	}
 	gomega.Expect(k8sClient.Create(ctx, &githubApp)).Should(gomega.Succeed())
@@ -200,7 +200,7 @@ func CreateDeploymentWithLabel(
 	namespace string,
 	labelKey string,
 	labelValue string,
-) ( *appsv1.Deployment, *corev1.Pod ) {
+) (*appsv1.Deployment, *corev1.Pod) {
 
 	// just create 1 replica
 	replicas := int32(1)
@@ -252,7 +252,7 @@ func CreateDeploymentWithLabel(
 	}
 	podList := &corev1.PodList{}
 	// Wait for the pod list to be populated
-	gomega.Eventually(func() []corev1.Pod {		
+	gomega.Eventually(func() []corev1.Pod {
 		gomega.Expect(k8sClient.List(ctx, podList, listOptions)).Should(gomega.Succeed())
 		return podList.Items
 	}, "30s", "5s").ShouldNot(gomega.BeEmpty())

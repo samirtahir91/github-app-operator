@@ -22,10 +22,10 @@ import (
 
 // GithubAppSpec defines the desired state of GithubApp
 type GithubAppSpec struct {
-	AppId            int              `json:"appId"`
-	InstallId        int              `json:"installId"`
-	PrivateKeySecret string           `json:"privateKeySecret"`
-	RolloutDeployment      *RolloutDeploymentSpec `json:"rolloutDeployment,omitempty"`
+	AppId             int                    `json:"appId"`
+	InstallId         int                    `json:"installId"`
+	PrivateKeySecret  string                 `json:"privateKeySecret"`
+	RolloutDeployment *RolloutDeploymentSpec `json:"rolloutDeployment,omitempty"`
 }
 
 // GithubAppStatus defines the observed state of GithubApp
