@@ -242,7 +242,7 @@ func CreateDeploymentWithLabel(
 	err := k8sClient.Get(ctx, types.NamespacedName{Name: podName, Namespace: namespace}, pod)
 
 	// Verify the pod created
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("pod failed to create: %v", err))
+	gomega.Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("pod failed to create: %v", err))
 
 	// Return the pod name
 	return pod.Name
