@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -197,6 +198,9 @@ func CreateDeploymentWithLabel(
 	labelValue string,
 ) (string) {
 
+	// just create 1 replica
+	replicas := int32(1)
+
 	// Pod template
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
@@ -224,7 +228,7 @@ func CreateDeploymentWithLabel(
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: int32(1),
+			Replicas: replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": deploymentName,
@@ -243,15 +247,10 @@ func CreateDeploymentWithLabel(
 		LabelSelector: labels.SelectorFromSet(map[string]string{"app": deploymentName}),
 	}
 
-	// List pods with the label selector
+	// Get pod with the label selector
 	podList := &corev1.PodList{}
 	gomega.Expect(k8sClient.List(ctx, podList, listOptions)).Should(gomega.Succeed())
-
-	// Verify the pod created
 	pod := &podList.Items[0]
-	pod := &corev1.Pod{}
-	err := k8sClient.Get(ctx, types.NamespacedName{Name: podName, Namespace: namespace}, pod)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("pod failed to create: %v", err))
 
 	// Return the pod name
 	return pod.Name
