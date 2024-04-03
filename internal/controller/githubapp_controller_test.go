@@ -203,7 +203,7 @@ var _ = Describe("GithubApp controller", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to delete deploy1: %v", err)
 
 			// Delete deploy2
-			err := k8sClient.Delete(ctx, deploy2)
+			err = k8sClient.Delete(ctx, deploy2)
 			Expect(err).ToNot(HaveOccurred(), "Failed to delete deploy2: %v", err)
 
 			// Delete the GitHubApp after reconciliation
