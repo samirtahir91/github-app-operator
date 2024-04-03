@@ -248,8 +248,7 @@ func CreateDeploymentWithLabel(
 	}
 	podList := &corev1.PodList{}
 	// Wait for the pod list to be populated
-	gomega.Eventually(func() []corev1.Pod {
-		
+	gomega.Eventually(func() []corev1.Pod {		
 		gomega.Expect(k8sClient.List(ctx, podList, listOptions)).Should(gomega.Succeed())
 		return podList.Items
 	}, "30s", "5s").ShouldNot(gomega.BeEmpty())
