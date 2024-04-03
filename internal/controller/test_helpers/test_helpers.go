@@ -224,7 +224,7 @@ func CreateDeploymentWithLabel(
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: 1,
+			Replicas: int32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": deploymentName,
@@ -237,12 +237,21 @@ func CreateDeploymentWithLabel(
 	// Create the Deployment
 	gomega.Expect(k8sClient.Create(ctx, deployment)).Should(gomega.Succeed())
 
-	// Wait for the Pod to be created
-	pod := &corev1.Pod{}
-	err := k8sClient.Get(ctx, types.NamespacedName{Name: podName, Namespace: namespace}, pod)
+	// Create a list options with label selector
+	listOptions := &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(map[string]string{"app": deploymentName}),
+	}
+
+	// List pods with the label selector
+	podList := &corev1.PodList{}
+	gomega.Expect(k8sClient.List(ctx, podList, listOptions)).Should(gomega.Succeed())
 
 	// Verify the pod created
-	gomega.Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("pod failed to create: %v", err))
+	pod := &podList.Items[0]
+	pod := &corev1.Pod{}
+	err := k8sClient.Get(ctx, types.NamespacedName{Name: podName, Namespace: namespace}, pod)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), fmt.Sprintf("pod failed to create: %v", err))
 
 	// Return the pod name
 	return pod.Name
