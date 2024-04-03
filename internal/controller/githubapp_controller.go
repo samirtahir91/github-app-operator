@@ -566,7 +566,7 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
 			deployment.ObjectMeta.Labels["lastUpdateTime"] = time.Now().Format(time.RFC3339)
 			
 			// Patch the Deployment
-			if err := r.Update(ctx, deployment); err != nil {
+			if err := r.Update(ctx, &deployment); err != nil {
 				return fmt.Errorf(
 					"failed to upgrade deployment %s/%s: %v",
 					deployment.Namespace,
