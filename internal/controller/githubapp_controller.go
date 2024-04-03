@@ -30,9 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/client-go/kubernetes"
-	config "sigs.k8s.io/controller-runtime/pkg/client/config"
-    policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -396,7 +393,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				return fmt.Errorf("failed after creating secret: %v", err)
 			}
 			// Restart the pods is required
-			if err := r.restartPods(ctx, githubApp); err != nil {
+			if err := r.rolloutDeployment(ctx, githubApp); err != nil {
 				return fmt.Errorf("failed to restart pods after after creating secret: %v", err)
 			}
 			return nil
@@ -434,7 +431,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		return fmt.Errorf("failed after updating secret: %v", err)
 	}
 	// Restart the pods is required
-	if err := r.restartPods(ctx, githubApp); err != nil {
+	if err := r.rolloutDeployment(ctx, githubApp); err != nil {
 		return fmt.Errorf("failed to restart pods after updating secret: %v", err)
 	}
 
@@ -536,62 +533,55 @@ func generateAccessToken(ctx context.Context, appID int, installationID int, pri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
-// Function to bounce pods as per `spec.restartPods.labels` in GithubApp (in the same namespace)
-func (r *GithubAppReconciler) restartPods(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+// Function to bounce pods as per `spec.rolloutDeployment.labels` in GithubApp (in the same namespace)
+func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *githubappv1.GithubApp) error {
     l := log.FromContext(ctx)
 
-    // Check if restartPods field is defined
-    if githubApp.Spec.RestartPods == nil || len(githubApp.Spec.RestartPods.Labels) == 0 {
-        // No action needed if restartPods is not defined or no labels are specified
+    // Check if rolloutDeployment field is defined
+    if githubApp.Spec.RolloutDeployment == nil || len(githubApp.Spec.RolloutDeployment.Labels) == 0 {
+        // No action needed if rolloutDeployment is not defined or no labels are specified
         return nil
     }
 
-    // Loop through each label specified in restartPods.labels and restart pods matching each label
-    for key, value := range githubApp.Spec.RestartPods.Labels {
+    // Loop through each label specified in rolloutDeployment.labels and restart pods matching each label
+    for key, value := range githubApp.Spec.RolloutDeployment.Labels {
         // Create a list options with label selector
         listOptions := &client.ListOptions{
             Namespace:     githubApp.Namespace,
             LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
         }
 
-        // List pods with the label selector
-        podList := &corev1.PodList{}
-        if err := r.List(ctx, podList, listOptions); err != nil {
-            return fmt.Errorf("failed to list pods with label %s=%s: %v", key, value, err)
+        // List Deployments with the label selector
+        deploymentList := &corev1.DeploymentList{}
+        if err := r.List(ctx, deploymentList, listOptions); err != nil {
+            return fmt.Errorf("failed to list Deployments with label %s=%s: %v", key, value, err)
         }
 
-		// creates the in-cluster config
-		kubeConfig, err := config.GetConfig()
-		if err != nil {
-			return fmt.Errorf("failed to create in-cluster config: %v", err)
-		}
-		// creates the clientset
-		clientset, err := kubernetes.NewForConfig(kubeConfig)
-		if err != nil {
-			return fmt.Errorf("failed to create clientset: %v", err)
-		}
-		
+	
         // Evict each pod
-        for _, pod := range podList.Items {
-            // Construct the pod eviction object
-            eviction := &policyv1.Eviction{
-                ObjectMeta: metav1.ObjectMeta{
-                    Name:      pod.Name,
-                    Namespace: pod.Namespace,
-                },
-            }
+        for _, deployment := range deploymentList.Items {
 
-            // Evict the pod
-            if err := clientset.PolicyV1().Evictions(pod.Namespace).Evict(ctx, eviction); err != nil {
-                // If the pod is already gone, ignore the error
-                if apierrors.IsNotFound(err) {
-                    l.Info("Pod not found, skipping eviction", "Pod Name", pod.Name)
-                    continue
-                }
-                return fmt.Errorf("failed to evict pod %s/%s: %v", pod.Namespace, pod.Name, err)
-            }
-            // Log pod eviction
-            l.Info("Pod marked for eviction to refresh secret", "Pod Name", pod.Name)
+			// Add a timestamp label to trigger a rolling upgrade
+			deployment.ObjectMeta.Labels["lastUpdateTime"] = time.Now().Format(time.RFC3339)
+			
+			// Patch the Deployment
+			if err := r.Update(ctx, deployment); err != nil {
+				return fmt.Errorf(
+					"failed to upgrade deployment %s/%s: %v",
+					deployment.Namespace,
+					deployment.Name,
+					err,
+				)
+			}
+
+            // Log deployment upgrade
+            l.Info(
+				"Deployment rolling upgrade triggered",
+				"Name",
+				deployment.Name,
+				"Namespace",
+				deployment.Namespace,
+			)
         }
     }
     return nil

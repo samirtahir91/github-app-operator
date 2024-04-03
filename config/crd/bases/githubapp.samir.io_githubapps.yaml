@@ -45,8 +45,8 @@ spec:
                 type: integer
               privateKeySecret:
                 type: string
-              restartPods:
-                description: RestartPodsSpec defines the specification for restarting
+              rolloutDeployment:
+                description: RolloutDeploymentSpec defines the specification for restarting
                   pods
                 properties:
                   labels:
