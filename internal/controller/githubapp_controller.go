@@ -557,8 +557,6 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
         if err := r.List(ctx, deploymentList, listOptions); err != nil {
             return fmt.Errorf("failed to list Deployments with label %s=%s: %v", key, value, err)
         }
-		log.Log.Info("Deployment list", "Deployments:", deploymentList)
-
 	
         // Trigger rolling upgrade for matching deployments
         for _, deployment := range deploymentList.Items {
