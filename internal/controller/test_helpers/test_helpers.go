@@ -242,23 +242,6 @@ func CreateDeploymentWithLabel(
 	// Create the Deployment
 	gomega.Expect(k8sClient.Create(ctx, deployment)).Should(gomega.Succeed())
 
-    // Poll the deployment for pod to be created
-    for {
-        deployment := &appsv1.Deployment{}
-        err := k8sClient.Get(ctx, types.NamespacedName{Name: deploymentName, Namespace: namespace}, deployment)
-        if err != nil {
-            fmt.Printf("retrying to get deployment in 5 seconds: %v\n", err)
-			time.Sleep(time.Second * 5)
-            continue
-        }
-
-        if deployment.Status.AvailableReplicas == replicas {
-            break // Desired number of replicas are available, exit the loop
-        }
-        // sleep for 5s
-        time.Sleep(time.Second * 5)
-    }
-
 	// Create a list options with label selector
 	listOptions := &client.ListOptions{
 		Namespace:     namespace,
@@ -268,6 +251,9 @@ func CreateDeploymentWithLabel(
 	// Get pod with the label selector
 	podList := &corev1.PodList{}
 	gomega.Expect(k8sClient.List(ctx, podList, listOptions)).Should(gomega.Succeed())
+	if err := k8sClient.List(ctx, podList, listOptions); err != nil {
+		gomega.Fail("failed to list pods", err)
+	}
 	pod := &podList.Items[0]
 
 	// Return the pod name
