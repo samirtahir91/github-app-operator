@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	gomega "github.com/onsi/gomega"
 
@@ -252,7 +251,7 @@ func CreateDeploymentWithLabel(
 	podList := &corev1.PodList{}
 	gomega.Expect(k8sClient.List(ctx, podList, listOptions)).Should(gomega.Succeed())
 	if err := k8sClient.List(ctx, podList, listOptions); err != nil {
-		gomega.Fail("failed to list pods", err)
+		Fail("failed to list pods", err)
 	}
 	pod := &podList.Items[0]
 
