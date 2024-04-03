@@ -250,10 +250,13 @@ func CreateDeploymentWithLabel(
 	// Get pod with the label selector
 	podList := &corev1.PodList{}
 	gomega.Expect(k8sClient.List(ctx, podList, listOptions)).Should(gomega.Succeed())
-	if err := k8sClient.List(ctx, podList, listOptions); err != nil {
-		Fail("failed to list pods", err)
+	fmt.Println("List of Pods:")
+	for _, pod := range podList.Items {
+		fmt.Printf("Name: %s, Namespace: %s\n", pod.Name, pod.Namespace)
 	}
+
 	pod := &podList.Items[0]
+
 
 	// Return the pod name
 	return deployment, pod
