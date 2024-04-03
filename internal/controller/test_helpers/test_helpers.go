@@ -253,5 +253,5 @@ func CreateDeploymentWithLabel(
 	pod := &podList.Items[0]
 
 	// Return the pod name
-	return deployment, pod.Name
+	return deployment, pod
 }
