@@ -559,7 +559,7 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
         }
 
 	
-        // Evict each pod
+        // Trigger rolling upgrade for matching deployments
         for _, deployment := range deploymentList.Items {
 
 			// Add a timestamp label to trigger a rolling upgrade
