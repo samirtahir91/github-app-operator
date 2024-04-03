@@ -564,7 +564,7 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
         for _, deployment := range deploymentList.Items {
 
 			// Add a timestamp label to trigger a rolling upgrade
-			deployment.ObjectMeta.Labels["lastUpdateTime"] = time.Now().Format("2006-01-02T15:04:05")
+			deployment.ObjectMeta.Labels["lastUpdateTime"] = time.Now().Format("20060102150405")
 			
 			// Patch the Deployment
 			if err := r.Update(ctx, &deployment); err != nil {
