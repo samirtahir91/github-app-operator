@@ -535,7 +535,6 @@ func generateAccessToken(ctx context.Context, appID int, installationID int, pri
 }
 
 // Function to bounce pods as per `spec.rolloutDeployment.labels` in GithubApp (in the same namespace)
-//go:build ignorecoverage
 func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *githubappv1.GithubApp) error {
     l := log.FromContext(ctx)
 
