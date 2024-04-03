@@ -166,10 +166,10 @@ var _ = Describe("GithubApp controller", func() {
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace2, "privateKey")
 
 			By("Creating a deployment with the label foo: bar")
-			deploy1, pod1 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo", namespace2, "foo", "bar")
+			pod1 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo", namespace2, "foo", "bar")
 
 			By("Creating a deployment with the label foo: bar2")
-			deploy2, pod2 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo2", namespace2, "foo", "bar2")
+			pod2 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo2", namespace2, "foo", "bar2")
 
 			By("Creating a GithubApp with the spec.rolloutDeployment.labels foo: bar")
 			rolloutDeploymentSpec := &githubappv1.RolloutDeploymentSpec{

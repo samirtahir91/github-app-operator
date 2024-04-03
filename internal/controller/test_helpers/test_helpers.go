@@ -194,7 +194,7 @@ func CreateDeploymentWithLabel(
 	namespace string,
 	labelKey string,
 	labelValue string,
-) (*appsv1.Deployment, string) {
+) (string) {
 
 	// Pod template
 	podTemplate := corev1.PodTemplateSpec{
@@ -243,6 +243,6 @@ func CreateDeploymentWithLabel(
 	// Verify the pod created
 	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("pod failed to create: %v", err))
 
-	// Return the Deployment, Pod name, and error
-	return deployment, pod.Name
+	// Return the pod name
+	return pod.Name
 }
