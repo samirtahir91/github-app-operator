@@ -154,6 +154,8 @@ make run
 - Export your GitHub App private key as a `base64` string and then run the tests
 ```sh
 export GITHUB_PRIVATE_KEY=<YOUR_BASE64_ENCODED_GH_APP_PRIVATE_KEY>
+export GH_APP_ID=<YOUR GITHUB APP ID>
+export GH_INSTALL_ID=<YOUR GITHUB APP INSTALL ID>
 make test
 ```
 
