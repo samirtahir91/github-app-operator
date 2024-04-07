@@ -22,14 +22,14 @@ import (
 )
 
 const (
-	// github app details
+	// github app private key secret
 	privateKeySecret = "gh-app-key-test"
-	appId            = 857468
-	installId        = 48531286
 )
 
 var (
 	privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
+	appId                = os.Getenv("GH_APP_ID")
+	installId            = os.Getenv("GH_INSTALL_ID")
 	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 )
 
