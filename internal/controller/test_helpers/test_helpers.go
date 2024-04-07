@@ -28,8 +28,8 @@ const (
 
 var (
 	privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
-	appId                = os.Getenv("GH_APP_ID")
-	installId            = os.Getenv("GH_INSTALL_ID")
+	appId                = strconv.Atoi(os.Getenv("GH_APP_ID"))
+	installId            = strconv.Atoi(os.Getenv("GH_INSTALL_ID"))
 	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
 )
 
