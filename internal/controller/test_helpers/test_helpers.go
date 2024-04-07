@@ -22,16 +22,30 @@ import (
 )
 
 const (
-	// github app details
+	// github app private key secret
 	privateKeySecret = "gh-app-key-test"
-	appId            = 857468
-	installId        = 48531286
 )
 
 var (
 	privateKey           = os.Getenv("GITHUB_PRIVATE_KEY")
-	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
+	appId                int
+	installId            int
+	acessTokenSecretName string
 )
+
+// Function to initialise vars for github app
+func init() {
+    var err error
+    appId, err = strconv.Atoi(os.Getenv("GH_APP_ID"))
+    if err != nil {
+        panic(err)
+    }
+    installId, err = strconv.Atoi(os.Getenv("GH_INSTALL_ID"))
+    if err != nil {
+        panic(err)
+    }
+    acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
+}
 
 // Function to delete accessToken Secret
 func DeleteAccessTokenSecret(ctx context.Context, k8sClient client.Client, namespace string) {
