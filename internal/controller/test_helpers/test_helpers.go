@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	gomega "github.com/onsi/gomega"
 
@@ -35,16 +36,53 @@ var (
 
 // Function to initialise vars for github app
 func init() {
-    var err error
-    appId, err = strconv.Atoi(os.Getenv("GH_APP_ID"))
-    if err != nil {
-        panic(err)
-    }
-    installId, err = strconv.Atoi(os.Getenv("GH_INSTALL_ID"))
-    if err != nil {
-        panic(err)
-    }
-    acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
+	var err error
+	appId, err = strconv.Atoi(os.Getenv("GH_APP_ID"))
+	if err != nil {
+		panic(err)
+	}
+	installId, err = strconv.Atoi(os.Getenv("GH_INSTALL_ID"))
+	if err != nil {
+		panic(err)
+	}
+	acessTokenSecretName = fmt.Sprintf("github-app-access-token-%s", strconv.Itoa(appId))
+}
+
+// Function to check and wait for an event on a GithubApp object
+func CheckEvent(
+	ctx context.Context,
+	k8sClient client.Client,
+	githubAppName string,
+	namespace string,
+	eventType string,
+	reason string,
+	message string,
+) {
+	listOptions := &client.ListOptions{
+		Namespace: namespace,
+	}
+
+	// Event not found, wait for it
+	gomega.Eventually(func() error {
+		// list events
+		eventList := &corev1.EventList{}
+		err := k8sClient.List(ctx, eventList, listOptions)
+		if err != nil {
+			return fmt.Errorf("failed to list events: %v", err)
+		}
+		// Check the event exists
+		for _, evt := range eventList.Items {
+			if evt.InvolvedObject.Name == githubAppName &&
+				evt.Type == eventType &&
+				evt.Reason == reason &&
+				strings.Contains(evt.Message, message) {
+				return nil // Event found
+			}
+		}
+
+		// Event not found yet
+		return fmt.Errorf("matching event not found")
+	}, "20s", "5s").Should(gomega.Succeed())
 }
 
 // Function to delete accessToken Secret
@@ -83,7 +121,7 @@ func DeleteGitHubAppAndWait(ctx context.Context, k8sClient client.Client, namesp
 			Name:      name,
 		}, &githubappv1.GithubApp{})
 		return apierrors.IsNotFound(err) // GitHubApp is deleted
-	}, "60s", "5s").Should(gomega.BeTrue(), "Failed to delete GitHubApp within timeout")
+	}, "20s", "5s").Should(gomega.BeTrue(), "Failed to delete GitHubApp within timeout")
 }
 
 // Function to create a GitHubApp and wait for its creation

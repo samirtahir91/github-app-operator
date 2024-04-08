@@ -76,7 +76,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	// set check interval and expiry threshold for test env
-	osEnvErr := os.Setenv("CHECK_INTERVAL", "5s")
+	osEnvErr := os.Setenv("CHECK_INTERVAL", "15s")
 	Expect(osEnvErr).NotTo(HaveOccurred())
 	osEnvErr = os.Setenv("EXPIRY_THRESHOLD", "15m")
 	Expect(osEnvErr).NotTo(HaveOccurred())
@@ -103,8 +103,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&GithubAppReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
+		Client:   k8sManager.GetClient(),
+		Scheme:   k8sManager.GetScheme(),
+		Recorder: k8sManager.GetEventRecorderFor("githubapp-controller"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

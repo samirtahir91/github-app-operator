@@ -27,6 +27,13 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
   - githubapp.samir.io
   resources:
   - githubapps

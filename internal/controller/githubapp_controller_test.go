@@ -65,6 +65,16 @@ var _ = Describe("GithubApp controller", func() {
 
 			By("Waiting for the access token secret to be created")
 			test_helpers.WaitForAccessTokenSecret(ctx, k8sClient, namespace1)
+
+			By("Waiting for the correct event to be recorded")
+			test_helpers.CheckEvent(
+				ctx,
+				k8sClient,
+				githubAppName,
+				namespace1,
+				"Normal",
+				"Created",
+				fmt.Sprintf("Created access token secret %s/github-app-access-token-", namespace1))
 		})
 	})
 
@@ -101,6 +111,16 @@ var _ = Describe("GithubApp controller", func() {
 				Expect(err).To(Succeed())
 				return string(updatedSecret.Data["token"])
 			}, "60s", "5s").ShouldNot(Equal(dummyAccessToken))
+
+			By("Waiting for the correct event to be recorded")
+			test_helpers.CheckEvent(
+				ctx,
+				k8sClient,
+				githubAppName,
+				namespace1,
+				"Normal",
+				"Updated",
+				fmt.Sprintf("Updated access token secret %s/github-app-access-token-", namespace1))
 		})
 	})
 
@@ -237,6 +257,16 @@ var _ = Describe("GithubApp controller", func() {
 				namespace4,
 				"privateKey not found in Secret",
 			)
+			By("Waiting for the correct event to be recorded")
+			test_helpers.CheckEvent(
+				ctx,
+				k8sClient,
+				githubAppName4,
+				namespace4,
+				"Warning",
+				"FailedRenewal",
+				"Error: privateKey not found in Secret",
+			)
 
 			// Delete the GitHubApp after reconciliation
 			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4)
@@ -260,6 +290,16 @@ var _ = Describe("GithubApp controller", func() {
 				githubAppName3,
 				namespace3,
 				"Secret \"gh-app-key-test\" not found",
+			)
+			By("Waiting for the correct event to be recorded")
+			test_helpers.CheckEvent(
+				ctx,
+				k8sClient,
+				githubAppName3,
+				namespace3,
+				"Warning",
+				"FailedRenewal",
+				"Error: Secret \"gh-app-key-test\" not found",
 			)
 		})
 	})

@@ -40,6 +40,8 @@ type GithubAppStatus struct {
 //+kubebuilder:subresource:status
 
 // GithubApp is the Schema for the githubapps API
+// +kubebuilder:printcolumn:name="App ID",type=string,JSONPath=`.spec.appId`
+// +kubebuilder:printcolumn:name="Install ID",type=string,JSONPath=`.spec.installId`
 // +kubebuilder:printcolumn:name="Expires At",type=string,JSONPath=`.status.expiresAt`
 // +kubebuilder:printcolumn:name="Error",type=string,JSONPath=`.status.error`
 type GithubApp struct {
