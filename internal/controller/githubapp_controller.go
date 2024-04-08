@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,8 +46,9 @@ import (
 // GithubAppReconciler reconciles a GithubApp object
 type GithubAppReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	lock   sync.Mutex
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
+	lock     sync.Mutex
 }
 
 var (
@@ -65,6 +67,7 @@ const (
 //+kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;update;create;delete;watch;patch
 //+kubebuilder:rbac:groups="apps",resources=deployments,verbs=get;list;update;watch;patch
+//+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 
 // Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -114,6 +117,13 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if updateErr := r.updateStatusWithError(ctx, githubApp, err.Error()); updateErr != nil {
 			l.Error(updateErr, "failed to update status field 'Error'")
 		}
+		// Raise event
+		r.Recorder.Event(
+			githubApp,
+			"Warning",
+			"FailedRenewal",
+			fmt.Sprintf("Error: %s", err),
+		)
 		return ctrl.Result{}, err
 	}
 
@@ -389,12 +399,26 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 				"Secret created for access token",
 				"Secret", accessTokenSecret,
 			)
+			// Raise event
+			r.Recorder.Event(
+				githubApp,
+				"Normal",
+				"Created",
+				fmt.Sprintf("Created access token secret %s/%s", githubApp.Namespace, accessTokenSecret),
+			)
 			// Update the status with the new expiresAt time
 			if err := updateGithubAppStatusWithRetry(ctx, r, githubApp, expiresAt, 10); err != nil {
 				return fmt.Errorf("failed after creating secret: %v", err)
 			}
-			// Restart the pods is required
+			// Rollout deployments if required
 			if err := r.rolloutDeployment(ctx, githubApp); err != nil {
+				// Raise event
+				r.Recorder.Event(
+					githubApp,
+					"Warning",
+					"FailedDeploymentUpgrade",
+					fmt.Sprintf("Error: %s", err),
+				)
 				return fmt.Errorf("failed to rollout deployment after after creating secret: %v", err)
 			}
 			return nil
@@ -433,10 +457,24 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 	// Restart the pods is required
 	if err := r.rolloutDeployment(ctx, githubApp); err != nil {
+		// Raise event
+		r.Recorder.Event(
+			githubApp,
+			"Warning",
+			"FailedDeploymentUpgrade",
+			fmt.Sprintf("Error: %s", err),
+		)
 		return fmt.Errorf("failed to rollout deployment after updating secret: %v", err)
 	}
 
 	l.Info("Access token updated in the existing Secret successfully")
+	// Raise event
+	r.Recorder.Event(
+		githubApp,
+		"Normal",
+		"Updated",
+		fmt.Sprintf("Updated access token secret %s/%s", githubApp.Namespace, accessTokenSecret),
+	)
 	return nil
 }
 
@@ -534,7 +572,7 @@ func generateAccessToken(ctx context.Context, appID int, installationID int, pri
 	return accessToken, metav1.NewTime(expiresAt), nil
 }
 
-// Function to bounce pods as per `spec.rolloutDeployment.labels` in GithubApp (in the same namespace)
+// Function to upgrade deployments as per `spec.rolloutDeployment.labels` in GithubApp (in the same namespace)
 func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
 
@@ -544,7 +582,7 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
 		return nil
 	}
 
-	// Loop through each label specified in rolloutDeployment.labels and restart pods matching each label
+	// Loop through each label specified in rolloutDeployment.labels and update deployments matching each label
 	for key, value := range githubApp.Spec.RolloutDeployment.Labels {
 		// Create a list options with label selector
 		listOptions := &client.ListOptions{
@@ -581,6 +619,13 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
 				deployment.Name,
 				"Namespace",
 				deployment.Namespace,
+			)
+			// Raise event
+			r.Recorder.Event(
+				githubApp,
+				"Normal",
+				"Updated",
+				fmt.Sprintf("Updated deployment %s/%s", deployment.Namespace, deployment.Name),
 			)
 		}
 	}

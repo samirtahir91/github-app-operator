@@ -15,6 +15,12 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.appId
+      name: App ID
+      type: string
+    - jsonPath: .spec.installId
+      name: Install ID
+      type: string
     - jsonPath: .status.expiresAt
       name: Expires At
       type: string
