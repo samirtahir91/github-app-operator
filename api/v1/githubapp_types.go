@@ -41,6 +41,7 @@ type GithubAppStatus struct {
 
 // GithubApp is the Schema for the githubapps API
 // +kubebuilder:printcolumn:name="Expires At",type=string,JSONPath=`.status.expiresAt`
+// +kubebuilder:printcolumn:name="Error",type=string,JSONPath=`.status.error`
 type GithubApp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
