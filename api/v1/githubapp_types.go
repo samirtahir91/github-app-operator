@@ -40,8 +40,7 @@ type GithubAppStatus struct {
 //+kubebuilder:subresource:status
 
 // GithubApp is the Schema for the githubapps API
-// +kubebuilder:printcolumn:name="Expires At",type=string,JSONPath=`.status.expiresAt`
-// +kubebuilder:printcolumn:name="Error",type=string,JSONPath=`.status.error`
+
 // +kubebuilder:subresource:status
 type GithubApp struct {
 	metav1.TypeMeta   `json:",inline"`
