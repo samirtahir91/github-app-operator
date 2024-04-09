@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/samirtahir91/github-app-operator/compare/v1.3.0...v1.3.1) (2024-04-09)
+
+
+### Bug Fixes
+
+* Up debug log value in manager.yaml ([582498b](https://github.com/samirtahir91/github-app-operator/commit/582498b0b1ed20ca3de54666584381a6ce3cd50f))
+
 ## [1.0.1](https://github.com/samirtahir91/github-app-operator/compare/v1.0.0...v1.0.1) (2024-03-29)
 
 
