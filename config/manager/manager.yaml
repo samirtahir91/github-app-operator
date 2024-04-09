@@ -105,6 +105,6 @@ spec:
           - name: EXPIRY_THRESHOLD
             value: "15m"
           - name: DEBUG_LOG
-            value: false
+            value: "false"
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
