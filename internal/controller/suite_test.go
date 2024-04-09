@@ -80,6 +80,8 @@ var _ = BeforeSuite(func() {
 	Expect(osEnvErr).NotTo(HaveOccurred())
 	osEnvErr = os.Setenv("EXPIRY_THRESHOLD", "15m")
 	Expect(osEnvErr).NotTo(HaveOccurred())
+	osEnvErr = os.Setenv("DEBUG_LOG", "true")
+	Expect(osEnvErr).NotTo(HaveOccurred())
 
 	var err error
 	// cfg is defined in this file globally.
