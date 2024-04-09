@@ -32,6 +32,17 @@ Key features:
     - It will default to `15m` if not set
 - Optionally, you can enable rolling upgrade to deployments in the same namespace as the `GithubApp` that match any of the labels you define in `spec.rolloutDeployment.labels`
   - This is useful where pods need to be recreated to pickup the new secret data.
+- By default the logs are json formatted and log level is set to info and error, you can set `DEBUG_LOG` to `true` in the manager deployment environment variable for debug level logs.
+- The CRD has additional data printed with `kubectl get`:
+  - APP ID
+  - INSTALL ID
+  - EXPIRES AT
+  - ERROR
+- Events are recorded for:
+  - Any error on reconcile for a GithubApp
+  - Creation of an access token secret
+  - Updating an access token secret
+  - Updating a deployment for rolling upgrade
 
 ## Example creating a secret to hold a GitHub App private key
 - Get your GithubApp private key and encode to base64
