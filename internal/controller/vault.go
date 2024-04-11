@@ -131,7 +131,7 @@ func GetSecretWithKubernetesAuth(
 	if err != nil {
 		return []byte(""), fmt.Errorf("failed auth to vault using k8s auth with JWT: %v", err)
 	}
-	authInfo, err := clientAuth().Login(context.Background(), k8sAuth)
+	authInfo, err := client.Auth().Login(context.Background(), k8sAuth)
 	if err != nil {
 		return []byte(""), fmt.Errorf("failed to login to vault with k8s auth: %v", err)
 	}
