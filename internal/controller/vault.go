@@ -21,10 +21,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
-	"os"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
+	"os"
 
 	// vault auth
 	vault "github.com/hashicorp/vault/api"
