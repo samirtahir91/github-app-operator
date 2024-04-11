@@ -34,6 +34,20 @@ rules:
   - create
   - patch
 - apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - create
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  verbs:
+  - create
+  - get
+- apiGroups:
   - githubapp.samir.io
   resources:
   - githubapps

@@ -106,5 +106,11 @@ spec:
             value: "15m"
           - name: DEBUG_LOG
             value: "false"
+          - name: VAULT_ROLE
+            value: githubapp
+          - name: VAULT_ROLE_AUDIENCE
+            value: githubapp
+          - name: VAULT_ADDRESS
+            value: "http://vault.default:8200"
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

@@ -12,10 +12,27 @@ It will reconcile a new access token before expiry (1hr).
 ## Description
 Key features:
 - Uses a custom resource `GithubApp` in your destination namespace.
-- Reads `appId`, `installId` and `privateKeySecret` defined in a `GithubApp` resource and requests an access token from Github for the Github App.
+- Reads `appId`, `installId` and either and `privateKeySecret` or `vaultPrivateKey` defined in a `GithubApp` resource and requests an access token from Github for the Github App.
   - It stores the access token in a secret `github-app-access-token-{appId}`
-- The `privateKeySecret` refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
-  - It expects the field `data.privateKey` in the secret to pull the private key from.
+- For pulling a GitHub Apps private key, there are 2 options built-in:
+  - Using a Kubernetes secret:
+    - Use `privateKeySecret` - refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
+    - It expects the field `data.privateKey` in the secret to pull the private key from.
+  - Hashicorp Vault (this takes priority over `privateKeySecret` if both are specified):
+    - **You must base64 encode your private key before saving in Vault**
+      - The operator logic will only accept base64 encoded secrets else it will fail.
+    - This will create a short-lived JWT (10mins TTL) via Kubernetes Token Request API, with an audience you define.
+    - It will then use the JWT and Vault role you define to authenticate with Vault and pull the secret containing the private key.
+    - Configure with the `vaultPrivateKey` block:
+      - `spec.vaultPrivateKey.mountPath` - Secret mount path, i.e "secret"
+      - `spec.vaultPrivateKey.secretPath` - Secret path i.e. "githubapps/{App ID}"
+      - `spec.vaultPrivateKey.secretKey` - Secret key i.e. "privateKey"
+    - Configure Kubernetes auth with Vault
+    - Define a role and optionally audience, service account, namespace etc bound to the role
+    - Configure the environment variables in the controller deployment spec:
+      - `VAULT_ROLE` - The role you have bound for Kubernetes auth for the operator
+      - `VAULT_ROLE_AUDIENCE` - The audience you have bound in Vault
+      - `VAULT_ADDRESS` - FQDN or your Vault server, i.e. `http://vault.default:8200`
 - Deleting the `GithubApp` object will also delete the access token secret it owns.
 - The operator will reconcile an access token for a `GithubApp` when:
     - Modifications are made to the access token secret that is owned by a `GithubApp`.
@@ -96,6 +113,25 @@ spec:
     labels:
       foo: bar
       foo2: bar2
+EOF
+```
+
+## Example GithubApp object using Vault to pull the private key during run-time
+- Below example will request a new JWT from Kubernetes and use it to fetch the private key from Vault when the github access token expires
+```sh
+kubectl apply -f - <<EOF
+apiVersion: githubapp.samir.io/v1
+kind: GithubApp
+metadata:
+  name: GithubApp-sample
+  namespace: team-1
+spec:
+  appId: 123123
+  installId: 12312312
+  vaultPrivateKey:
+    mountPath: secret
+    secretPath: githubapp/123123
+    secretKey: privateKey
 EOF
 ```
 

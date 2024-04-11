@@ -52,10 +52,13 @@ type GithubAppReconciler struct {
 }
 
 var (
-	defaultRequeueAfter     = 5 * time.Minute  // Default requeue interval
-	defaultTimeBeforeExpiry = 15 * time.Minute // Default time before expiry
-	reconcileInterval       time.Duration      // Requeue interval (from env var)
-	timeBeforeExpiry        time.Duration      // Expiry threshold (from env var)
+	defaultRequeueAfter     = 5 * time.Minute                  // Default requeue interval
+	defaultTimeBeforeExpiry = 15 * time.Minute                 // Default time before expiry
+	reconcileInterval       time.Duration                      // Requeue interval (from env var)
+	timeBeforeExpiry        time.Duration                      // Expiry threshold (from env var)
+	vaultAddress            = os.Getenv("VAULT_ADDRESS")       // Vault server fqdn
+	vaultAudience           = os.Getenv("VAULT_ROLE_AUDIENCE") // Vault audience bound to role
+	vaultRole               = os.Getenv("VAULT_ROLE")          // Vault role to use
 )
 
 const (
@@ -68,6 +71,8 @@ const (
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;update;create;delete;watch;patch
 //+kubebuilder:rbac:groups="apps",resources=deployments,verbs=get;list;update;watch;patch
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
+//+kubebuilder:rbac:groups=core,resources=serviceaccounts/token,verbs=create;get
+//+kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=create;get
 
 // Reconcile function
 func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -331,8 +336,8 @@ func (r *GithubAppReconciler) checkExpiryAndRequeue(ctx context.Context, githubA
 	return ctrl.Result{RequeueAfter: reconcileInterval}
 }
 
-// Function to generate or update access token
-func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+// Function to get private key from a k8s secret
+func (r *GithubAppReconciler) getPrivateKeyFromSecret(ctx context.Context, githubApp *githubappv1.GithubApp) ([]byte, error) {
 	l := log.FromContext(ctx)
 
 	// Get the private key from the Secret
@@ -342,13 +347,62 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	err := r.Get(ctx, client.ObjectKey{Namespace: secretNamespace, Name: secretName}, secret)
 	if err != nil {
 		l.Error(err, "failed to get Secret")
-		return err
+		return []byte(""), err
 	}
 
 	privateKey, ok := secret.Data["privateKey"]
 	if !ok {
 		l.Error(err, "privateKey not found in Secret")
-		return fmt.Errorf("privateKey not found in Secret")
+		return []byte(""), fmt.Errorf("privateKey not found in Secret")
+	}
+	return privateKey, nil
+}
+
+// Function to get private key from a Vault secret
+func getPrivateKeyFromVault(ctx context.Context, mountPath string, secretPath string, secretKey string) ([]byte, error) {
+
+	// Get JWT from k8s Token Request API
+	token, err := RequestToken(ctx, vaultAudience)
+	if err != nil {
+		return []byte(""), err
+	}
+
+	// Get private key from Vault secret with short-lived JWT
+	privateKey, err := GetSecretWithKubernetesAuth(token, vaultAddress, vaultRole, mountPath, secretPath, secretKey)
+	if err != nil {
+		return []byte(""), err
+	}
+	return privateKey, nil
+}
+
+// Function to generate or update access token
+func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+	l := log.FromContext(ctx)
+
+	var privateKey []byte
+	var privateKeyErr error
+
+	// Get the private key from a vault path if defined in Githubapp spec
+	// Vault auth will take precedence over using `spec.privateKeySecret`
+	if githubApp.Spec.VaultPrivateKey != nil {
+
+		if vaultAddress == "" || vaultAudience == "" || vaultRole == "" {
+			return fmt.Errorf("failed on vault auth: VAULT_ROLE, VAULT_ROLE_AUDIENCE and VAULT_ADDRESS are required env variables for Vault authentication")
+		}
+
+		mountPath := githubApp.Spec.VaultPrivateKey.MountPath
+		secretPath := githubApp.Spec.VaultPrivateKey.SecretPath
+		secretKey := githubApp.Spec.VaultPrivateKey.SecretKey
+		privateKey, privateKeyErr = getPrivateKeyFromVault(ctx, mountPath, secretPath, secretKey)
+		if privateKeyErr != nil {
+			return fmt.Errorf("failed to get private key from vault: %v", privateKeyErr)
+		}
+	} else {
+		// else get the private key from K8s secret `spec.privateKeySecret`
+		privateKey, privateKeyErr = r.getPrivateKeyFromSecret(ctx, githubApp)
+		if privateKeyErr != nil {
+			return fmt.Errorf("failed to get private key from kubernetes secret: %v", privateKeyErr)
+		}
 	}
 
 	// Generate or renew access token
@@ -360,7 +414,6 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	)
 	if err != nil {
 		return fmt.Errorf("failed to generate access token: %v", err)
-
 	}
 
 	// Create a new Secret with the access token
