@@ -361,7 +361,7 @@ func (r *GithubAppReconciler) getPrivateKeyFromSecret(ctx context.Context, githu
 func getPrivateKeyFromVault(ctx context.Context, mountPath string, secretPath string, secretKey string) ([]byte, error) {
 
 	// Get JWT from k8s Token Request API
-	token, err := RequestToken(ctx, vaultAddress)
+	token, err := RequestToken(ctx, vaultAudience)
 	if err != nil {
 		return []byte(""), err
 	}
