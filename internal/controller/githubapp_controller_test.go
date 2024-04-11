@@ -289,7 +289,7 @@ var _ = Describe("GithubApp controller", func() {
 				k8sClient,
 				githubAppName3,
 				namespace3,
-				"Secret \"gh-app-key-test\" not found",
+				"failed to get private key from kubernetes secret: Secret \"gh-app-key-test\" not found",
 			)
 			By("Waiting for the correct event to be recorded")
 			test_helpers.CheckEvent(
@@ -299,7 +299,7 @@ var _ = Describe("GithubApp controller", func() {
 				namespace3,
 				"Warning",
 				"FailedRenewal",
-				"Error: Secret \"gh-app-key-test\" not found",
+				"Error: failed to get private key from kubernetes secret: Secret \"gh-app-key-test\" not found",
 			)
 		})
 	})
