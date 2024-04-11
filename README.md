@@ -19,12 +19,12 @@ Key features:
     - Use `privateKeySecret` - refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
     - It expects the field `data.privateKey` in the secret to pull the private key from.
   - Hashicorp Vault (this takes priority over `privateKeySecret` if both are specified):
-    - This will create a short-lived JWT (10mins TTL) via Kuberenetes Token Request API with an audience you define
+    - This will create a short-lived JWT (10mins TTL) via Kubernetes Token Request API, with an audience you define.
     - It will then use the JWT and Vault role you define to authenticate with Vault and pull the secret containing the private key.
     - Configure with the `vaultPrivateKey` block:
-      - spec.vaultPrivateKey.mountPath
-      - spec.vaultPrivateKey.secretPath
-      - spec.vaultPrivateKey.secretKey
+      - `spec.vaultPrivateKey.mountPath`
+      - `spec.vaultPrivateKey.secretPath`
+      - `spec.vaultPrivateKey.secretKey`
     - Configure Kubernetes auth with Vault
     - Define a role and optionally audience, service account, namespace etc bound to the role
     - Configure the environment variables in the controller deployment spec:
