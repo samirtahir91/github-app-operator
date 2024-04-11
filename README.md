@@ -19,7 +19,7 @@ Key features:
     - Use `privateKeySecret` - refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
     - It expects the field `data.privateKey` in the secret to pull the private key from.
   - Hashicorp Vault (this takes priority over `privateKeySecret` if both are specified):
-    - **You must base64 encode your private key before savings in Vault**
+    - **You must base64 encode your private key before saving in Vault**
       - The operator logic will only accept base64 encoded secrets else it will fail.
     - This will create a short-lived JWT (10mins TTL) via Kubernetes Token Request API, with an audience you define.
     - It will then use the JWT and Vault role you define to authenticate with Vault and pull the secret containing the private key.
