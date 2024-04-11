@@ -265,7 +265,7 @@ var _ = Describe("GithubApp controller", func() {
 				namespace4,
 				"Warning",
 				"FailedRenewal",
-				"Error: failed to get private key from kubernetes secret: privateKey not found in Secret",
+				"Error: failed to get private key from kubernetes secret",
 			)
 
 			// Delete the GitHubApp after reconciliation
