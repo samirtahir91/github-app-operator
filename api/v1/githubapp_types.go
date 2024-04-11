@@ -24,8 +24,9 @@ import (
 type GithubAppSpec struct {
 	AppId             int                    `json:"appId"`
 	InstallId         int                    `json:"installId"`
-	PrivateKeySecret  string                 `json:"privateKeySecret"`
+	PrivateKeySecret  string                 `json:"privateKeySecret,omitempty"`
 	RolloutDeployment *RolloutDeploymentSpec `json:"rolloutDeployment,omitempty"`
+	VaultPrivateKey	  *VaultPrivateKeySpec	 `json:"vaultPrivateKey,omitempty"`
 }
 
 // GithubAppStatus defines the observed state of GithubApp
@@ -55,6 +56,13 @@ type GithubApp struct {
 // RolloutDeploymentSpec defines the specification for restarting pods
 type RolloutDeploymentSpec struct {
 	Labels map[string]string `json:"labels,omitempty"`
+}
+
+// VaultPrivateKeySpec defines the spec for retrieving the private key from Vault
+type VaultPrivateKeySpec struct {
+	MountPath  string `json:"mountPath"`
+	SecretPath string `json:"secretPath"`
+	SecretKey  string `json:"secretKey"`
 }
 
 //+kubebuilder:object:root=true
