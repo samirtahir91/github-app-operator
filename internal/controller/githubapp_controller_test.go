@@ -255,7 +255,7 @@ var _ = Describe("GithubApp controller", func() {
 				k8sClient,
 				githubAppName4,
 				namespace4,
-				"privateKey not found in Secret",
+				"failed to get private key from kubernetes secret: privateKey not found in Secret",
 			)
 			By("Waiting for the correct event to be recorded")
 			test_helpers.CheckEvent(
@@ -265,7 +265,7 @@ var _ = Describe("GithubApp controller", func() {
 				namespace4,
 				"Warning",
 				"FailedRenewal",
-				"Error: privateKey not found in Secret",
+				"Error: failed to get private key from kubernetes secret: privateKey not found in Secret",
 			)
 
 			// Delete the GitHubApp after reconciliation
