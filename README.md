@@ -22,9 +22,9 @@ Key features:
     - This will create a short-lived JWT (10mins TTL) via Kubernetes Token Request API, with an audience you define.
     - It will then use the JWT and Vault role you define to authenticate with Vault and pull the secret containing the private key.
     - Configure with the `vaultPrivateKey` block:
-      - `spec.vaultPrivateKey.mountPath`
-      - `spec.vaultPrivateKey.secretPath`
-      - `spec.vaultPrivateKey.secretKey`
+      - `spec.vaultPrivateKey.mountPath` - Secret mount path, i.e "secret"
+      - `spec.vaultPrivateKey.secretPath` - Secret path i.e. "githubapps/{App ID}"
+      - `spec.vaultPrivateKey.secretKey` - Secret key i.e. "privateKey"
     - Configure Kubernetes auth with Vault
     - Define a role and optionally audience, service account, namespace etc bound to the role
     - Configure the environment variables in the controller deployment spec:
@@ -111,6 +111,25 @@ spec:
     labels:
       foo: bar
       foo2: bar2
+EOF
+```
+
+## Example GithubApp object using Vault to pull the private key during run-time
+- Below example will request a new JWT from Kubernetes and use it to fetch the private key from Vault when the github access token expires
+```sh
+kubectl apply -f - <<EOF
+apiVersion: githubapp.samir.io/v1
+kind: GithubApp
+metadata:
+  name: GithubApp-sample
+  namespace: team-1
+spec:
+  appId: 123123
+  installId: 12312312
+  vaultPrivateKey:
+    mountPath: secret
+    secretPath: githubapp/123123
+    secretKey: privateKey
 EOF
 ```
 
