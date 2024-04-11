@@ -31,6 +31,8 @@ Key features:
       - `VAULT_ROLE` - The role you have bound for Kubernetes auth for the operator
       - `VAULT_ROLE_AUDIENCE` - The audience you have bound in Vault
       - `VAULT_ADDRESS` - FQDN or your Vault server, i.e. `http://vault.default:8200`
+      - **You must base64 encode your private key before savings in Vault**
+        - The operator logic will only accept base64 encoded secrets else it will fail.
 - Deleting the `GithubApp` object will also delete the access token secret it owns.
 - The operator will reconcile an access token for a `GithubApp` when:
     - Modifications are made to the access token secret that is owned by a `GithubApp`.
