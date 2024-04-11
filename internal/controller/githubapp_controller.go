@@ -387,7 +387,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	if githubApp.Spec.VaultPrivateKey != nil {
 
 		if vaultAddress == "" || vaultAudience == "" || vaultRole == "" {
-			return fmt.Errorf("failed on vault auth: VAULT_ROLE_AUDIENCE and VAULT_ADDRESS are required env variables for Vault authentication")
+			return fmt.Errorf("failed on vault auth: VAULT_ROLE, VAULT_ROLE_AUDIENCE and VAULT_ADDRESS are required env variables for Vault authentication")
 		}
 
 		mountPath := githubApp.Spec.VaultPrivateKey.MountPath
