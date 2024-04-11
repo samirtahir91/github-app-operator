@@ -21,7 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
-	"io/ioutil"
+	"os"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
@@ -56,7 +56,7 @@ func RequestToken(ctx context.Context, vaultAudience string) (string, error) {
 	}
 
 	// Get KSA mounted in pod
-	serviceAccountToken, err := ioutil.ReadFile("var/run/secrets/kubernetes.io/serviceaccount/token")
+	serviceAccountToken, err := os.ReadFile("var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
 		return "", fmt.Errorf("failed to read service account token: %v", err)
 	}
