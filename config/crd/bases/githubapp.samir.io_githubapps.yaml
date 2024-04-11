@@ -67,10 +67,24 @@ spec:
                       type: string
                     type: object
                 type: object
+              vaultPrivateKey:
+                description: VaultPrivateKeySpec defines the spec for retrieving the
+                  private key from Vault
+                properties:
+                  mountPath:
+                    type: string
+                  secretKey:
+                    type: string
+                  secretPath:
+                    type: string
+                required:
+                - mountPath
+                - secretKey
+                - secretPath
+                type: object
             required:
             - appId
             - installId
-            - privateKeySecret
             type: object
           status:
             description: GithubAppStatus defines the observed state of GithubApp

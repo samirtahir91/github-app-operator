@@ -29,7 +29,7 @@ import (
 	// vault auth
 	vault "github.com/hashicorp/vault/api"
 	auth "github.com/hashicorp/vault/api/auth/kubernetes"
-	// k8s Token request 
+	// k8s Token request
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -46,11 +46,11 @@ func RequestToken(ctx context.Context, vaultAudience string) (string, error) {
 		return "", fmt.Errorf("failed to set k8s clientset: %v", err)
 	}
 
-	// Token request spec 
+	// Token request spec
 	// TTL of 10 mins for short lived JWT for Vault auth
 	treq := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
-			Audiences:		   []string{vaultAudience},
+			Audiences:         []string{vaultAudience},
 			ExpirationSeconds: ptr.To(int64(600)),
 		},
 	}

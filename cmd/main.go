@@ -70,8 +70,8 @@ func main() {
 	// Read DEBUG_LOG from env var
 	debugLog, logVarErr := strconv.ParseBool(os.Getenv("DEBUG_LOG"))
 	if logVarErr != nil {
-	    // Default to false
-	    debugLog = false
+		// Default to false
+		debugLog = false
 	}
 	opts := zap.Options{
 		Development: debugLog,

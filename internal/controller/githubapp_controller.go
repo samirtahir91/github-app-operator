@@ -52,12 +52,12 @@ type GithubAppReconciler struct {
 }
 
 var (
-	defaultRequeueAfter     = 5 * time.Minute  					// Default requeue interval
-	defaultTimeBeforeExpiry = 15 * time.Minute 					// Default time before expiry
-	reconcileInterval       time.Duration      					// Requeue interval (from env var)
-	timeBeforeExpiry        time.Duration      					// Expiry threshold (from env var)
-	vaultAddress 			= os.Getenv("VAULT_ADDRESS") 		// Vault server fqdn
-	VaultAudience 			= os.Getenv("VAULT_ROLE_AUDIENCE") 	// Vault audience bound to role
+	defaultRequeueAfter     = 5 * time.Minute                  // Default requeue interval
+	defaultTimeBeforeExpiry = 15 * time.Minute                 // Default time before expiry
+	reconcileInterval       time.Duration                      // Requeue interval (from env var)
+	timeBeforeExpiry        time.Duration                      // Expiry threshold (from env var)
+	vaultAddress            = os.Getenv("VAULT_ADDRESS")       // Vault server fqdn
+	VaultAudience           = os.Getenv("VAULT_ROLE_AUDIENCE") // Vault audience bound to role
 )
 
 const (
@@ -385,7 +385,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	// Vault auth will take precedence over using `spec.privateKeySecret`
 	if githubApp.Spec.VaultPrivateKey != nil {
 
-		if vaultAddress == "" || VaultAudience =="" {
+		if vaultAddress == "" || VaultAudience == "" {
 			return fmt.Errorf("failed on vault auth: VAULT_ROLE_AUDIENCE and VAULT_ADDRESS are required env variables for Vault authentication")
 		}
 

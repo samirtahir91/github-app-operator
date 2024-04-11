@@ -26,7 +26,7 @@ type GithubAppSpec struct {
 	InstallId         int                    `json:"installId"`
 	PrivateKeySecret  string                 `json:"privateKeySecret,omitempty"`
 	RolloutDeployment *RolloutDeploymentSpec `json:"rolloutDeployment,omitempty"`
-	VaultPrivateKey	  *VaultPrivateKeySpec	 `json:"vaultPrivateKey,omitempty"`
+	VaultPrivateKey   *VaultPrivateKeySpec   `json:"vaultPrivateKey,omitempty"`
 }
 
 // GithubAppStatus defines the observed state of GithubApp
