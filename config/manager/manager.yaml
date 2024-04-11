@@ -106,6 +106,8 @@ spec:
             value: "15m"
           - name: DEBUG_LOG
             value: "false"
+          - name: VAULT_ROLE
+            value: githubapp
           - name: VAULT_ROLE_AUDIENCE
             value: githubapp
           - name: VAULT_ADDRESS

@@ -109,7 +109,7 @@ func RequestToken(ctx context.Context, vaultAudience string) (string, error) {
 func GetSecretWithKubernetesAuth(
 	token string,
 	vaultAddress string,
-	vaultAudience string,
+	vaultRole string,
 	mountPath string,
 	secretPath string,
 	secretKey string,
@@ -123,9 +123,9 @@ func GetSecretWithKubernetesAuth(
 		return []byte(""), fmt.Errorf("failed to initialise Vault client: %v", err)
 	}
 
-	// Auth to Vault using k8s auth, using short-lived JWT with defined audience
+	// Auth to Vault using k8s auth, role and short-lived JWT with defined audience
 	k8sAuth, err := auth.NewKubernetesAuth(
-		vaultAudience,
+		vaultRole,
 		auth.WithServiceAccountToken(token),
 	)
 	if err != nil {

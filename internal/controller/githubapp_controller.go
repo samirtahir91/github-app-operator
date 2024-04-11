@@ -58,6 +58,7 @@ var (
 	timeBeforeExpiry        time.Duration                      // Expiry threshold (from env var)
 	vaultAddress            = os.Getenv("VAULT_ADDRESS")       // Vault server fqdn
 	vaultAudience           = os.Getenv("VAULT_ROLE_AUDIENCE") // Vault audience bound to role
+	vaultRole           	= os.Getenv("VAULT_ROLE") 		   // Vault role to use
 )
 
 const (
@@ -367,7 +368,7 @@ func getPrivateKeyFromVault(ctx context.Context, mountPath string, secretPath st
 	}
 
 	// Get private key from Vault secret with short-lived JWT
-	privateKey, err := GetSecretWithKubernetesAuth(token, vaultAddress, vaultAudience, mountPath, secretPath, secretKey)
+	privateKey, err := GetSecretWithKubernetesAuth(token, vaultAddress, vaultRole, mountPath, secretPath, secretKey)
 	if err != nil {
 		return []byte(""), err
 	}
@@ -385,7 +386,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	// Vault auth will take precedence over using `spec.privateKeySecret`
 	if githubApp.Spec.VaultPrivateKey != nil {
 
-		if vaultAddress == "" || vaultAudience == "" {
+		if vaultAddress == "" || vaultAudience == "" || vaultRole == "" {
 			return fmt.Errorf("failed on vault auth: VAULT_ROLE_AUDIENCE and VAULT_ADDRESS are required env variables for Vault authentication")
 		}
 
