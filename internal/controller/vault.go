@@ -116,9 +116,9 @@ func GetSecretWithKubernetesAuth(
 ) ([]byte, error) {
 
 	// Initialise vault client
-	client, err := vault.NewClient(&vault.Config(
+	client, err := vault.NewClient(&vault.Config{
 		Address: vaultAddress,
-	))
+	})
 	if err != nil {
 		return []byte(""), fmt.Errorf("failed to initialise Vault client: %v", err)
 	}
