@@ -58,7 +58,7 @@ var (
 	timeBeforeExpiry        time.Duration                      // Expiry threshold (from env var)
 	vaultAddress            = os.Getenv("VAULT_ADDRESS")       // Vault server fqdn
 	vaultAudience           = os.Getenv("VAULT_ROLE_AUDIENCE") // Vault audience bound to role
-	vaultRole           	= os.Getenv("VAULT_ROLE") 		   // Vault role to use
+	vaultRole               = os.Getenv("VAULT_ROLE")          // Vault role to use
 )
 
 const (
