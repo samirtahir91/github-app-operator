@@ -12,10 +12,25 @@ It will reconcile a new access token before expiry (1hr).
 ## Description
 Key features:
 - Uses a custom resource `GithubApp` in your destination namespace.
-- Reads `appId`, `installId` and `privateKeySecret` defined in a `GithubApp` resource and requests an access token from Github for the Github App.
+- Reads `appId`, `installId` and either and `privateKeySecret` or `vaultPrivateKey` defined in a `GithubApp` resource and requests an access token from Github for the Github App.
   - It stores the access token in a secret `github-app-access-token-{appId}`
-- The `privateKeySecret` refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
-  - It expects the field `data.privateKey` in the secret to pull the private key from.
+- For pulling a GitHub Apps private key, there are 2 options built-in:
+  - Using a Kubernetes secret:
+    - Use `privateKeySecret` - refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
+    - It expects the field `data.privateKey` in the secret to pull the private key from.
+  - Hashicorp Vault (this takes priority over `privateKeySecret` if both are specified):
+    - This will create a short-lived JWT (10mins TTL) via Kuberenetes Token Request API with an audience you define
+    - It will then use the JWT and Vault role you define to authenticate with Vault and pull the secret containing the private key.
+    - Configure with the `vaultPrivateKey` block:
+      - spec.vaultPrivateKey.mountPath
+      - spec.vaultPrivateKey.secretPath
+      - spec.vaultPrivateKey.secretKey
+    - Configure Kubernetes auth with Vault
+    - Define a role and optionally audience, service account, namespace etc bound to the role
+    - Configure the environment variables in the controller deployment spec:
+      - `VAULT_ROLE` - The role you have bound for Kubernetes auth for the operator
+      - `VAULT_ROLE_AUDIENCE` - The audience you have bound in Vault
+      - `VAULT_ADDRESS` - FQDN or your Vault server, i.e. `http://vault.default:8200`
 - Deleting the `GithubApp` object will also delete the access token secret it owns.
 - The operator will reconcile an access token for a `GithubApp` when:
     - Modifications are made to the access token secret that is owned by a `GithubApp`.
