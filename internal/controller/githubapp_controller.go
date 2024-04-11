@@ -379,7 +379,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	l := log.FromContext(ctx)
 
 	var privateKey []byte
-	vat privateKeyErr error
+	var privateKeyErr error
 
 	// Get the private key from a vault path if defined in Githubapp spec
 	// Vault auth will take precedence over using `spec.privateKeySecret`
