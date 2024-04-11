@@ -152,7 +152,7 @@ func GetSecretWithKubernetesAuth(
 	}
 	// Base64 decode the private key
 	// The private key must be stored as a base64 encoded string in the vault secret
-	privateKey, err := base64.StdEncoding.Decoding(privateKeyStr)
+	privateKey, err := base64.StdEncoding.DecodeString(privateKeyStr)
 	if err != nil {
 		return []byte(""), fmt.Errorf("failed to base64 decode the private key: %v", err)
 	}
