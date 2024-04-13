@@ -27,12 +27,14 @@ import (
 	"time"
 
 	githubappv1 "github-app-operator/api/v1"
+	vault "github.com/hashicorp/vault/api" // vault client
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	kubernetes "k8s.io/client-go/kubernetes" // k8s client
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
@@ -46,9 +48,12 @@ import (
 // GithubAppReconciler reconciles a GithubApp object
 type GithubAppReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
-	lock     sync.Mutex
+	Scheme      *runtime.Scheme
+	Recorder    record.EventRecorder
+	HTTPClient  *http.Client
+	VaultClient *vault.Client
+	K8sClient   *kubernetes.Clientset
+	lock        sync.Mutex
 }
 
 var (
@@ -56,9 +61,10 @@ var (
 	defaultTimeBeforeExpiry = 15 * time.Minute                 // Default time before expiry
 	reconcileInterval       time.Duration                      // Requeue interval (from env var)
 	timeBeforeExpiry        time.Duration                      // Expiry threshold (from env var)
-	vaultAddress            = os.Getenv("VAULT_ADDRESS")       // Vault server fqdn
 	vaultAudience           = os.Getenv("VAULT_ROLE_AUDIENCE") // Vault audience bound to role
 	vaultRole               = os.Getenv("VAULT_ROLE")          // Vault role to use
+	serviceAccountName      string                             // controller service account
+	kubernetesNamespace     string                             // controller namespace
 )
 
 const (
@@ -224,7 +230,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	username := string(accessTokenSecret.Data["username"])
 
 	// Check if the access token is a valid github token via gh api auth
-	if !isAccessTokenValid(ctx, username, accessToken) {
+	if !r.isAccessTokenValid(ctx, username, accessToken) {
 		// If accessToken is invalid, generate or update access token
 		return r.generateOrUpdateAccessToken(ctx, githubApp)
 	}
@@ -245,7 +251,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 }
 
 // Function to check if the access token is valid by making a request to GitHub API
-func isAccessTokenValid(ctx context.Context, username string, accessToken string) bool {
+func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username string, accessToken string) bool {
 	l := log.FromContext(ctx)
 
 	// If username has been modified, renew the secret
@@ -259,9 +265,6 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 	// GitHub API endpoint for rate limit information
 	url := "https://api.github.com/rate_limit"
 
-	// Create a new HTTP client
-	client := &http.Client{}
-
 	// Create a new request
 	ghReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -273,7 +276,7 @@ func isAccessTokenValid(ctx context.Context, username string, accessToken string
 	ghReq.Header.Set("Authorization", "token "+accessToken)
 
 	// Send the request
-	resp, err := client.Do(ghReq)
+	resp, err := r.HTTPClient.Do(ghReq)
 	if err != nil {
 		l.Error(err, "Error sending request to GitHub API for rate limit")
 		return false
@@ -359,16 +362,16 @@ func (r *GithubAppReconciler) getPrivateKeyFromSecret(ctx context.Context, githu
 }
 
 // Function to get private key from a Vault secret
-func getPrivateKeyFromVault(ctx context.Context, mountPath string, secretPath string, secretKey string) ([]byte, error) {
+func (r *GithubAppReconciler) getPrivateKeyFromVault(ctx context.Context, mountPath string, secretPath string, secretKey string) ([]byte, error) {
 
 	// Get JWT from k8s Token Request API
-	token, err := RequestToken(ctx, vaultAudience)
+	token, err := r.RequestToken(ctx, vaultAudience, kubernetesNamespace, serviceAccountName)
 	if err != nil {
 		return []byte(""), err
 	}
 
 	// Get private key from Vault secret with short-lived JWT
-	privateKey, err := GetSecretWithKubernetesAuth(token, vaultAddress, vaultRole, mountPath, secretPath, secretKey)
+	privateKey, err := r.GetSecretWithKubernetesAuth(token, vaultRole, mountPath, secretPath, secretKey)
 	if err != nil {
 		return []byte(""), err
 	}
@@ -386,14 +389,14 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	// Vault auth will take precedence over using `spec.privateKeySecret`
 	if githubApp.Spec.VaultPrivateKey != nil {
 
-		if vaultAddress == "" || vaultAudience == "" || vaultRole == "" {
+		if r.VaultClient.Address() == "" || vaultAudience == "" || vaultRole == "" {
 			return fmt.Errorf("failed on vault auth: VAULT_ROLE, VAULT_ROLE_AUDIENCE and VAULT_ADDRESS are required env variables for Vault authentication")
 		}
 
 		mountPath := githubApp.Spec.VaultPrivateKey.MountPath
 		secretPath := githubApp.Spec.VaultPrivateKey.SecretPath
 		secretKey := githubApp.Spec.VaultPrivateKey.SecretKey
-		privateKey, privateKeyErr = getPrivateKeyFromVault(ctx, mountPath, secretPath, secretKey)
+		privateKey, privateKeyErr = r.getPrivateKeyFromVault(ctx, mountPath, secretPath, secretKey)
 		if privateKeyErr != nil {
 			return fmt.Errorf("failed to get private key from vault: %v", privateKeyErr)
 		}
@@ -406,7 +409,7 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 	}
 
 	// Generate or renew access token
-	accessToken, expiresAt, err := generateAccessToken(
+	accessToken, expiresAt, err := r.generateAccessToken(
 		ctx,
 		githubApp.Spec.AppId,
 		githubApp.Spec.InstallId,
@@ -556,7 +559,7 @@ func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler,
 }
 
 // function to generate new access token for gh app
-func generateAccessToken(ctx context.Context, appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
+func (r *GithubAppReconciler) generateAccessToken(ctx context.Context, appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
 
 	l := log.FromContext(ctx)
 
@@ -579,8 +582,7 @@ func generateAccessToken(ctx context.Context, appID int, installationID int, pri
 		return "", metav1.Time{}, fmt.Errorf("failed to sign JWT: %v", err)
 	}
 
-	// Create HTTP client and perform request to get installation token
-	httpClient := &http.Client{}
+	// Use HTTP client and perform request to get installation token
 	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installationID)
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, nil)
 	if err != nil {
@@ -590,7 +592,7 @@ func generateAccessToken(ctx context.Context, appID int, installationID int, pri
 	req.Header.Set("Accept", "application/vnd.github+json")
 
 	// Send post request for access token
-	resp, err := httpClient.Do(req)
+	resp, err := r.HTTPClient.Do(req)
 	if err != nil {
 		return "", metav1.Time{}, fmt.Errorf("failed to perform HTTP request: %v", err)
 	}
@@ -722,6 +724,48 @@ func githubAppPredicate() predicate.Predicate {
 	}
 }
 
+// Function to get service account and namespace of controller
+func getServiceAccountAndNamespace() (string, string, error) {
+
+	// Get KSA mounted in pod
+	serviceAccountToken, err := os.ReadFile("var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		return "", "", fmt.Errorf("failed to read service account token: %v", err)
+	}
+	// Parse the KSA token
+	parsedToken, _, err := new(jwt.Parser).ParseUnverified(string(serviceAccountToken), jwt.MapClaims{})
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse token: %v", err)
+	}
+	// Get the claims
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", "", fmt.Errorf("failed to parse token claims")
+	}
+	// Get kubernetes.io claims
+	kubernetesClaims, ok := claims["kubernetes.io"].(map[string]interface{})
+	if !ok {
+		return "", "", fmt.Errorf("failed to assert kubernetes.io claim to map[string]interface{}")
+	}
+	// Get serviceaccount claim
+	serviceAccountClaims, ok := kubernetesClaims["serviceaccount"].(map[string]interface{})
+	if !ok {
+		return "", "", fmt.Errorf("failed to assert serviceaccount claim to map[string]interface{}")
+	}
+	// Get the namespace
+	kubernetesNamespace, ok := kubernetesClaims["namespace"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("failed to assert namespace to string")
+	}
+	// Get service account name
+	serviceAccountName, ok := serviceAccountClaims["name"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("failed to assert service account name to string")
+	}
+
+	return serviceAccountName, kubernetesNamespace, nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Get reconcile interval from environment variable or use default value
@@ -741,6 +785,14 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Handle case where environment variable is not set or invalid
 		log.Log.Error(err, "failed to set timeBeforeExpiry, defaulting")
 		timeBeforeExpiry = defaultTimeBeforeExpiry
+	}
+
+	// Get service account name and namespace
+	serviceAccountName, kubernetesNamespace, err = getServiceAccountAndNamespace()
+	if err != nil {
+		log.Log.Error(err, "failed to get service account and/or namespace of controller")
+	} else {
+		log.Log.Info("Got controller aervice account and namespace", "service account", serviceAccountName, "namespace", kubernetesNamespace)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).

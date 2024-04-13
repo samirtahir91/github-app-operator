@@ -24,7 +24,11 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	vault "github.com/hashicorp/vault/api"   // vault client
+	kubernetes "k8s.io/client-go/kubernetes" // k8s client
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"net/http" // http client
+	ctrlConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -101,6 +105,22 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
+	// http client
+	httpClient := &http.Client{}
+
+	// Initialise vault client with VAULT_ADDRESS env var
+	vaultAddress := os.Getenv("VAULT_ADDRESS") // Vault server fqdn
+	vaultClient, err := vault.NewClient(&vault.Config{
+		Address: vaultAddress,
+	})
+	if err != nil {
+		setupLog.Error(err, "failed to initialise Vault client")
+		os.Exit(1)
+	}
+
+	// Initialise K8s client
+	k8sClientset := kubernetes.NewForConfigOrDie(ctrlConfig.GetConfigOrDie())
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -130,9 +150,12 @@ func main() {
 	}
 
 	if err = (&controller.GithubAppReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("githubapp-controller"),
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		Recorder:    mgr.GetEventRecorderFor("githubapp-controller"),
+		HTTPClient:  httpClient,
+		VaultClient: vaultClient,
+		K8sClient:   k8sClientset,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GithubApp")
 		os.Exit(1)

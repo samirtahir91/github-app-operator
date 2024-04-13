@@ -20,31 +20,20 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/golang-jwt/jwt/v4"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
-	"os"
 
-	// vault auth
-	vault "github.com/hashicorp/vault/api"
-	auth "github.com/hashicorp/vault/api/auth/kubernetes"
-	// k8s Token request
-	authenticationv1 "k8s.io/api/authentication/v1"
+	auth "github.com/hashicorp/vault/api/auth/kubernetes" // vault k8s auth
+	authenticationv1 "k8s.io/api/authentication/v1"       // k8s Token request
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Function to create token via K8s Token Request API
-func RequestToken(ctx context.Context, vaultAudience string) (string, error) {
-	// Auth to k8s using mounted service account
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return "", fmt.Errorf("failed to use in cluster config: %v", err)
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", fmt.Errorf("failed to set k8s clientset: %v", err)
-	}
+func (r *GithubAppReconciler) RequestToken(
+	ctx context.Context,
+	vaultAudience string,
+	kubernetesNamespace string,
+	serviceAccountName string,
+) (string, error) {
 
 	// Token request spec
 	// TTL of 10 mins for short lived JWT for Vault auth
@@ -55,50 +44,14 @@ func RequestToken(ctx context.Context, vaultAudience string) (string, error) {
 		},
 	}
 
-	// Get KSA mounted in pod
-	serviceAccountToken, err := os.ReadFile("var/run/secrets/kubernetes.io/serviceaccount/token")
-	if err != nil {
-		return "", fmt.Errorf("failed to read service account token: %v", err)
-	}
-	// Parse the KSA token
-	parsedToken, _, err := new(jwt.Parser).ParseUnverified(string(serviceAccountToken), jwt.MapClaims{})
-	if err != nil {
-		return "", fmt.Errorf("failed to parse token: %v", err)
-	}
-	// Get the claims
-	claims, ok := parsedToken.Claims.(jwt.MapClaims)
-	if !ok {
-		return "", fmt.Errorf("failed to parse token claims")
-	}
-	// Get kubernetes.io claims
-	kubernetesClaims, ok := claims["kubernetes.io"].(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("failed to assert kubernetes.io claim to map[string]interface{}")
-	}
-	// Get serviceaccount claim
-	serviceAccountClaims, ok := kubernetesClaims["serviceaccount"].(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("failed to assert serviceaccount claim to map[string]interface{}")
-	}
-	// Get the namespace
-	kubernetesNamespace, ok := kubernetesClaims["namespace"].(string)
-	if !ok {
-		return "", fmt.Errorf("failed to assert namespace to string")
-	}
-	// Get service account name
-	serviceAccountName, ok := serviceAccountClaims["name"].(string)
-	if !ok {
-		return "", fmt.Errorf("failed to assert service account name to string")
-	}
-
 	// Request a JWT from Token Request API
-	tokenRequest, tErr := clientset.CoreV1().ServiceAccounts(kubernetesNamespace).CreateToken(
+	tokenRequest, err := r.K8sClient.CoreV1().ServiceAccounts(kubernetesNamespace).CreateToken(
 		ctx,
 		serviceAccountName,
 		treq,
 		metav1.CreateOptions{},
 	)
-	if tErr != nil {
+	if err != nil {
 		return "", fmt.Errorf("failed to create token request to k8s api: %v", err)
 	}
 	token := tokenRequest.Status.Token
@@ -106,22 +59,13 @@ func RequestToken(ctx context.Context, vaultAudience string) (string, error) {
 }
 
 // Fetches a key-value secret (kv-2) after authenticating to Vault with a Kubernetes service account
-func GetSecretWithKubernetesAuth(
+func (r *GithubAppReconciler) GetSecretWithKubernetesAuth(
 	token string,
-	vaultAddress string,
 	vaultRole string,
 	mountPath string,
 	secretPath string,
 	secretKey string,
 ) ([]byte, error) {
-
-	// Initialise vault client
-	client, err := vault.NewClient(&vault.Config{
-		Address: vaultAddress,
-	})
-	if err != nil {
-		return []byte(""), fmt.Errorf("failed to initialise Vault client: %v", err)
-	}
 
 	// Auth to Vault using k8s auth, role and short-lived JWT with defined audience
 	k8sAuth, err := auth.NewKubernetesAuth(
@@ -131,7 +75,7 @@ func GetSecretWithKubernetesAuth(
 	if err != nil {
 		return []byte(""), fmt.Errorf("failed auth to vault using k8s auth with JWT: %v", err)
 	}
-	authInfo, err := client.Auth().Login(context.Background(), k8sAuth)
+	authInfo, err := r.VaultClient.Auth().Login(context.Background(), k8sAuth)
 	if err != nil {
 		return []byte(""), fmt.Errorf("failed to login to vault with k8s auth: %v", err)
 	}
@@ -140,7 +84,7 @@ func GetSecretWithKubernetesAuth(
 	}
 
 	// Get secret from vault mount path
-	secret, err := client.KVv2(mountPath).Get(context.Background(), secretPath)
+	secret, err := r.VaultClient.KVv2(mountPath).Get(context.Background(), secretPath)
 	if err != nil {
 		return []byte(""), fmt.Errorf("failed to read secret in vault: %v", err)
 	}
