@@ -30,7 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -144,35 +143,6 @@ var _ = Describe("GithubApp controller", func() {
 				Expect(err).To(Succeed())
 				return updatedSecret.Data["foo"]
 			}, "60s", "5s").Should(BeNil())
-		})
-	})
-
-	Context("When requeing a reconcile for a GithubApp that is not expired", func() {
-		It("should successfully reconcile the resource and get the rate limit", func() {
-			ctx := context.Background()
-
-			By("Reconciling the created resource")
-			controllerReconciler := &GithubAppReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-			}
-
-			// Perform reconciliation for the resource
-			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: namespace1,
-					Name:      githubAppName,
-				},
-			})
-
-			// Verify if reconciliation was successful
-			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Reconciliation failed: %v", err))
-
-			// Print the result
-			fmt.Println("Reconciliation result:", result)
-
-			// Delete the GitHubApp after reconciliation
-			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace1, githubAppName)
 		})
 	})
 

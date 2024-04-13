@@ -19,10 +19,14 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net/http" // http client
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	vault "github.com/hashicorp/vault/api"   // vault client
+	kubernetes "k8s.io/client-go/kubernetes" // k8s client
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -44,11 +48,14 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg       *rest.Config
-	k8sClient client.Client
-	testEnv   *envtest.Environment
-	ctx       context.Context
-	cancel    context.CancelFunc
+	cfg          *rest.Config
+	k8sClient    client.Client
+	httpClient   *http.Client
+	vaultClient  *vault.Client
+	k8sClientset *kubernetes.Clientset
+	testEnv      *envtest.Environment
+	ctx          context.Context
+	cancel       context.CancelFunc
 )
 
 func TestControllers(t *testing.T) {
@@ -104,10 +111,16 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	// http client
+	httpClient = &http.Client{}
+
 	err = (&GithubAppReconciler{
-		Client:   k8sManager.GetClient(),
-		Scheme:   k8sManager.GetScheme(),
-		Recorder: k8sManager.GetEventRecorderFor("githubapp-controller"),
+		Client:      k8sManager.GetClient(),
+		Scheme:      k8sManager.GetScheme(),
+		Recorder:    k8sManager.GetEventRecorderFor("githubapp-controller"),
+		HTTPClient:  httpClient,
+		VaultClient: vaultClient,
+		K8sClient:   k8sClientset,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
