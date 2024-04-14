@@ -19,7 +19,9 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github-app-operator/test/utils"
 	"os"
+	"os/exec"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,22 +35,76 @@ import (
 )
 
 const (
-	githubAppName  = "gh-app-test"
-	githubAppName2 = "gh-app-test-2"
-	githubAppName3 = "gh-app-test-3"
-	githubAppName4 = "gh-app-test-4"
-	namespace1     = "default"
-	namespace2     = "namespace2"
-	namespace3     = "namespace3"
-	namespace4     = "namespace4"
+	githubAppName        = "gh-app-test"
+	githubAppName2       = "gh-app-test-2"
+	githubAppName3       = "gh-app-test-3"
+	githubAppName4       = "gh-app-test-4"
+	namespace0           = "namespace0"
+	namespace1           = "namespace1"
+	namespace2           = "namespace2"
+	namespace3           = "namespace3"
+	namespace4           = "namespace4"
+	existingClusterValue = "true"
 )
 
 // Tests
-var _ = Describe("GithubApp controller", func() {
+var _ = Describe("GithubApp controller", Ordered, func() {
+
+	BeforeAll(func() {
+		if os.Getenv("USE_EXISTING_CLUSTER") != existingClusterValue {
+			fmt.Println("Skipping as not a real cluster...")
+			return
+		}
+		By("removing test namespaces")
+		cmd := exec.Command("kubectl", "delete", "ns", namespace1, namespace2, namespace3, namespace4)
+		_, _ = utils.Run(cmd)
+	})
+
+	AfterAll(func() {
+		if os.Getenv("USE_EXISTING_CLUSTER") != existingClusterValue {
+			fmt.Println("Skipping as not a real cluster...")
+			return
+		}
+		By("removing test namespaces")
+		cmd := exec.Command("kubectl", "delete", "ns", namespace0, namespace1, namespace2, namespace3, namespace4)
+		_, _ = utils.Run(cmd)
+	})
+
+	Context("When requesting a token from token request api", func() {
+		It("Should create a valid JWT", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != existingClusterValue {
+				fmt.Println("Skipping token request api test case as not a real cluster...")
+				return // Skip the test case since requires a real cluster
+			}
+			ctx := context.Background()
+
+			By("Creating a new token via token request")
+
+			controllerReconciler := &GithubAppReconciler{
+				Client:    k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				K8sClient: k8sClientset,
+			}
+			fmt.Println("Got k8sClientset:", k8sClientset)
+
+			vaultAudience := "githubapp"
+
+			token, err := controllerReconciler.RequestToken(ctx, vaultAudience, namespace0, "default")
+
+			fmt.Println("Got a JWT from Kubernetes api:", token)
+
+			// Verify if reconciliation was successful
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Token request failed: %v", err))
+
+		})
+	})
 
 	Context("When setting up the test environment", func() {
 		It("Should create GithubApp custom resources", func() {
 			ctx := context.Background()
+
+			By("Creating a new namespace")
+			test_helpers.CreateNamespace(ctx, k8sClient, namespace1)
 
 			By("Creating the privateKeySecret in the namespace1")
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace1, "privateKey")
@@ -148,9 +204,9 @@ var _ = Describe("GithubApp controller", func() {
 
 	Context("When reconciling a GithubApp with spec.rolloutDeployment.labels.foo as bar", func() {
 		It("Should eventually upgrade the deployment matching label foo: bar", func() {
-			if os.Getenv("USE_EXISTING_CLUSTER") == "" {
+			if os.Getenv("USE_EXISTING_CLUSTER") != existingClusterValue {
 				fmt.Println("Skipping deployment rollout test case as not a real cluster...")
-				return // Skip the test case in envtest since required deployment controller
+				return // Skip the test case in envtest since requires deployment controller
 			}
 			ctx := context.Background()
 

@@ -21,18 +21,22 @@ import (
 	"fmt"
 	"net/http" // http client
 	"os"
+	//"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	vault "github.com/hashicorp/vault/api"   // vault client
 	kubernetes "k8s.io/client-go/kubernetes" // k8s client
+	ctrlConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	test_helpers "github-app-operator/internal/controller/test_helpers"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,14 +52,15 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg          *rest.Config
-	k8sClient    client.Client
-	httpClient   *http.Client
-	vaultClient  *vault.Client
-	k8sClientset *kubernetes.Clientset
-	testEnv      *envtest.Environment
-	ctx          context.Context
-	cancel       context.CancelFunc
+	cfg           *rest.Config
+	k8sClient     client.Client
+	httpClient    *http.Client
+	vaultClient   *vault.Client
+	k8sClientset  *kubernetes.Clientset
+	testEnv       *envtest.Environment
+	ctx           context.Context
+	cancel        context.CancelFunc
+	tokenFilePath = "/tmp/serviceAccountToken"
 )
 
 func TestControllers(t *testing.T) {
@@ -114,6 +119,48 @@ var _ = BeforeSuite(func() {
 	// http client
 	httpClient = &http.Client{}
 
+	var token string
+	if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+		// Initialise K8s client
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Error initializing Kubernetes clientset:", r)
+			}
+		}()
+		k8sClientset = kubernetes.NewForConfigOrDie(ctrlConfig.GetConfigOrDie())
+		fmt.Println("Got main k8sClientset:", k8sClientset)
+
+		By("Creating a new namespace")
+		test_helpers.CreateNamespace(ctx, k8sClient, "namespace0")
+		time.Sleep(5 * time.Second)
+
+		By("Creating a new token via token request")
+		controllerReconciler := &GithubAppReconciler{
+			Client:    k8sClient,
+			Scheme:    k8sClient.Scheme(),
+			K8sClient: k8sClientset,
+		}
+
+		vaultAudience := "githubapp"
+
+		token, err = controllerReconciler.RequestToken(ctx, vaultAudience, "namespace0", "default")
+		// Verify if reconciliation was successful
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Token request failed: %v", err))
+	} else {
+		token = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ik5ieTJyVUk2ZzlQZ0k0anNGclRvTkJDM0FsUjJjLUJDVUhzNU9mVG9lcEUifQ.eyJhdWQiOlsiZ2l0aHViYXBwIl0sImV4cCI6MTcxMzEyNjIxMiwiaWF0IjoxNzEzMTI1NjEyLCJpc3MiOiJodHRwczovL2t1YmVybmV0ZXMuZGVmYXVsdC5zdmMuY2x1c3Rlci5sb2NhbCIsImt1YmVybmV0ZXMuaW8iOnsibmFtZXNwYWNlIjoibmFtZXNwYWNlMCIsInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJkZWZhdWx0IiwidWlkIjoiNDY3ZTA4MGMtYWZhNy00OTc4LWFkYzMtYWI5NmFkMWJjOTQzIn19LCJuYmYiOjE3MTMxMjU2MTIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpuYW1lc3BhY2UwOmRlZmF1bHQifQ.ftFKNIwM_qi-6W7rvMyjNC2xAbNfFsrRgPQnjEsDw84_fpn9I1LFnQPQzA5HeTtJyIBzjrdHsEGgcCTxsYLgErLkIJ9MfWxwyP3FsNeuQgNoBr4Pmo9lRnayzERU9YZwEb9QCoZXGkCrcv16q15hB_J_ik9lcwlLJ6PYDW58AA39VUDsfqin-8D23ghmAumv8vods6v-WVNeMKAP0oO7oqElLop9r5h8hf9ApaAZ2zRbTnQ-X1HpAFwOzRTGvcPli1hLZ7rgDAw6yJOOnExPgMZ44umiaXVhnow2Vxol2G7yb0mFToWOwpiHZPsL4kZccGK33nk1Kcfcawqqd2IGBA"
+	}
+
+	var file *os.File
+	file, err = os.Create(tokenFilePath)
+	Expect(err).ToNot(HaveOccurred())
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Println("Error closing file:", err)
+		}
+	}()
+	_, err = file.WriteString(token)
+	Expect(err).ToNot(HaveOccurred())
+
 	err = (&GithubAppReconciler{
 		Client:      k8sManager.GetClient(),
 		Scheme:      k8sManager.GetScheme(),
@@ -121,7 +168,7 @@ var _ = BeforeSuite(func() {
 		HTTPClient:  httpClient,
 		VaultClient: vaultClient,
 		K8sClient:   k8sClientset,
-	}).SetupWithManager(k8sManager)
+	}).SetupWithManager(k8sManager, tokenFilePath)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
@@ -135,5 +182,8 @@ var _ = AfterSuite(func() {
 	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
+	Expect(err).NotTo(HaveOccurred())
+	// Remove service account token file
+	err = os.Remove(tokenFilePath)
 	Expect(err).NotTo(HaveOccurred())
 })

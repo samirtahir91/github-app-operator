@@ -269,6 +269,10 @@ func CreateDeploymentWithLabel(
 				{
 					Name:  deploymentName,
 					Image: "busybox",
+					Command: []string{
+						"sleep",
+						"1d", // keep-alive for tests
+					},
 				},
 			},
 		},
