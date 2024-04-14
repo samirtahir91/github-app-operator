@@ -725,10 +725,10 @@ func githubAppPredicate() predicate.Predicate {
 }
 
 // Function to get service account and namespace of controller
-func getServiceAccountAndNamespace() (string, string, error) {
+func getServiceAccountAndNamespace(serviceAccountPath string) (string, string, error) {
 
 	// Get KSA mounted in pod
-	serviceAccountToken, err := os.ReadFile("var/run/secrets/kubernetes.io/serviceaccount/token")
+	serviceAccountToken, err := os.ReadFile(serviceAccountPath)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to read service account token: %v", err)
 	}
@@ -767,7 +767,7 @@ func getServiceAccountAndNamespace() (string, string, error) {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager, tokenPath ...string) error {
 	// Get reconcile interval from environment variable or use default value
 	var err error
 	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
@@ -788,11 +788,17 @@ func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// Get service account name and namespace
-	serviceAccountName, kubernetesNamespace, err = getServiceAccountAndNamespace()
+	// Check if tokenPath is provided
+	var serviceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	if len(tokenPath) > 0 {
+		serviceAccountPath = tokenPath[0]
+	}
+
+	serviceAccountName, kubernetesNamespace, err = getServiceAccountAndNamespace(serviceAccountPath)
 	if err != nil {
 		log.Log.Error(err, "failed to get service account and/or namespace of controller")
 	} else {
-		log.Log.Info("Got controller aervice account and namespace", "service account", serviceAccountName, "namespace", kubernetesNamespace)
+		log.Log.Info("got controller service account and namespace", "service account", serviceAccountName, "namespace", kubernetesNamespace)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
