@@ -29,6 +29,7 @@ jobs:
       # kustomize for each test but has no permission to do so
       - name: Remove pre-installed kustomize
         run: sudo rm -f /usr/local/bin/kustomize
+      # Install vault to minikube cluster to test vault case with kubernetes auth
       - name: Install Vault
         run: |
           helm repo add hashicorp https://helm.releases.hashicorp.com
@@ -60,32 +61,32 @@ jobs:
           VAULT_ROOT_TOKEN=$(jq -r ".root_token" cluster-keys.json)
         
           # login
-          kubectl exec -it vault-0 -- vault login -non-interactive ${VAULT_ROOT_TOKEN}
+          kubectl exec -i vault-0 -- vault login -non-interactive ${VAULT_ROOT_TOKEN}
          
           # enable kv-v2
-          kubectl exec -it vault-0 -- vault secrets enable -path=secret kv-v2
+          kubectl exec -i vault-0 -- vault secrets enable -path=secret kv-v2
          
           # write github app secret
-          kubectl exec -it vault-0 -- vault kv put secret/githubapp/test privateKey="{{ secrets.GH_TEST_APP_PK }}"
+          kubectl exec -i vault-0 -- vault kv put secret/githubapp/test privateKey="{{ secrets.GH_TEST_APP_PK }}"
          
           # enable k8s auth
-          kubectl exec -it vault-0 -- vault auth enable kubernetes
+          kubectl exec -i vault-0 -- vault auth enable kubernetes
           
           # get k8s host
-          KUBERNETES_HOST=$(kubectl exec -it vault-0 -- sh -c 'echo $KUBERNETES_SERVICE_HOST')
+          KUBERNETES_HOST=$(kubectl exec -i vault-0 -- sh -c 'echo $KUBERNETES_SERVICE_HOST')
           
           # write k8s host
-          kubectl exec -it vault-0 -- vault write auth/kubernetes/config kubernetes_host="https://$KUBERNETES_HOST:443"
+          kubectl exec -i vault-0 -- vault write auth/kubernetes/config kubernetes_host="https://$KUBERNETES_HOST:443"
           
           # write vault policy
-          kubectl exec -it vault-0 -- sh -c 'vault policy write githubapp - <<EOF
+          kubectl exec -i vault-0 -- sh -c 'vault policy write githubapp - <<EOF
           path "secret/data/githubapp/test" {
             capabilities = ["read"]
           }
           EOF'
           
           # write vault role
-          kubectl exec -it vault-0 -- sh -c 'vault write auth/kubernetes/role/githubapp \
+          kubectl exec -i vault-0 -- sh -c 'vault write auth/kubernetes/role/githubapp \
               bound_service_account_names="default" \
               bound_service_account_namespaces="namespace0" \
               policies=githubapp \
@@ -95,7 +96,7 @@ jobs:
           export "GITHUB_PRIVATE_KEY=${{ secrets.GH_TEST_APP_PK }}"
           export "GH_APP_ID=${{ secrets.GH_APP_ID }}"
           export "GH_INSTALL_ID=${{ secrets.GH_INSTALL_ID }}"
-          export "VAULT_ADDRESS="http://vault.default:8200"
+          export "VAULT_ADDRESS=http://vault.default:8200"
           export "VAULT_ROLE_AUDIENCE=githubapp"
           export "VAULT_ROLE=githubapp"
           USE_EXISTING_CLUSTER=true make test
