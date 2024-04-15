@@ -29,11 +29,27 @@ jobs:
       # kustomize for each test but has no permission to do so
       - name: Remove pre-installed kustomize
         run: sudo rm -f /usr/local/bin/kustomize
+      # Install vault to minikube cluster to test vault case with kubernetes auth
+      - name: Install Vault
+        env:
+            GITHUB_PRIVATE_KEY: ${{ secrets.GH_TEST_APP_PK }}
+        run: |
+          cd scripts
+          chmod +x install_and_setup_vault_k8s.sh
+          ./install_and_setup_vault_k8s.sh
       - name: Perform the test
         run: |
           export "GITHUB_PRIVATE_KEY=${{ secrets.GH_TEST_APP_PK }}"
           export "GH_APP_ID=${{ secrets.GH_APP_ID }}"
           export "GH_INSTALL_ID=${{ secrets.GH_INSTALL_ID }}"
+          export "VAULT_ADDRESS=http://localhost:8200"
+          export "VAULT_ROLE_AUDIENCE=githubapp"
+          export "VAULT_ROLE=githubapp"
+
+          # Run vault port forward in background
+          kubectl port-forward vault-0 8200:8200 &
+          
+          # Run tests
           USE_EXISTING_CLUSTER=true make test
       - name: Report failure
         uses: nashmaniac/create-issue-action@v1.2

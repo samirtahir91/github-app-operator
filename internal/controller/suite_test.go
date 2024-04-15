@@ -121,6 +121,13 @@ var _ = BeforeSuite(func() {
 
 	var token string
 	if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+		// Initialise vault client with VAULT_ADDRESS env var
+		vaultAddress := os.Getenv("VAULT_ADDRESS") // Vault server fqdn
+		vaultClient, err = vault.NewClient(&vault.Config{
+			Address: vaultAddress,
+		})
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Vault client initialisation failed: %v", err))
+
 		// Initialise K8s client
 		defer func() {
 			if r := recover(); r != nil {
@@ -130,6 +137,8 @@ var _ = BeforeSuite(func() {
 		k8sClientset = kubernetes.NewForConfigOrDie(ctrlConfig.GetConfigOrDie())
 		fmt.Println("Got main k8sClientset:", k8sClientset)
 
+		// Create a valid service account token to initialise the controller SetupWithManager with
+		// This will be used in Token Request API
 		By("Creating a new namespace")
 		test_helpers.CreateNamespace(ctx, k8sClient, "namespace0")
 		time.Sleep(5 * time.Second)
@@ -147,7 +156,18 @@ var _ = BeforeSuite(func() {
 		// Verify if reconciliation was successful
 		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Token request failed: %v", err))
 	} else {
-		token = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ik5ieTJyVUk2ZzlQZ0k0anNGclRvTkJDM0FsUjJjLUJDVUhzNU9mVG9lcEUifQ.eyJhdWQiOlsiZ2l0aHViYXBwIl0sImV4cCI6MTcxMzEyNjIxMiwiaWF0IjoxNzEzMTI1NjEyLCJpc3MiOiJodHRwczovL2t1YmVybmV0ZXMuZGVmYXVsdC5zdmMuY2x1c3Rlci5sb2NhbCIsImt1YmVybmV0ZXMuaW8iOnsibmFtZXNwYWNlIjoibmFtZXNwYWNlMCIsInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJkZWZhdWx0IiwidWlkIjoiNDY3ZTA4MGMtYWZhNy00OTc4LWFkYzMtYWI5NmFkMWJjOTQzIn19LCJuYmYiOjE3MTMxMjU2MTIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpuYW1lc3BhY2UwOmRlZmF1bHQifQ.ftFKNIwM_qi-6W7rvMyjNC2xAbNfFsrRgPQnjEsDw84_fpn9I1LFnQPQzA5HeTtJyIBzjrdHsEGgcCTxsYLgErLkIJ9MfWxwyP3FsNeuQgNoBr4Pmo9lRnayzERU9YZwEb9QCoZXGkCrcv16q15hB_J_ik9lcwlLJ6PYDW58AA39VUDsfqin-8D23ghmAumv8vods6v-WVNeMKAP0oO7oqElLop9r5h8hf9ApaAZ2zRbTnQ-X1HpAFwOzRTGvcPli1hLZ7rgDAw6yJOOnExPgMZ44umiaXVhnow2Vxol2G7yb0mFToWOwpiHZPsL4kZccGK33nk1Kcfcawqqd2IGBA"
+		// Set a dummy token just to satisfy the SetupWithManager fucntion
+		// which will read the token and get the service account and and namespace.
+		// This token is for 'default' service account in the 'namespace0' namespace
+		token = `eyJhbGciOiJSUzI1NiIsImtpZCI6Ik5ieTJyVUk2ZzlQZ0k0anNGclRvTkJDM0FsUjJjLUJDVUhzNU9mVG9lcEUifQ.
+		eyJhdWQiOlsiZ2l0aHViYXBwIl0sImV4cCI6MTcxMzEyNjIxMiwiaWF0IjoxNzEzMTI1NjEyLCJpc3MiOiJodHRwczovL2
+		t1YmVybmV0ZXMuZGVmYXVsdC5zdmMuY2x1c3Rlci5sb2NhbCIsImt1YmVybmV0ZXMuaW8iOnsibmFtZXNwYWNlIjoibmFtZ
+		XNwYWNlMCIsInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJkZWZhdWx0IiwidWlkIjoiNDY3ZTA4MGMtYWZhNy00OTc4LWFkY
+		zMtYWI5NmFkMWJjOTQzIn19LCJuYmYiOjE3MTMxMjU2MTIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpuYW1lc3BhY2
+		UwOmRlZmF1bHQifQ.ftFKNIwM_qi-6W7rvMyjNC2xAbNfFsrRgPQnjEsDw84_fpn9I1LFnQPQzA5HeTtJyIBzjrdHsEGgcCTx
+		sYLgErLkIJ9MfWxwyP3FsNeuQgNoBr4Pmo9lRnayzERU9YZwEb9QCoZXGkCrcv16q15hB_J_ik9lcwlLJ6PYDW58AA39VUDs
+		fqin-8D23ghmAumv8vods6v-WVNeMKAP0oO7oqElLop9r5h8hf9ApaAZ2zRbTnQ-X1HpAFwOzRTGvcPli1hLZ7rgDAw6yJOOn
+		ExPgMZ44umiaXVhnow2Vxol2G7yb0mFToWOwpiHZPsL4kZccGK33nk1Kcfcawqqd2IGBA`
 	}
 
 	var file *os.File

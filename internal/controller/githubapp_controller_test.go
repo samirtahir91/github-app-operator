@@ -70,36 +70,49 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 		_, _ = utils.Run(cmd)
 	})
 
-	Context("When requesting a token from token request api", func() {
-		It("Should create a valid JWT", func() {
-			if os.Getenv("USE_EXISTING_CLUSTER") != existingClusterValue {
-				fmt.Println("Skipping token request api test case as not a real cluster...")
-				return // Skip the test case since requires a real cluster
-			}
+	// Requires vault to be running on cluster and configured.
+	// from ./scripts directory run ./install_and_setup_vault_k8s.sh
+	// kubectl port-forward vault-0 8200:8200 in another terminal
+	// export VAULT_ADDRESS=http://localhost:8200
+	// then run the tests
+	Context("When creating a GithubApp with VaultPrivateKey spec", func() {
+		if os.Getenv("USE_EXISTING_CLUSTER") != existingClusterValue {
+			fmt.Println("Skipping test case as not a real cluster...")
+			return // Skip the test case since requires a real cluster
+		}
+		It("Should create GithubApp custom resources", func() {
 			ctx := context.Background()
 
-			By("Creating a new token via token request")
+			// namespace0 is already created in suite_test.go
 
-			controllerReconciler := &GithubAppReconciler{
-				Client:    k8sClient,
-				Scheme:    k8sClient.Scheme(),
-				K8sClient: k8sClientset,
+			By("Creating a GithubApp custom resource in the namespace0 with VaultPrivateKey spec")
+			vaultPrivateKeySpec := &githubappv1.VaultPrivateKeySpec{
+				MountPath:  "secret",
+				SecretPath: "githubapp/test",
+				SecretKey:  "privateKey",
 			}
-			fmt.Println("Got k8sClientset:", k8sClientset)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace0, githubAppName, nil, vaultPrivateKeySpec)
+		})
 
-			vaultAudience := "githubapp"
+		It("should successfully reconcile the resource", func() {
+			ctx := context.Background()
 
-			token, err := controllerReconciler.RequestToken(ctx, vaultAudience, namespace0, "default")
+			By("Waiting for the access token secret to be created")
+			test_helpers.WaitForAccessTokenSecret(ctx, k8sClient, namespace0)
 
-			fmt.Println("Got a JWT from Kubernetes api:", token)
-
-			// Verify if reconciliation was successful
-			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Token request failed: %v", err))
-
+			By("Waiting for the correct event to be recorded")
+			test_helpers.CheckEvent(
+				ctx,
+				k8sClient,
+				githubAppName,
+				namespace0,
+				"Normal",
+				"Created",
+				fmt.Sprintf("Created access token secret %s/github-app-access-token-", namespace0))
 		})
 	})
 
-	Context("When setting up the test environment", func() {
+	Context("When creating a GithubApp with PrivateKeySecret spec", func() {
 		It("Should create GithubApp custom resources", func() {
 			ctx := context.Background()
 
@@ -110,7 +123,7 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace1, "privateKey")
 
 			By("Creating a first GithubApp custom resource in the namespace1")
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace1, githubAppName, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace1, githubAppName, nil, nil)
 		})
 	})
 
@@ -229,7 +242,7 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 				},
 			}
 			// Create a GithubApp instance with the RolloutDeployment field initialized
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, rolloutDeploymentSpec)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2, rolloutDeploymentSpec, nil)
 
 			By("Waiting for pod1 with the label 'foo: bar' to be deleted")
 			// Wait for the pod to be deleted by the reconcile loop
@@ -273,7 +286,7 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace4, "foo")
 
 			By("Creating a GithubApp without creating the privateKeySecret with 'privateKey' field")
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace4, githubAppName4, nil, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
 			test_helpers.CheckGithubAppStatusError(
@@ -307,7 +320,7 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 			test_helpers.CreateNamespace(ctx, k8sClient, namespace3)
 
 			By("Creating a GithubApp without creating the privateKeySecret")
-			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace3, githubAppName3, nil)
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace3, githubAppName3, nil, nil)
 
 			By("Checking the githubApp `status.error` value is as expected")
 			test_helpers.CheckGithubAppStatusError(
