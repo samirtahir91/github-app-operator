@@ -35,6 +35,7 @@ jobs:
             GITHUB_PRIVATE_KEY: ${{ secrets.GH_TEST_APP_PK }}
         run: |
           cd scripts
+          chmod +x install_and_setup_vault_k8s.sh
           ./install_and_setup_vault_k8s.sh
       - name: Perform the test
         run: |
