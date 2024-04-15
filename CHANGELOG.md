@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/samirtahir91/github-app-operator/compare/v1.4.2...v1.5.0) (2024-04-15)
+
+
+### Features
+
+* Add vault tests ([#43](https://github.com/samirtahir91/github-app-operator/issues/43)) ([61d2603](https://github.com/samirtahir91/github-app-operator/commit/61d2603dec29cf03ea5026bf0b5d24d29ec9006d))
+
 ## [1.0.1](https://github.com/samirtahir91/github-app-operator/compare/v1.0.0...v1.0.1) (2024-03-29)
 
 
