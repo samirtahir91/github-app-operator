@@ -66,7 +66,7 @@ jobs:
           kubectl exec -it vault-0 -- vault secrets enable -path=secret kv-v2
          
           # write github app secret
-          vault kv put secret/githubapp/test privateKey="{{ secrets.GH_TEST_APP_PK }}"
+          kubectl exec -it vault-0 -- vault kv put secret/githubapp/test privateKey="{{ secrets.GH_TEST_APP_PK }}"
          
           # enable k8s auth
           kubectl exec -it vault-0 -- vault auth enable kubernetes
@@ -96,8 +96,8 @@ jobs:
           export "GH_APP_ID=${{ secrets.GH_APP_ID }}"
           export "GH_INSTALL_ID=${{ secrets.GH_INSTALL_ID }}"
           export "VAULT_ADDRESS="http://vault.default:8200"
-          export VAULT_ROLE_AUDIENCE=githubapp
-          export VAULT_ROLE=githubapp
+          export "VAULT_ROLE_AUDIENCE=githubapp"
+          export "VAULT_ROLE=githubapp"
           USE_EXISTING_CLUSTER=true make test
       - name: Report failure
         uses: nashmaniac/create-issue-action@v1.2
