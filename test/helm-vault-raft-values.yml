@@ -1,7 +1,7 @@
 server:
    affinity: ""
    ha:
-      enabled: true
+      enabled: false
       raft: 
          enabled: true
          setNodeId: true
