@@ -23,6 +23,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '~1.22'
+      - name: Setup Kubernetes Cluster in Docker Environment
+        uses: medyagh/setup-minikube@latest
       # This step is needed as the following one tries to remove
       # kustomize for each test but has no permission to do so
       - name: Remove pre-installed kustomize
@@ -32,7 +34,7 @@ jobs:
           export "GITHUB_PRIVATE_KEY=${{ secrets.GH_TEST_APP_PK }}"
           export "GH_APP_ID=${{ secrets.GH_APP_ID }}"
           export "GH_INSTALL_ID=${{ secrets.GH_INSTALL_ID }}"
-          make test
+          USE_EXISTING_CLUSTER=true make test
       - name: Report failure
         uses: nashmaniac/create-issue-action@v1.2
         # Only report failures of pushes (PRs have are visible through the Checks section) to the default branch
