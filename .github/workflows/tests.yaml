@@ -31,6 +31,8 @@ jobs:
         run: sudo rm -f /usr/local/bin/kustomize
       # Install vault to minikube cluster to test vault case with kubernetes auth
       - name: Install Vault
+        env:
+            GITHUB_PRIVATE_KEY: ${{ secrets.GH_TEST_APP_PK }}
         run: |
           helm repo add hashicorp https://helm.releases.hashicorp.com
           helm repo update
@@ -67,7 +69,7 @@ jobs:
           kubectl exec -i vault-0 -- vault secrets enable -path=secret kv-v2
          
           # write github app secret
-          kubectl exec -i vault-0 -- vault kv put secret/githubapp/test privateKey="{{ secrets.GH_TEST_APP_PK }}"
+          kubectl exec -i vault-0 -- vault kv put secret/githubapp/test privateKey="${GITHUB_PRIVATE_KEY}"
          
           # enable k8s auth
           kubectl exec -i vault-0 -- vault auth enable kubernetes

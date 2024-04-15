@@ -22,6 +22,7 @@ import (
 	"github-app-operator/test/utils"
 	"os"
 	"os/exec"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -56,7 +57,7 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 			return
 		}
 		By("removing test namespaces")
-		cmd := exec.Command("kubectl", "delete", "ns", namespace1, namespace2, namespace3, namespace4)
+		cmd := exec.Command("kubectl", "delete", "ns", namespace0, namespace1, namespace2, namespace3, namespace4)
 		_, _ = utils.Run(cmd)
 	})
 
@@ -78,6 +79,10 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 			}
 			ctx := context.Background()
 
+			By("Creating a new namespace")
+			test_helpers.CreateNamespace(ctx, k8sClient, "namespace0")
+			time.Sleep(5 * time.Second)
+
 			By("Creating a new token via token request")
 
 			controllerReconciler := &GithubAppReconciler{
@@ -92,10 +97,10 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 			token, err := controllerReconciler.RequestToken(ctx, vaultAudience, namespace0, "default")
 
 			fmt.Println("Got a JWT from Kubernetes api:", token)
+			fmt.Println("Got main vaultClient:", vaultClient.Address())
 
 			// Verify if reconciliation was successful
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Token request failed: %v", err))
-
 		})
 	})
 
