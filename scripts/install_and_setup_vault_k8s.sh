@@ -62,4 +62,5 @@ kubectl exec -i vault-0 -- sh -c 'vault write auth/kubernetes/role/githubapp \
   bound_service_account_names="default" \
   bound_service_account_namespaces="namespace0" \
   policies=githubapp \
-  ttl=24h'
+  audience=githubapp \
+  ttl=1h'
