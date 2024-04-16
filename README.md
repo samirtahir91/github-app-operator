@@ -190,20 +190,46 @@ Current integration tests cover the scenarios:
 - Reconcile of access token is valid.
 - Reconcile error is recorded in a `GithubApp` object's `status.error` field
 - The `status.error` field is cleared on succesful reconcile for a `GithubApp` object.
-- Pods are deleted matching a label if defined in `spec.rolloutDeployment.labels` for a `GithubApp`.
+- Deployments are upgraded for rolling upgrade matching a label if defined in `spec.rolloutDeployment.labels` for a `GithubApp` (requires USE_EXISTING_CLUSTER=true).
+- Vault integration for private key secret using Kubernetes auth (requires USE_EXISTING_CLUSTER=true).
 
 **Run the controller in the foreground for testing:**
 ```sh
 make run
 ```
 
-**Run integration tests:**
+**Run integration tests against a real cluster, i.e. Minikube:**
 - Export your GitHub App private key as a `base64` string and then run the tests
 ```sh
 export GITHUB_PRIVATE_KEY=<YOUR_BASE64_ENCODED_GH_APP_PRIVATE_KEY>
 export GH_APP_ID=<YOUR GITHUB APP ID>
 export GH_INSTALL_ID=<YOUR GITHUB APP INSTALL ID>
-make test
+export "VAULT_ADDRESS=http://localhost:8200" # this can be local k8s Vault or some other Vault
+export "VAULT_ROLE_AUDIENCE=githubapp"
+export "VAULT_ROLE=githubapp"
+```
+- This uses Vault, you can spin up a simple Vault server using this script.
+- It will use Helm and configure the Vault server with a test private key as per the env var ${GITHUB_PRIVATE_KEY}.
+```sh
+cd scripts
+./install_and_setup_vault_k8s.sh
+# Run vault port forward
+kubectl port-forward vault-0 8200:8200
+```
+- Run tests
+```sh
+cd ..
+USE_EXISTING_CLUSTER=true make test
+```
+
+**Run integration tests using env test (without a real cluster):**
+- Export your GitHub App private key as a `base64` string and then run the tests.
+- This will skip the Vault and Deployment Rollout test cases.
+```sh
+export GITHUB_PRIVATE_KEY=<YOUR_BASE64_ENCODED_GH_APP_PRIVATE_KEY>
+export GH_APP_ID=<YOUR GITHUB APP ID>
+export GH_INSTALL_ID=<YOUR GITHUB APP INSTALL ID>
+USE_EXISTING_CLUSTER=false make test
 ```
 
 **Generate coverage html report:**
