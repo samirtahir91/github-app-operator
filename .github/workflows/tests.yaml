@@ -23,14 +23,19 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '~1.22'
-      - name: Setup Kubernetes Cluster in Docker Environment
+      - name: Install Helm and Kubectl
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install helm
+          brew install kubectl
+      - name: Setup Minikube cluster
         uses: medyagh/setup-minikube@latest
       # This step is needed as the following one tries to remove
       # kustomize for each test but has no permission to do so
       - name: Remove pre-installed kustomize
         run: sudo rm -f /usr/local/bin/kustomize
       # Install vault to minikube cluster to test vault case with kubernetes auth
-      - name: Install Vault
+      - name: Install and configure Vault
         env:
             GITHUB_PRIVATE_KEY: ${{ secrets.GH_TEST_APP_PK }}
         run: |
