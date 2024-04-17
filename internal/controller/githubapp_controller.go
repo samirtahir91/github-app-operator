@@ -310,7 +310,14 @@ func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username s
 			l.Error(err, "error sending request to GitHub API for rate limit")
 			return false
 		}
-		defer resp.Body.Close()
+
+		// Defer closing the response body and check for errors
+		defer func() {
+			err := resp.Body.Close()
+			if err != nil {
+				l.Error(err, "error closing response body for api rate lmiit call")
+			}
+		}()
 
 		// Check if the response status code is 200 (OK)
 		if resp.StatusCode == http.StatusOK {
@@ -649,7 +656,14 @@ func (r *GithubAppReconciler) generateAccessToken(ctx context.Context, appID int
 		if err != nil {
 			return "", metav1.Time{}, fmt.Errorf("failed to send HTTP post request to GitHub API: %v", err)
 		}
-		defer resp.Body.Close()
+
+		// Defer closing the response body and check for errors
+		defer func() {
+			err := resp.Body.Close()
+			if err != nil {
+				l.Error(err, "error closing response body for access token call")
+			}
+		}()
 
 		// If response is successful, parse token and expiry
 		if resp.StatusCode == http.StatusCreated {
