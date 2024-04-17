@@ -21,8 +21,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
+	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -45,7 +47,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate" // Required for Watching
 )
 
-// GithubAppReconciler reconciles a GithubApp object
+// Struct for GithubAppReconciler
 type GithubAppReconciler struct {
 	client.Client
 	Scheme      *runtime.Scheme
@@ -54,6 +56,21 @@ type GithubAppReconciler struct {
 	VaultClient *vault.Client
 	K8sClient   *kubernetes.Clientset
 	lock        sync.Mutex
+}
+
+// Struct for GitHub App access token response
+type Response struct {
+	Token     string      `json:"token"`
+	ExpiresAt metav1.Time `json:"expires_at"`
+}
+
+// Struct for GitHub App rate limit
+type RateLimitInfo struct {
+	Resources struct {
+		Core struct {
+			Remaining int `json:"remaining"`
+		} `json:"core"`
+	} `json:"resources"`
 }
 
 var (
@@ -291,18 +308,16 @@ func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username s
 		return false
 	}
 
-	// Decode the response body into a map
-	var result map[string]interface{}
+	// Decode the response body into the struct
+	var result RateLimitInfo
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		l.Error(err, "Error decoding response body for rate limit")
 		return false
 	}
 
-	// Extract rate limit information from the map
-	resources := result["resources"].(map[string]interface{})
-	core := resources["core"].(map[string]interface{})
-	remaining := int(core["remaining"].(float64))
+	// Get rate limit
+	remaining := result.Resources.Core.Remaining
 
 	// Check if remaining rate limit is greater than 0
 	if remaining <= 0 {
@@ -591,40 +606,59 @@ func (r *GithubAppReconciler) generateAccessToken(ctx context.Context, appID int
 	req.Header.Set("Authorization", "Bearer "+signedToken)
 	req.Header.Set("Accept", "application/vnd.github+json")
 
-	// Send post request for access token
-	resp, err := r.HTTPClient.Do(req)
-	if err != nil {
-		return "", metav1.Time{}, fmt.Errorf("failed to perform HTTP request: %v", err)
-	}
+	// Get the access token from GitHub API
+	// Retry the request if any rate limit error
+	// Return an error if max retries reached
+	maxRetries := 5
+	for i := 0; i < maxRetries; i++ {
+		// Send POST request for access token
+		resp, err := r.HTTPClient.Do(req)
 
-	// Check error in response
-	if resp.StatusCode != http.StatusCreated {
-		return "", metav1.Time{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	// Parse response
-	var responseBody map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
-		return "", metav1.Time{}, fmt.Errorf("failed to parse response body: %v", err)
-	}
-
-	// Extract access token and expires_at from response
-	accessToken := responseBody["token"].(string)
-	expiresAtString := responseBody["expires_at"].(string)
-	expiresAt, err := time.Parse(time.RFC3339, expiresAtString)
-	if err != nil {
-		return "", metav1.Time{}, fmt.Errorf("failed to parse expire time: %v", err)
-	}
-
-	// Close the response body to prevent resource leaks
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			// Handle error if closing the response body fails
-			l.Error(err, "error closing response body:")
+		// if error break the loop
+		if err != nil {
+			return "", metav1.Time{}, fmt.Errorf("failed to send HTTP post request to GitHub API: %v", err)
 		}
-	}()
+		defer resp.Body.Close()
 
-	return accessToken, metav1.NewTime(expiresAt), nil
+		// If response is successful, parse token and expiry
+		if resp.StatusCode == http.StatusCreated {
+			// Parse response
+			var responseBody Response
+			// if error in body break the loop, return error msg
+			if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
+				return "", metav1.Time{}, fmt.Errorf("failed to parse response body: %v", err)
+			}
+
+			// Got token and expiry
+			// return and break the loop
+			return responseBody.Token, responseBody.ExpiresAt, nil
+		}
+
+		// If response failed due to 403 or 429 (GitHub rate limit errors)
+		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+			l.Info("Retrying GitHub API access token call")
+			// Try use retry-after header
+			retryAfter, err := strconv.Atoi(resp.Header.Get("retry-after"))
+			if err != nil {
+				// default to 1s if header not present
+				retryAfter = 1
+			}
+			waitTime := time.Duration(retryAfter) * time.Second
+
+			// Add exponentional backoff
+			waitTime *= time.Duration(1 << i)
+
+			// Add jitter
+			waitTime += time.Duration(rand.Intn(500)) * time.Millisecond
+
+			time.Sleep(waitTime)
+		} else {
+			// If not a rate limit error/any other error
+			return "", metav1.Time{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		}
+	}
+	// max retries reached return error
+	return "", metav1.Time{}, fmt.Errorf("failed to get access token after %d retries", maxRetries)
 }
 
 // Function to upgrade deployments as per `spec.rolloutDeployment.labels` in GithubApp (in the same namespace)
