@@ -60,7 +60,7 @@ var (
 	testEnv       *envtest.Environment
 	ctx           context.Context
 	cancel        context.CancelFunc
-	tokenFilePath = "/tmp/serviceAccountToken"
+	tokenFilePath = "/tmp/githubOperatorServiceAccountToken"
 )
 
 func TestControllers(t *testing.T) {
@@ -181,6 +181,12 @@ var _ = BeforeSuite(func() {
 	_, err = file.WriteString(token)
 	Expect(err).ToNot(HaveOccurred())
 
+	// Path to store private keys for local caching
+	privateKeyCachePath := "/tmp/github-app-operator/"
+	// Remove private key cache
+	err = os.RemoveAll(privateKeyCachePath)
+	Expect(err).NotTo(HaveOccurred())
+
 	err = (&GithubAppReconciler{
 		Client:      k8sManager.GetClient(),
 		Scheme:      k8sManager.GetScheme(),
@@ -188,7 +194,7 @@ var _ = BeforeSuite(func() {
 		HTTPClient:  httpClient,
 		VaultClient: vaultClient,
 		K8sClient:   k8sClientset,
-	}).SetupWithManager(k8sManager, tokenFilePath)
+	}).SetupWithManager(k8sManager, privateKeyCachePath, tokenFilePath)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
@@ -205,5 +211,8 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	// Remove service account token file
 	err = os.Remove(tokenFilePath)
+	Expect(err).NotTo(HaveOccurred())
+	// Remove private key cache
+	err = os.RemoveAll(privateKeyCachePath)
 	Expect(err).NotTo(HaveOccurred())
 })
