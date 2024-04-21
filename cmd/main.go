@@ -149,6 +149,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Path to store private keys for local caching
+	privateKeyCachePath := "/var/run/github-app-secrets/"
+	// Check for PRIVATE_KEY_CACHE_PATH environment variable amnd override privateKeyCachePath
+	if customCachePath := os.Getenv("PRIVATE_KEY_CACHE_PATH"); customCachePath != "" {
+		// If the environment variable is set, use its value as the privateKeyCachePath
+		privateKeyCachePath = customCachePath
+	}
+
 	if err = (&controller.GithubAppReconciler{
 		Client:      mgr.GetClient(),
 		Scheme:      mgr.GetScheme(),
@@ -156,7 +164,7 @@ func main() {
 		HTTPClient:  httpClient,
 		VaultClient: vaultClient,
 		K8sClient:   k8sClientset,
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, privateKeyCachePath); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GithubApp")
 		os.Exit(1)
 	}

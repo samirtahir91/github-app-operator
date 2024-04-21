@@ -57,14 +57,15 @@ spec:
       #             values:
       #               - linux
       securityContext:
+        # Dockerfile user is 65532
         runAsNonRoot: true
-        # TODO(user): For common cases that do not require escalating privileges
-        # it is recommended to ensure that all your Pods/Containers are restrictive.
-        # More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
-        # Please uncomment the following code if your project does NOT have to work on old Kubernetes
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        # Please comment the following code if your project DOES have to work on old Kubernetes
         # versions < 1.19 or on vendors versions which do NOT support this field by default (i.e. Openshift < 4.11 ).
-        # seccompProfile:
-        #   type: RuntimeDefault
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - command:
         - /manager
@@ -112,5 +113,12 @@ spec:
             value: githubapp
           - name: VAULT_ADDRESS
             value: "http://vault.default:8200"
+        # volume to cache private keys
+        volumeMounts:
+          - name: github-app-secrets
+            mountPath: /var/run/github-app-secrets
+      volumes:
+        - name: github-app-secrets
+          emptyDir: {}
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

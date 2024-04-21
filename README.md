@@ -138,7 +138,7 @@ EOF
 ## Getting Started
 
 ### Prerequisites
-- go version v1.22.1+
+- go version v1.21.9+
 - docker version 17.03+.
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
@@ -195,6 +195,10 @@ Current integration tests cover the scenarios:
 
 **Run the controller in the foreground for testing:**
 ```sh
+# PRIVATE_KEY_CACHE_PATH folder to temp store private keys in local file system
+# /tmp/github-test is fine for testing
+export PRIVATE_KEY_CACHE_PATH=/tmp/github-test/
+# run
 make run
 ```
 

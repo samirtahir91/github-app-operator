@@ -24,6 +24,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -87,6 +88,7 @@ var (
 	vaultRole               = os.Getenv("VAULT_ROLE")          // Vault role to use
 	serviceAccountName      string                             // controller service account
 	kubernetesNamespace     string                             // controller namespace
+	privateKeyCachePath     string                             // Path to store private keys
 )
 
 const (
@@ -117,9 +119,13 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	err := r.Get(ctx, req.NamespacedName, githubApp)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			l.Info("GithubApp resource not found. Ignoring since object must be deleted.")
+			l.Info("GithubApp resource not found. Deleting managed objects and .")
 			// Delete owned access token secret
 			if err := r.deleteOwnedSecrets(ctx, githubApp); err != nil {
+				return ctrl.Result{}, err
+			}
+			// Delete private key cache
+			if err := deletePrivateKyCache(req.Namespace, req.Name); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
@@ -134,9 +140,13 @@ func (r *GithubAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	we manually delete the secret.
 	*/
 	if !githubApp.ObjectMeta.DeletionTimestamp.IsZero() {
-		l.Info("GithubApp is being deleted. Deleting managed objects.")
+		l.Info("GithubApp is being deleted. Deleting managed objects and cache.")
 		// Delete owned access token secret
 		if err := r.deleteOwnedSecrets(ctx, githubApp); err != nil {
+			return ctrl.Result{}, err
+		}
+		// Delete private key cache
+		if err := deletePrivateKyCache(req.Namespace, req.Name); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -201,6 +211,17 @@ func (r *GithubAppReconciler) deleteOwnedSecrets(ctx context.Context, githubApp 
 	return nil
 }
 
+// Function to delete private key cache file for a GithubApp
+func deletePrivateKyCache(namespace string, name string) error {
+	privateKeyPath := filepath.Join(privateKeyCachePath, namespace, name)
+	// Remove cached private key
+	err := os.Remove(privateKeyPath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove cached private key: %v", err)
+	}
+	return nil
+}
+
 // Function to update the status field 'Error' of a GithubApp with an error message
 func (r *GithubAppReconciler) updateStatusWithError(ctx context.Context, githubApp *githubappv1.GithubApp, errMsg string) error {
 	// Update the error message in the status field
@@ -222,7 +243,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 
 	// If expiresAt status field is not present or expiry time has already passed, generate or renew access token
 	if expiresAt.IsZero() || expiresAt.Before(time.Now()) {
-		return r.generateOrUpdateAccessToken(ctx, githubApp)
+		return r.createOrUpdateAccessToken(ctx, githubApp)
 	}
 
 	// Check if the access token secret exists if not reconcile immediately
@@ -234,7 +255,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Secret doesn't exist, reconcile straight away
-			return r.generateOrUpdateAccessToken(ctx, githubApp)
+			return r.createOrUpdateAccessToken(ctx, githubApp)
 		}
 		// Error other than NotFound, return error
 		return err
@@ -243,7 +264,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	for key := range accessTokenSecret.Data {
 		if key != "token" && key != "username" {
 			l.Info("Removing invalid key in access token secret", "Key", key)
-			return r.generateOrUpdateAccessToken(ctx, githubApp)
+			return r.createOrUpdateAccessToken(ctx, githubApp)
 		}
 	}
 
@@ -254,7 +275,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	// Check if the access token is a valid github token via gh api auth
 	if !r.isAccessTokenValid(ctx, username, accessToken) {
 		// If accessToken is invalid, generate or update access token
-		return r.generateOrUpdateAccessToken(ctx, githubApp)
+		return r.createOrUpdateAccessToken(ctx, githubApp)
 	}
 
 	// Access token exists, calculate the duration until expiry
@@ -265,8 +286,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 		l.Info(
 			"Expiry threshold reached - renewing",
 		)
-		err := r.generateOrUpdateAccessToken(ctx, githubApp)
-		return err
+		return r.createOrUpdateAccessToken(ctx, githubApp)
 	}
 
 	return nil
@@ -431,16 +451,50 @@ func (r *GithubAppReconciler) getPrivateKeyFromVault(ctx context.Context, mountP
 	return privateKey, nil
 }
 
+// Function to get private key from local file cache
+func getPrivateKeyFromCache(namespace string, name string) ([]byte, string, error) {
+
+	// Try to get private key from local file system
+	// Stores keys in <privateKeyCachePath>/<Namespace of githubapp>/<Name of githubapp>
+	privateKeyDir := filepath.Join(privateKeyCachePath, namespace)
+	privateKeyPath := filepath.Join(privateKeyDir, name)
+
+	// Create dir if does not exist
+	if _, err := os.Stat(privateKeyDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(privateKeyDir, 0700); err != nil {
+			return []byte(""), "", fmt.Errorf("failed to create private key directory: %v", err)
+		}
+	}
+	if _, err := os.Stat(privateKeyPath); err == nil {
+		// get private key if secret file exists
+		privateKey, privateKeyErr := os.ReadFile(privateKeyPath)
+		if privateKeyErr != nil {
+			return []byte(""), "", fmt.Errorf("failed to read private key from file: %v", privateKeyErr)
+		}
+		return privateKey, privateKeyPath, nil
+	}
+	// Return privateKeyPath if private key file doesn't exist
+	return []byte(""), privateKeyPath, nil
+}
+
 // Function to generate or update access token
-func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
+func (r *GithubAppReconciler) createOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
 
 	var privateKey []byte
 	var privateKeyErr error
+	var privateKeyPath string
 
+	// Try to get private key from local file system
+	privateKey, privateKeyPath, privateKeyErr = getPrivateKeyFromCache(githubApp.Namespace, githubApp.Name)
+	if privateKeyErr != nil {
+		return fmt.Errorf("failed to read private key from file cache: %v", privateKeyErr)
+	}
+
+	// If private key file is not cached try to get it from Vault
 	// Get the private key from a vault path if defined in Githubapp spec
 	// Vault auth will take precedence over using `spec.privateKeySecret`
-	if githubApp.Spec.VaultPrivateKey != nil {
+	if githubApp.Spec.VaultPrivateKey != nil && len(privateKey) == 0 {
 
 		if r.VaultClient.Address() == "" || vaultAudience == "" || vaultRole == "" {
 			return fmt.Errorf("failed on vault auth: VAULT_ROLE, VAULT_ROLE_AUDIENCE and VAULT_ADDRESS are required env variables for Vault authentication")
@@ -453,11 +507,25 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		if privateKeyErr != nil {
 			return fmt.Errorf("failed to get private key from vault: %v", privateKeyErr)
 		}
-	} else {
+		if len(privateKey) == 0 {
+			return fmt.Errorf("empty private key from vault")
+		}
+		// Cache the private key to file
+		if err := os.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
+			return fmt.Errorf("failed to write private key to file: %v", err)
+		}
+	} else if githubApp.Spec.PrivateKeySecret != "" && len(privateKey) == 0 {
 		// else get the private key from K8s secret `spec.privateKeySecret`
 		privateKey, privateKeyErr = r.getPrivateKeyFromSecret(ctx, githubApp)
 		if privateKeyErr != nil {
 			return fmt.Errorf("failed to get private key from kubernetes secret: %v", privateKeyErr)
+		}
+		if len(privateKey) == 0 {
+			return fmt.Errorf("empty private key from vault")
+		}
+		// Cache the private key to file
+		if err := os.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
+			return fmt.Errorf("failed to write private key to file: %v", err)
 		}
 	}
 
@@ -468,8 +536,12 @@ func (r *GithubAppReconciler) generateOrUpdateAccessToken(ctx context.Context, g
 		githubApp.Spec.InstallId,
 		privateKey,
 	)
+	// if GitHubApi request for access token fails
 	if err != nil {
-		return fmt.Errorf("failed to generate access token: %v", err)
+		// Delete private key cache
+		if err := deletePrivateKyCache(githubApp.Namespace, githubApp.Name); err != nil {
+			return err
+		}
 	}
 
 	// Create a new Secret with the access token
@@ -846,7 +918,11 @@ func getServiceAccountAndNamespace(serviceAccountPath string) (string, string, e
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager, tokenPath ...string) error {
+func (r *GithubAppReconciler) SetupWithManager(mgr ctrl.Manager, privateKeyCache string, tokenPath ...string) error {
+
+	// Set private key cache path
+	privateKeyCachePath = privateKeyCache
+
 	// Get reconcile interval from environment variable or use default value
 	var err error
 	reconcileIntervalStr := os.Getenv("CHECK_INTERVAL")
