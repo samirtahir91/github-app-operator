@@ -1,8 +1,6 @@
 module github-app-operator
 
-go 1.22.0
-
-toolchain go1.22.1
+go 1.22.2
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
