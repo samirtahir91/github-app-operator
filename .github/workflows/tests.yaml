@@ -29,13 +29,16 @@ jobs:
           brew install helm
           brew install kubectl
       - name: Setup Minikube cluster
+        if: matrix.os != 'macos-latest'
         uses: medyagh/setup-minikube@latest
       # This step is needed as the following one tries to remove
       # kustomize for each test but has no permission to do so
       - name: Remove pre-installed kustomize
+        if: matrix.os != 'macos-latest'
         run: sudo rm -f /usr/local/bin/kustomize
       # Install vault to minikube cluster to test vault case with kubernetes auth
       - name: Install and configure Vault
+        if: matrix.os != 'macos-latest'
         env:
             GITHUB_PRIVATE_KEY: ${{ secrets.GH_TEST_APP_PK }}
         run: |
@@ -43,6 +46,7 @@ jobs:
           chmod +x install_and_setup_vault_k8s.sh
           ./install_and_setup_vault_k8s.sh
       - name: Perform the test
+        if: matrix.os != 'macos-latest'
         run: |
           export "GITHUB_PRIVATE_KEY=${{ secrets.GH_TEST_APP_PK }}"
           export "GH_APP_ID=${{ secrets.GH_APP_ID }}"
@@ -57,6 +61,7 @@ jobs:
           # Run tests
           USE_EXISTING_CLUSTER=true make test
       - name: Report failure
+        if: matrix.os != 'macos-latest'
         uses: nashmaniac/create-issue-action@v1.2
         # Only report failures of pushes (PRs have are visible through the Checks section) to the default branch
         if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -66,6 +71,7 @@ jobs:
           labels: kind/bug
           body: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - name: Send the coverage output
+        if: matrix.os != 'macos-latest'
         uses: shogo82148/actions-goveralls@v1
         with:
           path-to-profile: cover.out
