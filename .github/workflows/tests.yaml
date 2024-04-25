@@ -61,7 +61,6 @@ jobs:
           # Run tests
           USE_EXISTING_CLUSTER=true make test
       - name: Report failure
-        if: matrix.os != 'macos-latest'
         uses: nashmaniac/create-issue-action@v1.2
         # Only report failures of pushes (PRs have are visible through the Checks section) to the default branch
         if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
