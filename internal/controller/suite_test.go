@@ -121,11 +121,10 @@ var _ = BeforeSuite(func() {
 
 	var token string
 	if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-		// Initialise vault client with VAULT_ADDRESS env var
-		vaultAddress := os.Getenv("VAULT_ADDRESS") // Vault server fqdn
-		vaultClient, err = vault.NewClient(&vault.Config{
-			Address: vaultAddress,
-		})
+		// Initialise vault client with default config - uses default Vault env vars for config
+		// See - https://pkg.go.dev/github.com/hashicorp/vault/api#pkg-constants
+		vaultConfig := vault.DefaultConfig()
+		vaultClient, err = vault.NewClient(vaultConfig)
 		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Vault client initialisation failed: %v", err))
 
 		// Initialise K8s client

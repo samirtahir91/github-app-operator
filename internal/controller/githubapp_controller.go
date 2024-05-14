@@ -497,7 +497,7 @@ func (r *GithubAppReconciler) getPrivateKey(ctx context.Context, githubApp *gith
 	if githubApp.Spec.VaultPrivateKey != nil && len(privateKey) == 0 {
 
 		if r.VaultClient.Address() == "" || vaultAudience == "" || vaultRole == "" {
-			return []byte(""), "", fmt.Errorf("failed on vault auth: VAULT_ROLE, VAULT_ROLE_AUDIENCE and VAULT_ADDRESS are required env variables for Vault authentication")
+			return []byte(""), "", fmt.Errorf("failed on vault auth: VAULT_ROLE, VAULT_ROLE_AUDIENCE and VAULT_ADDR are required env variables for Vault authentication")
 		}
 
 		mountPath := githubApp.Spec.VaultPrivateKey.MountPath

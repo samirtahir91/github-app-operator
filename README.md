@@ -32,7 +32,9 @@ Key features:
     - Configure the environment variables in the controller deployment spec:
       - `VAULT_ROLE` - The role you have bound for Kubernetes auth for the operator
       - `VAULT_ROLE_AUDIENCE` - The audience you have bound in Vault
-      - `VAULT_ADDRESS` - FQDN or your Vault server, i.e. `http://vault.default:8200`
+      - `VAULT_ADDR` - FQDN or your Vault server, i.e. `http://vault.default:8200`
+    - Additional Vault env vars can be set i.e. `VAULT_NAMESPACE` for enterprise Vault.
+      - See [Vault API](https://pkg.go.dev/github.com/hashicorp/vault/api#pkg-constants)
 - Deleting the `GithubApp` object will also delete the access token secret it owns.
 - The operator will reconcile an access token for a `GithubApp` when:
     - Modifications are made to the access token secret that is owned by a `GithubApp`.
@@ -208,7 +210,7 @@ make run
 export GITHUB_PRIVATE_KEY=<YOUR_BASE64_ENCODED_GH_APP_PRIVATE_KEY>
 export GH_APP_ID=<YOUR GITHUB APP ID>
 export GH_INSTALL_ID=<YOUR GITHUB APP INSTALL ID>
-export "VAULT_ADDRESS=http://localhost:8200" # this can be local k8s Vault or some other Vault
+export "VAULT_ADDR=http://localhost:8200" # this can be local k8s Vault or some other Vault
 export "VAULT_ROLE_AUDIENCE=githubapp"
 export "VAULT_ROLE=githubapp"
 ```

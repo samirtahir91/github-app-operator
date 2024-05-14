@@ -108,11 +108,10 @@ func main() {
 	// http client
 	httpClient := &http.Client{}
 
-	// Initialise vault client with VAULT_ADDRESS env var
-	vaultAddress := os.Getenv("VAULT_ADDRESS") // Vault server fqdn
-	vaultClient, err := vault.NewClient(&vault.Config{
-		Address: vaultAddress,
-	})
+	// Initialise vault client with default config - uses default Vault env vars for config
+	// See - https://pkg.go.dev/github.com/hashicorp/vault/api#pkg-constants
+	vaultConfig := vault.DefaultConfig()
+	vaultClient, err := vault.NewClient(vaultConfig)
 	if err != nil {
 		setupLog.Error(err, "failed to initialise Vault client")
 		os.Exit(1)
