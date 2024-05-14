@@ -73,7 +73,7 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 	// Requires vault to be running on cluster and configured.
 	// from ./scripts directory run ./install_and_setup_vault_k8s.sh
 	// kubectl port-forward vault-0 8200:8200 in another terminal
-	// export VAULT_ADDRESS=http://localhost:8200
+	// export VAULT_ADDR=http://localhost:8200
 	// then run the tests
 	Context("When creating a GithubApp with VaultPrivateKey spec", func() {
 		if os.Getenv("USE_EXISTING_CLUSTER") != existingClusterValue {

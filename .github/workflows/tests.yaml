@@ -51,7 +51,7 @@ jobs:
           export "GITHUB_PRIVATE_KEY=${{ secrets.GH_TEST_APP_PK }}"
           export "GH_APP_ID=${{ secrets.GH_APP_ID }}"
           export "GH_INSTALL_ID=${{ secrets.GH_INSTALL_ID }}"
-          export "VAULT_ADDRESS=http://localhost:8200"
+          export "VAULT_ADDR=http://localhost:8200"
           export "VAULT_ROLE_AUDIENCE=githubapp"
           export "VAULT_ROLE=githubapp"
 
