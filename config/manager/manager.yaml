@@ -111,8 +111,12 @@ spec:
             value: githubapp
           - name: VAULT_ROLE_AUDIENCE
             value: githubapp
-          - name: VAULT_ADDRESS
+          - name: VAULT_ADDR
             value: "http://vault.default:8200"
+          # Enterprise vault only - set namespace
+          - name: VAULT_NAMESPACE
+            value: ""
+          # optional vault env vars - https://pkg.go.dev/github.com/hashicorp/vault/api#pkg-constants
         # volume to cache private keys
         volumeMounts:
           - name: github-app-secrets
