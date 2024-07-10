@@ -7,3 +7,4 @@ spec:
   appId: 857468
   installId: 48531286
   privateKeySecret: github-app-secret
+  accessTokenSecret: github-app-access-token-123123

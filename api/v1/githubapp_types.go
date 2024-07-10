@@ -27,6 +27,7 @@ type GithubAppSpec struct {
 	PrivateKeySecret  string                 `json:"privateKeySecret,omitempty"`
 	RolloutDeployment *RolloutDeploymentSpec `json:"rolloutDeployment,omitempty"`
 	VaultPrivateKey   *VaultPrivateKeySpec   `json:"vaultPrivateKey,omitempty"`
+	AccessTokenSecret string                 `json:"accessTokenSecret"`
 }
 
 // GithubAppStatus defines the observed state of GithubApp
@@ -42,6 +43,7 @@ type GithubAppStatus struct {
 
 // GithubApp is the Schema for the githubapps API
 // +kubebuilder:printcolumn:name="App ID",type=string,JSONPath=`.spec.appId`
+// +kubebuilder:printcolumn:name="Access Token Secret",type=string,JSONPath=`.spec.accessTokenSecret`
 // +kubebuilder:printcolumn:name="Install ID",type=string,JSONPath=`.spec.installId`
 // +kubebuilder:printcolumn:name="Expires At",type=string,JSONPath=`.status.expiresAt`
 // +kubebuilder:printcolumn:name="Error",type=string,JSONPath=`.status.error`

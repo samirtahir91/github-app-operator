@@ -18,6 +18,9 @@ spec:
     - jsonPath: .spec.appId
       name: App ID
       type: string
+    - jsonPath: .spec.accessTokenSecret
+      name: Access Token Secret
+      type: string
     - jsonPath: .spec.installId
       name: Install ID
       type: string
@@ -52,6 +55,8 @@ spec:
           spec:
             description: GithubAppSpec defines the desired state of GithubApp
             properties:
+              accessTokenSecret:
+                type: string
               appId:
                 type: integer
               installId:
@@ -83,6 +88,7 @@ spec:
                 - secretPath
                 type: object
             required:
+            - accessTokenSecret
             - appId
             - installId
             type: object

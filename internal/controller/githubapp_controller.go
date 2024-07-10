@@ -250,7 +250,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	// Check if the access token secret exists if not reconcile immediately
 	accessTokenSecretKey := client.ObjectKey{
 		Namespace: githubApp.Namespace,
-		Name:      fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId),
+		Name:      githubApp.Spec.AccessTokenSecret,
 	}
 	accessTokenSecret := &corev1.Secret{}
 	if err := r.Get(ctx, accessTokenSecretKey, accessTokenSecret); err != nil {
@@ -659,7 +659,7 @@ func (r *GithubAppReconciler) createOrUpdateAccessToken(ctx context.Context, git
 	}
 
 	// Access token Kubernetes secret name
-	accessTokenSecret := fmt.Sprintf("github-app-access-token-%d", githubApp.Spec.AppId)
+	accessTokenSecret := githubApp.Spec.AccessTokenSecret
 
 	// Access token secret key
 	accessTokenSecretKey := client.ObjectKey{
