@@ -49,6 +49,9 @@ Key features:
     - It will default to `5m` if not set
   - `EXPIRY_THRESHOLD` - i.e. to reconcile a new access token if there is less than 10 mins left from expiry, set the value to `10m`
     - It will default to `15m` if not set
+- You can specify a proxy for GitHub and Vault using the env vars:
+  - `GITHUB_PROXY` - i.e. `http://myproxy.com:8080`
+  - `VAULT_PROXY_ADDR` - i.e. `http://myproxy.com:8080`
 - Optionally, you can enable rolling upgrade to deployments in the same namespace as the `GithubApp` that match any of the labels you define in `spec.rolloutDeployment.labels`
   - This is useful where pods need to be recreated to pickup the new secret data.
 - By default the logs are json formatted and log level is set to info and error, you can set `DEBUG_LOG` to `true` in the manager deployment environment variable for debug level logs.
