@@ -13,7 +13,7 @@ It will reconcile a new access token before expiry (1hr).
 Key features:
 - Uses a custom resource `GithubApp` in your destination namespace.
 - Reads `appId`, `installId` and either and `privateKeySecret` or `vaultPrivateKey` defined in a `GithubApp` resource and requests an access token from Github for the Github App.
-  - It stores the access token in a secret `github-app-access-token-{appId}`
+  - It stores the access token in a secret as per `accessTokenSecret`
 - For pulling a GitHub Apps private key, there are 2 options built-in:
   - Using a Kubernetes secret:
     - Use `privateKeySecret` - refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
@@ -93,9 +93,10 @@ metadata:
   name: GithubApp-sample
   namespace: team-1
 spec:
-  appId: 123123
+  appId: 
   installId: 12312312
   privateKeySecret: github-app-secret
+  accessTokenSecret: github-app-access-token-123123
 EOF
 ```
 
@@ -114,6 +115,7 @@ spec:
   appId: 123123
   installId: 12312312
   privateKeySecret: github-app-secret
+  accessTokenSecret: github-app-access-token-123123
   rolloutDeployment:
     labels:
       foo: bar
@@ -133,6 +135,7 @@ metadata:
 spec:
   appId: 123123
   installId: 12312312
+  accessTokenSecret: github-app-access-token-123123
   vaultPrivateKey:
     mountPath: secret
     secretPath: githubapp/123123

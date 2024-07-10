@@ -145,6 +145,7 @@ func CreateGitHubAppAndWait(
 			PrivateKeySecret:  privateKeySecret,
 			RolloutDeployment: rolloutDeploymentSpec, // Optionally pass rolloutDeployment
 			VaultPrivateKey:   vaultPrivateKeySpec,   // Optionally pass vaultPrivateKeySpec
+			AccessTokenSecret: acessTokenSecretName,
 		},
 	}
 	gomega.Expect(k8sClient.Create(ctx, &githubApp)).Should(gomega.Succeed())
