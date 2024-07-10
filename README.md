@@ -93,7 +93,7 @@ metadata:
   name: GithubApp-sample
   namespace: team-1
 spec:
-  appId: 
+  appId: 123123
   installId: 12312312
   privateKeySecret: github-app-secret
   accessTokenSecret: github-app-access-token-123123
