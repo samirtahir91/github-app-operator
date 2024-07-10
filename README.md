@@ -60,6 +60,7 @@ Key features:
   - INSTALL ID
   - EXPIRES AT
   - ERROR
+  - Access Token Secret
 - Events are recorded for:
   - Any error on reconcile for a GithubApp
   - Creation of an access token secret
