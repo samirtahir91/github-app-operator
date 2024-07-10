@@ -113,8 +113,14 @@ spec:
             value: githubapp
           - name: VAULT_ADDR
             value: "http://vault.default:8200"
+          # Optional proxy for github
+          - name: GITHUB_PROXY
+            value: ""
           # Enterprise vault only - set namespace
           - name: VAULT_NAMESPACE
+            value: ""
+          # Optional proxy for Vault
+          - name: VAULT_PROXY_ADDR
             value: ""
           # optional vault env vars - https://pkg.go.dev/github.com/hashicorp/vault/api#pkg-constants
         # volume to cache private keys

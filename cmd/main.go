@@ -19,6 +19,8 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"net/http" // http client
+	"net/url"
 	"os"
 	"strconv"
 
@@ -27,7 +29,6 @@ import (
 	vault "github.com/hashicorp/vault/api"   // vault client
 	kubernetes "k8s.io/client-go/kubernetes" // k8s client
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"net/http" // http client
 	ctrlConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -105,8 +106,27 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
-	// http client
-	httpClient := &http.Client{}
+	// http client with optional proxy configured
+	var httpClient *http.Client
+	// Check for GITHUB_PROXY environment variable and add to http client
+	if gitProxy := os.Getenv("GITHUB_PROXY"); gitProxy != "" {
+		// If the environment variable is set, use its value in the http client
+		proxyURL, _ := url.Parse(gitProxy)
+
+		// Add proxy to transport
+		transport := &http.Transport{
+			Proxy: http.ProxyURL(proxyURL),
+		}
+
+		// Add transport to http client
+		httpClient = &http.Client{
+			Transport: transport,
+		}
+
+		// Else create default http client with on proxy
+	} else {
+		httpClient = &http.Client{}
+	}
 
 	// Initialise vault client with default config - uses default Vault env vars for config
 	// See - https://pkg.go.dev/github.com/hashicorp/vault/api#pkg-constants
@@ -150,7 +170,7 @@ func main() {
 
 	// Path to store private keys for local caching
 	privateKeyCachePath := "/var/run/github-app-secrets/"
-	// Check for PRIVATE_KEY_CACHE_PATH environment variable amnd override privateKeyCachePath
+	// Check for PRIVATE_KEY_CACHE_PATH environment variable and override privateKeyCachePath
 	if customCachePath := os.Getenv("PRIVATE_KEY_CACHE_PATH"); customCachePath != "" {
 		// If the environment variable is set, use its value as the privateKeyCachePath
 		privateKeyCachePath = customCachePath
