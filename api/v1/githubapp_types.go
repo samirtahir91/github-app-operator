@@ -22,12 +22,13 @@ import (
 
 // GithubAppSpec defines the desired state of GithubApp
 type GithubAppSpec struct {
-	AppId             int                    `json:"appId"`
-	InstallId         int                    `json:"installId"`
-	PrivateKeySecret  string                 `json:"privateKeySecret,omitempty"`
-	RolloutDeployment *RolloutDeploymentSpec `json:"rolloutDeployment,omitempty"`
-	VaultPrivateKey   *VaultPrivateKeySpec   `json:"vaultPrivateKey,omitempty"`
-	AccessTokenSecret string                 `json:"accessTokenSecret"`
+	AppId               int                    `json:"appId"`
+	InstallId           int                    `json:"installId"`
+	PrivateKeySecret    string                 `json:"privateKeySecret,omitempty"`
+	RolloutDeployment   *RolloutDeploymentSpec `json:"rolloutDeployment,omitempty"`
+	VaultPrivateKey     *VaultPrivateKeySpec   `json:"vaultPrivateKey,omitempty"`
+	AccessTokenSecret   string                 `json:"accessTokenSecret"`
+	GcpPrivateKeySecret string                 `json:"googlePrivateKeySecret,omitempty"`
 }
 
 // GithubAppStatus defines the observed state of GithubApp

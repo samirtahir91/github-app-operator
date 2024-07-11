@@ -59,6 +59,8 @@ spec:
                 type: string
               appId:
                 type: integer
+              googlePrivateKeySecret:
+                type: string
               installId:
                 type: integer
               privateKeySecret:

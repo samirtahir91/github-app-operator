@@ -452,6 +452,20 @@ func (r *GithubAppReconciler) getPrivateKeyFromVault(ctx context.Context, mountP
 	return privateKey, nil
 }
 
+// Function to get private key from a GCP secret
+func (r *GithubAppReconciler) getPrivateKeyFromGcp(githubApp *githubappv1.GithubApp) ([]byte, error) {
+
+	// Get the secret name for the GCP Secret
+	secretName := githubApp.Spec.GcpPrivateKeySecret
+
+	// Get private key from GCP Secret manager secret
+	privateKey, err := r.GetSecretFromSecretMgr(secretName)
+	if err != nil {
+		return []byte(""), err
+	}
+	return privateKey, nil
+}
+
 // Function to get private key from local file cache
 func getPrivateKeyFromCache(namespace string, name string) ([]byte, string, error) {
 
@@ -514,6 +528,19 @@ func (r *GithubAppReconciler) getPrivateKey(ctx context.Context, githubApp *gith
 		if err := os.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
 			return []byte(""), "", fmt.Errorf("failed to write private key to file: %v", err)
 		}
+	} else if githubApp.Spec.GcpPrivateKeySecret != "" && len(privateKey) == 0 {
+		// else get the private key from GCP secret `spec.googlePrivateKeySecret`
+		privateKey, privateKeyErr = r.getPrivateKeyFromGcp(githubApp)
+		if privateKeyErr != nil {
+			return []byte(""), "", fmt.Errorf("failed to get private key from GCP secret: %v", privateKeyErr)
+		}
+		if len(privateKey) == 0 {
+			return []byte(""), "", fmt.Errorf("empty private key from GCP")
+		}
+		// Cache the private key to file
+		if err := os.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
+			return []byte(""), "", fmt.Errorf("failed to write private key to file: %v", err)
+		}
 	} else if githubApp.Spec.PrivateKeySecret != "" && len(privateKey) == 0 {
 		// else get the private key from K8s secret `spec.privateKeySecret`
 		privateKey, privateKeyErr = r.getPrivateKeyFromSecret(ctx, githubApp)
@@ -521,7 +548,7 @@ func (r *GithubAppReconciler) getPrivateKey(ctx context.Context, githubApp *gith
 			return []byte(""), "", fmt.Errorf("failed to get private key from kubernetes secret: %v", privateKeyErr)
 		}
 		if len(privateKey) == 0 {
-			return []byte(""), "", fmt.Errorf("empty private key from vault")
+			return []byte(""), "", fmt.Errorf("empty private key from k8s secret")
 		}
 		// Cache the private key to file
 		if err := os.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
