@@ -14,11 +14,18 @@ Key features:
 - Uses a custom resource `GithubApp` in your destination namespace.
 - Reads `appId`, `installId` and either and `privateKeySecret` or `vaultPrivateKey` defined in a `GithubApp` resource and requests an access token from Github for the Github App.
   - It stores the access token in a secret as per `accessTokenSecret`
-- For pulling a GitHub Apps private key, there are 2 options built-in:
+- For pulling a GitHub Apps private key, there are 3 options built-in:
   - Using a Kubernetes secret:
     - Use `privateKeySecret` - refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
     - It expects the field `data.privateKey` in the secret to pull the private key from.
-  - Hashicorp Vault (this takes priority over `privateKeySecret` if both are specified):
+  - Using GCP Secret Manager (this takes priority over `privateKeySecret` if it is specified):
+    - **You must base64 encode your private key before saving in Secret Manager**
+      - The operator logic will only accept base64 encoded secrets else it will fail.
+    - Configure with the `googlePrivateKeySecret` - the full secret path in Secret Manager for your GithubApp secret
+      - i.e. "projects/xxxxxxxxxx/secrets/my-gh-app/versions/latest"
+    - Configure [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) to bind secret access permissions to the operators Kubernetes Service Account
+        - Tested with role `roles/secretmanager.secretAccessor`
+  - Hashicorp Vault (this takes priority over `privateKeySecret` and `googlePrivateKeySecret` if they are specified):
     - **You must base64 encode your private key before saving in Vault**
       - The operator logic will only accept base64 encoded secrets else it will fail.
     - This will create a short-lived JWT (10mins TTL) via Kubernetes Token Request API, with an audience you define.
@@ -141,6 +148,24 @@ spec:
     mountPath: secret
     secretPath: githubapp/123123
     secretKey: privateKey
+EOF
+```
+
+## Example GithubApp object using GCP Secret Manager to pull the private key during run-time
+- Below example will fetch the private key from GCP Secret Manager when the github access token expires
+- It requires that the Kubernetes Service Account has permissions on the secret in SEcret Manager, i.e. via [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+```sh
+kubectl apply -f - <<EOF
+apiVersion: githubapp.samir.io/v1
+kind: GithubApp
+metadata:
+  name: GithubApp-sample
+  namespace: team-1
+spec:
+  appId: 123123
+  installId: 12312312
+  accessTokenSecret: github-app-access-token-123123
+  googlePrivateKeySecret: "projects/123123123123/secrets/gh-app-123123/versions/latest"
 EOF
 ```
 
