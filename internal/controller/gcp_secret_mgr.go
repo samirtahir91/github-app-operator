@@ -61,7 +61,7 @@ func (r *GithubAppReconciler) GetSecretFromSecretMgr(name string) ([]byte, error
 	crc32c := crc32.MakeTable(crc32.Castagnoli)
 	checksum := int64(crc32.Checksum(result.Payload.Data, crc32c))
 	if checksum != *result.Payload.DataCrc32C {
-		return []byte(""), fmt.Errorf("Data corruption detected.")
+		return []byte(""), fmt.Errorf("data corruption detected")
 	}
 
 	privateKeyStr := string(result.Payload.Data)
