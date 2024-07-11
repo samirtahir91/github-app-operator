@@ -37,7 +37,14 @@ func (r *GithubAppReconciler) GetSecretFromSecretMgr(name string) ([]byte, error
 	if err != nil {
 		return []byte(""), fmt.Errorf("failed to create secretmanager client: %w", err)
 	}
-	defer client.Close()
+
+	// Defer closing the client and check for errors
+	defer func() {
+		err := client.Close()
+		if err != nil {
+			fmt.Printf("error closing client for secret manager: %v\n", err)
+		}
+	}()
 
 	// Build the request.
 	req := &secretmanagerpb.AccessSecretVersionRequest{
