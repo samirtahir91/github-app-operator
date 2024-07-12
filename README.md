@@ -153,7 +153,7 @@ EOF
 
 ## Example GithubApp object using GCP Secret Manager to pull the private key during run-time
 - Below example will fetch the private key from GCP Secret Manager when the github access token expires
-- It requires that the Kubernetes Service Account has permissions on the secret in SEcret Manager, i.e. via [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+- It requires that the Kubernetes Service Account has permissions on the secret in Secret Manager, i.e. via [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
 ```sh
 kubectl apply -f - <<EOF
 apiVersion: githubapp.samir.io/v1
