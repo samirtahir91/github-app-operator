@@ -6,73 +6,107 @@
 [![Helm](https://github.com/samirtahir91/github-app-operator/actions/workflows/helm-release.yml/badge.svg)](https://github.com/samirtahir91/github-app-operator/actions/workflows/helm-release.yml)
 
 # github-app-operator
-This is a Kubernetes operator that will generate an access token for a GithubApp and store it in a secret to use for authenticated requests to Github as the GithubApp. \
-It will reconcile a new access token before expiry (1hr).
+
+The `github-app-operator` is a Kubernetes operator that generates an access token for a GitHub App and stores it in a secret for authenticated requests to GitHub. It reconciles a new access token before expiry (1 hour).
 
 ## Description
-Key features:
+
+### Key Features
 - Uses a custom resource `GithubApp` in your destination namespace.
-- Reads `appId`, `installId` and either and `privateKeySecret` or `vaultPrivateKey` defined in a `GithubApp` resource and requests an access token from Github for the Github App.
-  - It stores the access token in a secret as per `accessTokenSecret`
-- For pulling a GitHub Apps private key, there are 3 options built-in:
-  - Using a Kubernetes secret:
-    - Use `privateKeySecret` - refers to an existing secret in the namespace which holds the base64 encoded PEM of the Github App's private key.
-    - It expects the field `data.privateKey` in the secret to pull the private key from.
-  - Using GCP Secret Manager (this takes priority over `privateKeySecret` if it is specified):
-    - **You must base64 encode your private key before saving in Secret Manager**
-      - The operator logic will only accept base64 encoded secrets else it will fail.
-    - Configure with the `googlePrivateKeySecret` - the full secret path in Secret Manager for your GithubApp secret
-      - i.e. "projects/xxxxxxxxxx/secrets/my-gh-app/versions/latest"
-    - Configure [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) to bind secret access permissions to the operators Kubernetes Service Account
-        - Tested with role `roles/secretmanager.secretAccessor`
-  - Hashicorp Vault (this takes priority over `privateKeySecret` and `googlePrivateKeySecret` if they are specified):
-    - **You must base64 encode your private key before saving in Vault**
-      - The operator logic will only accept base64 encoded secrets else it will fail.
-    - This will create a short-lived JWT (10mins TTL) via Kubernetes Token Request API, with an audience you define.
-    - It will then use the JWT and Vault role you define to authenticate with Vault and pull the secret containing the private key.
-    - Configure with the `vaultPrivateKey` block:
-      - `spec.vaultPrivateKey.mountPath` - Secret mount path, i.e "secret"
-      - `spec.vaultPrivateKey.secretPath` - Secret path i.e. "githubapps/{App ID}"
-      - `spec.vaultPrivateKey.secretKey` - Secret key i.e. "privateKey"
-    - Configure Kubernetes auth with Vault
-    - Define a role and optionally audience, service account, namespace etc bound to the role
-    - Configure the environment variables in the controller deployment spec:
-      - `VAULT_ROLE` - The role you have bound for Kubernetes auth for the operator
-      - `VAULT_ROLE_AUDIENCE` - The audience you have bound in Vault
-      - `VAULT_ADDR` - FQDN or your Vault server, i.e. `http://vault.default:8200`
-    - Additional Vault env vars can be set i.e. `VAULT_NAMESPACE` for enterprise Vault.
-      - See [Vault API](https://pkg.go.dev/github.com/hashicorp/vault/api#pkg-constants)
-- Deleting the `GithubApp` object will also delete the access token secret it owns.
-- The operator will reconcile an access token for a `GithubApp` when:
-    - Modifications are made to the access token secret that is owned by a `GithubApp`.
-    - Modifications are made to a `GithubApp` object.
-    - The access token secret does not exist or does not have a `status.expiresAt` value
-- Periodically the operator will check the expiry time of the access token and reconcile a new access token if the threshold is met or if the access token is invalid (checks against GitHub API).
-- It stores the expiry time of the access token in the `status.expiresAt` field of the `GithubApp` object.
-- If any errors are recieved during a reconcile they are set in the `status.error` field of the `GithubApp` object.
-- It will skip requesting a new access token if the expiry threshold is not reached/exceeded.
-- You can override the check interval and expiry threshold using the deployment env vars:
-  - `CHECK_INTERVAL` - i.e. to check every 5 mins set the value to `5m`
-    - It will default to `5m` if not set
-  - `EXPIRY_THRESHOLD` - i.e. to reconcile a new access token if there is less than 10 mins left from expiry, set the value to `10m`
-    - It will default to `15m` if not set
-- You can specify a proxy for GitHub and Vault using the env vars:
-  - `GITHUB_PROXY` - i.e. `http://myproxy.com:8080`
-  - `VAULT_PROXY_ADDR` - i.e. `http://myproxy.com:8080`
-- Optionally, you can enable rolling upgrade to deployments in the same namespace as the `GithubApp` that match any of the labels you define in `spec.rolloutDeployment.labels`
-  - This is useful where pods need to be recreated to pickup the new secret data.
-- By default the logs are json formatted and log level is set to info and error, you can set `DEBUG_LOG` to `true` in the manager deployment environment variable for debug level logs.
-- The CRD has additional data printed with `kubectl get`:
-  - APP ID
-  - INSTALL ID
-  - EXPIRES AT
-  - ERROR
+- Reads `appId`, `installId`, and either `privateKeySecret`, `googlePrivateKeySecret` or `vaultPrivateKey` defined in a `GithubApp` resource to request an access token from GitHub.
+- Stores the access token in a secret specified by `accessTokenSecret`.
+
+### Private Key Retrieval Options
+
+#### 1. Using a Kubernetes Secret
+- **Configuration:**
+  - Use `privateKeySecret` - refers to an existing secret in the namespace holding the base64 encoded PEM of the GitHub App's private key.
+  - The secret expects the field `data.privateKey`.
+
+#### 2. Using GCP Secret Manager
+- **Configuration:**
+  - **Note:** You must base64 encode your private key before saving it in Secret Manager.
+  - Configure with `googlePrivateKeySecret` - the full secret path in Secret Manager for your GitHub App secret, e.g. `projects/xxxxxxxxxx/secrets/my-gh-app/versions/latest`.
+  - Configure [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) to bind secret access permissions to the operator's Kubernetes Service Account.
+  - Tested with the role `roles/secretmanager.secretAccessor`.
+
+#### 3. Using Hashicorp Vault
+- **Configuration:**
+  - **Note:** You must base64 encode your private key before saving it in Vault.
+  - The operator uses a short-lived JWT (10 minutes TTL) via Kubernetes Token Request API, with a defined audience.
+  - It uses the JWT and Vault role to authenticate with Vault and pull the secret containing the private key.
+  - Configure with the `vaultPrivateKey` block:
+    - `spec.vaultPrivateKey.mountPath` - Secret mount path, e.g., `secret`
+    - `spec.vaultPrivateKey.secretPath` - Secret path, e.g., `githubapps/{App ID}`
+    - `spec.vaultPrivateKey.secretKey` - Secret key, e.g., `privateKey`
+  - Configure Kubernetes auth with Vault.
+  - Define a role and optionally audience, service account, namespace, etc., bound to the role.
+  - Configure environment variables in the controller deployment spec:
+    - `VAULT_ROLE` - The role bound for Kubernetes auth for the operator.
+    - `VAULT_ROLE_AUDIENCE` - The audience bound in Vault.
+    - `VAULT_ADDR` - FQDN of your Vault server, e.g., `http://vault.default:8200`.
+    - Additional Vault env vars can be set, e.g., `VAULT_NAMESPACE` for enterprise Vault (see [Vault API](https://pkg.go.dev/github.com/hashicorp/vault/api#pkg-constants)).
+
+### Token Reconciliation
+- Cleans-up the the access token secret it owned by a `GithubApp` object if deleted.
+- Reconciles an access token for a `GithubApp` when:
+  - Modifications are made to the access token secret owned by a `GithubApp`.
+  - Modifications are made to a `GithubApp` object.
+  - The access token secret does not exist or lacks a `status.expiresAt` value.
+- Periodically checks the expiry time of the access token and reconciles a new one if the threshold is met or if the access token is invalid (checked against GitHub API).
+- Stores the expiry time of the access token in the `status.expiresAt` field of the `GithubApp` object.
+- Sets errors in the `status.error` field of the `GithubApp` object during reconciliation.
+- Skips requesting a new access token if the expiry threshold is not reached/exceeded.
+- Allows overriding the check interval and expiry threshold using deployment env vars:
+  - `CHECK_INTERVAL` - e.g., to check every 5 minutes, set the value to `5m` (default: `5m`).
+  - `EXPIRY_THRESHOLD` - e.g., to reconcile a new access token if there is less than 10 minutes left from expiry, set the value to `10m` (default: `15m`).
+
+### Proxy Configuration
+- Specify a proxy for GitHub and Vault using the env vars:
+  - `GITHUB_PROXY` - e.g., `http://myproxy.com:8080`.
+  - `VAULT_PROXY_ADDR` - e.g., `http://myproxy.com:8080`.
+
+### Rolling Upgrade
+- Optionally enable rolling upgrade to deployments in the same namespace as the `GithubApp` that match any of the labels defined in `spec.rolloutDeployment.labels`.
+  - Useful for recreating pods to pick up new secret data.
+
+### Logging and Debugging
+- By default, logs are JSON formatted, and log level is set to info and error.
+- Set `DEBUG_LOG` to `true` in the manager deployment environment variable for debug level logs.
+
+### Additional Information
+- The CRD includes extra data printed with `kubectl get`:
+  - App ID
+  - Install ID
+  - Expires At
+  - Error
   - Access Token Secret
 - Events are recorded for:
-  - Any error on reconcile for a GithubApp
-  - Creation of an access token secret
-  - Updating an access token secret
-  - Updating a deployment for rolling upgrade
+  - Any error on reconcile for a `GithubApp`.
+  - Creation of an access token secret.
+  - Updating an access token secret.
+  - Updating a deployment for rolling upgrade.
+
+## Example `GithubApp` Resource
+
+Here is an example of how to define the `GithubApp` resource:
+
+```yaml
+apiVersion: githubapp.samir.io/v1
+kind: GithubApp
+metadata:
+  name: example-githubapp
+spec:
+  appId: <your-github-app-id>
+  installId: <your-github-app-installation-id>
+  privateKeySecret: <your-private-key-secret-name> # If using Kubernetes secret
+  googlePrivateKeySecret: <your-google-secret-path> # If using GCP Secret Manager
+  vaultPrivateKey: # If using Hashicorp Vault
+    mountPath: <your-vault-mount-path>
+    secretPath: <your-vault-secret-path>
+    secretKey: <your-vault-secret-key>
+  accessTokenSecret: <your-access-token-secret-name>
+```
 
 ## Example creating a secret to hold a GitHub App private key
 - Get your GithubApp private key and encode to base64
@@ -153,7 +187,7 @@ EOF
 
 ## Example GithubApp object using GCP Secret Manager to pull the private key during run-time
 - Below example will fetch the private key from GCP Secret Manager when the github access token expires
-- It requires that the Kubernetes Service Account has permissions on the secret in Secret Manager, i.e. via [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+- It requires that the Kubernetes Service Account has permissions on the secret in SEcret Manager, i.e. via [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
 ```sh
 kubectl apply -f - <<EOF
 apiVersion: githubapp.samir.io/v1
