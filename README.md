@@ -17,6 +17,9 @@ The `github-app-operator` is a Kubernetes operator that generates an access toke
 - Stores the access token in a secret specified by `accessTokenSecret`.
 
 ### Private Key Retrieval Options
+> [!TIP]
+> There is a sample constraint template and constraint for Gatekeeper to restrict the type of private key source in the `gatekeeper-policy` folder since we can't restrict it to be unique in the GithubApp CRD.
+
 
 #### 1. Using a Kubernetes Secret
 - **Configuration:**

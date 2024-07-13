@@ -1,0 +1,9 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: GithubAppPrivateKey
+metadata:
+  name: githubapp-unique-key-constraint
+spec:
+  match:
+    kinds:
+      - apiGroups: ["githubapp.samir.io"]
+        kinds: ["GithubApp"]

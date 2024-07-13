@@ -1,0 +1,22 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: githubappprivatekey
+spec:
+  crd:
+    spec:
+      names:
+        kind: GithubAppPrivateKey
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package githubappsecrets
+
+        violation[{"msg": msg}] {
+          target_keys := {"privateKeySecret", "googlePrivateKeySecret", "vaultPrivateKey"}
+          provided_keys := {key | _ = input.review.object.spec[key]}
+          intersection := target_keys & provided_keys
+          count(intersection) != 1
+          invalid := provided_keys - target_keys
+          msg := "Exactly one of privateKeySecret, googlePrivateKeySecret or vaultPrivateKey are allowed"
+        }
