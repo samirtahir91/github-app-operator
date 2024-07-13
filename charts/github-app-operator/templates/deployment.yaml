@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "github-app-operator.fullname" . }}-controller-manager
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: github-app-operator
+    app.kubernetes.io/part-of: github-app-operator
+    control-plane: controller-manager
+  {{- include "github-app-operator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.controllerManager.replicas }}
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+    {{- include "github-app-operator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+      {{- include "github-app-operator.selectorLabels" . | nindent 8 }}
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+    spec:
+      containers:
+      - args: {{- toYaml .Values.controllerManager.manager.args | nindent 8 }}
+        command:
+        - /manager
+        env:
+        - name: CHECK_INTERVAL
+          value: {{ quote .Values.controllerManager.manager.env.checkInterval }}
+        - name: EXPIRY_THRESHOLD
+          value: {{ quote .Values.controllerManager.manager.env.expiryThreshold }}
+        - name: DEBUG_LOG
+          value: {{ quote .Values.controllerManager.manager.env.debugLog }}
+        - name: VAULT_ROLE
+          value: {{ quote .Values.controllerManager.manager.env.vaultRole }}
+        - name: VAULT_ROLE_AUDIENCE
+          value: {{ quote .Values.controllerManager.manager.env.vaultRoleAudience }}
+        - name: VAULT_ADDR
+          value: {{ quote .Values.controllerManager.manager.env.vaultAddr }}
+        - name: GITHUB_PROXY
+          value: {{ quote .Values.controllerManager.manager.env.githubProxy }}
+        - name: VAULT_NAMESPACE
+          value: {{ quote .Values.controllerManager.manager.env.vaultNamespace }}
+        - name: VAULT_PROXY_ADDR
+          value: {{ quote .Values.controllerManager.manager.env.vaultProxyAddr }}
+        - name: ENABLE_WEBHOOKS
+          value: {{ quote .Values.controllerManager.manager.env.enableWebhooks }}
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: {{ quote .Values.kubernetesClusterDomain }}
+        image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag
+          | default .Chart.AppVersion }}
+        imagePullPolicy: {{ .Values.controllerManager.manager.imagePullPolicy }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources: {{- toYaml .Values.controllerManager.manager.resources | nindent 10
+          }}
+        securityContext: {{- toYaml .Values.controllerManager.manager.containerSecurityContext
+          | nindent 10 }}
+        volumeMounts:
+        {{- if .Values.webhook.enabled -}}
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+        {{- end }}
+        - mountPath: /var/run/github-app-secrets
+          name: github-app-secrets
+      - args: {{- toYaml .Values.controllerManager.kubeRbacProxy.args | nindent 8 }}
+        env:
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: {{ quote .Values.kubernetesClusterDomain }}
+        image: {{ .Values.controllerManager.kubeRbacProxy.image.repository }}:{{ .Values.controllerManager.kubeRbacProxy.image.tag
+          | default .Chart.AppVersion }}
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources: {{- toYaml .Values.controllerManager.kubeRbacProxy.resources | nindent
+          10 }}
+        securityContext: {{- toYaml .Values.controllerManager.kubeRbacProxy.containerSecurityContext
+          | nindent 10 }}
+      securityContext: {{- toYaml .Values.controllerManager.podSecurityContext | nindent
+        8 }}
+      serviceAccountName: {{ include "github-app-operator.fullname" . }}-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      {{- if .Values.webhook.enabled -}}
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
+      {{- end }}
+      - emptyDir: {}
+        name: github-app-secrets

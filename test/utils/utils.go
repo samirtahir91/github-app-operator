@@ -21,6 +21,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
+
 	//lint:ignore ST1001 this is boilerplate code from kubebuilder
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 )
@@ -30,7 +32,7 @@ const (
 	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
 		"releases/download/%s/bundle.yaml"
 
-	certmanagerVersion = "v1.5.3"
+	certmanagerVersion = "v1.12.2"
 	certmanagerURLTmpl = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
 )
 
@@ -99,8 +101,46 @@ func InstallCertManager() error {
 		"--timeout", "5m",
 	)
 
-	_, err := Run(cmd)
-	return err
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+
+	// check caBundle
+	retryInterval := time.Second * 5
+	retryTimeout := time.Minute * 2
+	start := time.Now()
+
+	for time.Since(start) < retryTimeout {
+		cmd := exec.Command("kubectl", "get", "mutatingwebhookconfiguration", "cert-manager-webhook",
+			"-o", "jsonpath={.webhooks[*].clientConfig.caBundle}")
+		output, err := Run(cmd)
+		if err == nil && strings.TrimSpace(string(output)) != "" {
+			return nil
+		}
+
+		time.Sleep(retryInterval)
+	}
+	return fmt.Errorf("failed to get caBundle from MutatingWebhookConfiguration")
+}
+
+// UninstallVault uninstalls the Vault
+func UninstallVault() {
+	installScript := "./scripts/delete_vault.sh"
+	cmd := exec.Command("/bin/sh", "-c", installScript)
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+}
+
+// Install and setup Vault with github app private key
+func InstallAndSetupVault() error {
+	installScript := "./scripts/install_and_setup_vault_k8s.sh"
+	cmd := exec.Command("/bin/sh", "-c", installScript)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // LoadImageToKindCluster loads a local docker image to the kind cluster

@@ -8,7 +8,8 @@ helm repo add hashicorp https://helm.releases.hashicorp.com
 helm repo update
 
 # install vault with single node
-helm install vault hashicorp/vault --values helm-vault-raft-values.yml
+helm install vault hashicorp/vault \
+  --set server.dataStorage.enabled=false
 kubectl get pods
 
 # wait for vault to run
