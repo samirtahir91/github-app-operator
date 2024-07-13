@@ -187,6 +187,12 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "GithubApp")
 		os.Exit(1)
 	}
+	if os.Getenv("ENABLE_WEBHOOKS") == "true" {
+		if err = (&githubappv1.GithubApp{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "GithubApp")
+			os.Exit(1)
+		}
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
