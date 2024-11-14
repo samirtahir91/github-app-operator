@@ -1,0 +1,26 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-githubapp-samir-io-v1-githubapp
+  failurePolicy: Fail
+  name: vgithubapp.kb.io
+  rules:
+  - apiGroups:
+    - githubapp.samir.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - githubapps
+  sideEffects: None

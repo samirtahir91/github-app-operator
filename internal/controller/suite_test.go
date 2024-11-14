@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http" // http client
 	"os"
+
 	//"os/exec"
 	"path/filepath"
 	"runtime"
@@ -37,6 +38,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	test_helpers "github-app-operator/internal/controller/test_helpers"
+
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -155,7 +157,7 @@ var _ = BeforeSuite(func() {
 		// Verify if reconciliation was successful
 		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Token request failed: %v", err))
 	} else {
-		// Set a dummy token just to satisfy the SetupWithManager fucntion
+		// Set a dummy token just to satisfy the SetupWithManager function
 		// which will read the token and get the service account and and namespace.
 		// This token is for 'default' service account in the 'namespace0' namespace
 		token = `eyJhbGciOiJSUzI1NiIsImtpZCI6Ik5ieTJyVUk2ZzlQZ0k0anNGclRvTkJDM0FsUjJjLUJDVUhzNU9mVG9lcEUifQ.

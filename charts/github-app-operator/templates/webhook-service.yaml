@@ -1,0 +1,15 @@
+{{- if .Values.webhook.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "github-app-operator.fullname" . }}-webhook-service
+  labels:
+  {{- include "github-app-operator.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.webhook.webhookService.type }}
+  selector:
+    control-plane: controller-manager
+  {{- include "github-app-operator.selectorLabels" . | nindent 4 }}
+  ports:
+	{{- .Values.webhook.webhookService.ports | toYaml | nindent 2 }}
+{{- end }}

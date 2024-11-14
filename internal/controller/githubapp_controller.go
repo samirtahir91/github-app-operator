@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/golang-jwt/jwt/v4"
 	"math/rand"
 	"net/http"
 	"os"
@@ -29,7 +28,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
+
 	githubappv1 "github-app-operator/api/v1"
+
 	vault "github.com/hashicorp/vault/api" // vault client
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

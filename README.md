@@ -18,7 +18,7 @@ The `github-app-operator` is a Kubernetes operator that generates an access toke
 
 ### Private Key Retrieval Options
 > [!TIP]
-> There is a sample constraint template and constraint for Gatekeeper to restrict the type of private key source in the `gatekeeper-policy` folder since we can't restrict it to be unique in the GithubApp CRD.
+> There is a sample constraint template and constraint for Gatekeeper to restrict the type of private key source in the `gatekeeper-policy` folder if you dont want to use the validating webhook built-in.
 
 
 #### 1. Using a Kubernetes Secret
@@ -216,8 +216,17 @@ EOF
 
 ### To deploy with Helm using public Docker image
 A helm chart is generated using `make helm` when a new tag is pushed, i.e a release.
-You can pull the helm chart from this repos packages
-- See the [packages page](https://github.com/samirtahir91/github-app-operator/pkgs/container/github-app-operator%2Fhelm-charts%2Fgithub-app-operator)
+This chart will have webhooks and cert manager enabled.
+If you want to install without webhooks and cert manager required use the local manual chart.
+```sh
+cd charts/github-app-operator
+helm upgrade --install -n github-app-operator-system <release_name> . --create-namespace \
+  --set webhook.enabled=false \
+  --set controllerManager.manager.env.enableWebhooks="false"
+```
+
+You can pull the automatically built helm chart from this repos packages
+- See the [packages](https://github.com/samirtahir91/github-app-operator/pkgs/container/github-app-operator%2Fhelm-charts%2Fgithub-app-operator)
 - Pull with helm:
   - ```sh
     helm pull oci://ghcr.io/samirtahir91/github-app-operator/helm-charts/github-app-operator --version <TAG>
@@ -282,6 +291,7 @@ export GH_INSTALL_ID=<YOUR GITHUB APP INSTALL ID>
 export "VAULT_ADDR=http://localhost:8200" # this can be local k8s Vault or some other Vault
 export "VAULT_ROLE_AUDIENCE=githubapp"
 export "VAULT_ROLE=githubapp"
+export "ENABLE_WEBHOOKS=false"
 ```
 - This uses Vault, you can spin up a simple Vault server using this script.
 - It will use Helm and configure the Vault server with a test private key as per the env var ${GITHUB_PRIVATE_KEY}.
@@ -305,6 +315,7 @@ export GITHUB_PRIVATE_KEY=<YOUR_BASE64_ENCODED_GH_APP_PRIVATE_KEY>
 export GH_APP_ID=<YOUR GITHUB APP ID>
 export GH_INSTALL_ID=<YOUR GITHUB APP INSTALL ID>
 USE_EXISTING_CLUSTER=false make test
+USE_EXISTING_CLUSTER=false make test-webhooks
 ```
 
 **Generate coverage html report:**

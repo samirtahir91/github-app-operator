@@ -34,11 +34,18 @@ var _ = Describe("controller", Ordered, func() {
 		By("installing prometheus operator")
 		Expect(utils.InstallPrometheusOperator()).To(Succeed())
 
+		By("install and setup Vault")
+		Expect(utils.InstallAndSetupVault()).To(Succeed())
+
 		By("installing the cert-manager")
 		Expect(utils.InstallCertManager()).To(Succeed())
 
 		By("creating manager namespace")
 		cmd := exec.Command("kubectl", "create", "ns", namespace)
+		_, _ = utils.Run(cmd)
+
+		By("removing operator crds")
+		cmd = exec.Command("make", "uninstall")
 		_, _ = utils.Run(cmd)
 	})
 
@@ -46,11 +53,18 @@ var _ = Describe("controller", Ordered, func() {
 		By("uninstalling the Prometheus manager bundle")
 		utils.UninstallPrometheusOperator()
 
+		By("removing manager namespace")
+		cmd := exec.Command("kubectl", "delete", "ns", namespace)
+		_, _ = utils.Run(cmd)
+
 		By("uninstalling the cert-manager bundle")
 		utils.UninstallCertManager()
 
-		By("removing manager namespace")
-		cmd := exec.Command("kubectl", "delete", "ns", namespace)
+		By("uninstalling Vault")
+		utils.UninstallVault()
+
+		By("removing operator crds")
+		cmd = exec.Command("make", "uninstall")
 		_, _ = utils.Run(cmd)
 	})
 
@@ -60,16 +74,23 @@ var _ = Describe("controller", Ordered, func() {
 			var err error
 
 			// projectimage stores the name of the image used in the example
-			var projectimage = "example.com/github-app-operator:v0.0.1"
+			var projectimage = "samirtahir91076/github-app-operator:e2e-test"
 
-			By("building the manager(Operator) image")
-			cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectimage))
+			By("setting the terminal to use the docker daemon inside minikube")
+			cmd := exec.Command("/bin/sh", "-c", "eval $(minikube docker-env)")
 			_, err = utils.Run(cmd)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
+			By("building the manager(Operator) image")
+			cmd = exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectimage))
+			_, err = utils.Run(cmd)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+			/* Using minikube for now
 			By("loading the the manager(Operator) image on Kind")
 			err = utils.LoadImageToKindClusterWithName(projectimage)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			*/
 
 			By("installing CRDs")
 			cmd = exec.Command("make", "install")

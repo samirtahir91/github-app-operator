@@ -71,7 +71,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: github-app-operator:latest
+        image: controller
         imagePullPolicy: Never
         name: manager
         securityContext:
@@ -122,6 +122,9 @@ spec:
           # Optional proxy for Vault
           - name: VAULT_PROXY_ADDR
             value: ""
+          # Optional enable webhook set to "true"
+          - name: ENABLE_WEBHOOKS
+            value: "true"
           # optional vault env vars - https://pkg.go.dev/github.com/hashicorp/vault/api#pkg-constants
         # volume to cache private keys
         volumeMounts:
