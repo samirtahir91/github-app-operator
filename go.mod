@@ -4,7 +4,7 @@ go 1.22.8
 
 require (
 	cloud.google.com/go/secretmanager v1.13.4
-	github.com/golang-jwt/jwt/v4 v4.5.1
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/hashicorp/vault/api v1.13.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.6.0
 	github.com/onsi/ginkgo/v2 v2.17.1
