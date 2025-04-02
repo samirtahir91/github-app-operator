@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	githubappv1 "github-app-operator/api/v1"
 	"net"
 	"path/filepath"
 	"runtime"
@@ -87,7 +88,7 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	scheme := apimachineryruntime.NewScheme()
-	err = AddToScheme(scheme)
+	err = githubappv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = admissionv1.AddToScheme(scheme)
@@ -113,7 +114,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&GithubApp{}).SetupWebhookWithManager(mgr)
+	err = SetupGithubAppWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:webhook

@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	v2 "github-app-operator/api/v1"
 	"os"
 	"strconv"
 
@@ -54,19 +55,19 @@ func init() {
 
 var _ = Describe("GithubApp Webhook", func() {
 	var (
-		obj                   *GithubApp
+		obj                   *v2.GithubApp
 		validator             GithubAppCustomValidator
-		rolloutDeploymentSpec *RolloutDeploymentSpec
-		vaultPrivateKeySpec   *VaultPrivateKeySpec
+		rolloutDeploymentSpec *v2.RolloutDeploymentSpec
+		vaultPrivateKeySpec   *v2.VaultPrivateKeySpec
 		gcpPrivateKeySecret   string
 	)
 	BeforeEach(func() {
-		obj = &GithubApp{
+		obj = &v2.GithubApp{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gh-app-webhook-test",
 				Namespace: "default",
 			},
-			Spec: GithubAppSpec{
+			Spec: v2.GithubAppSpec{
 				AppId:               appId,
 				InstallId:           installId,
 				PrivateKeySecret:    privateKeySecret,

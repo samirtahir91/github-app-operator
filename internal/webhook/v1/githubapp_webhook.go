@@ -19,6 +19,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	githubappv1 "github-app-operator/api/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -30,10 +31,10 @@ import (
 // log is for logging in this package.
 var githubapplog = logf.Log.WithName("githubapp-resource")
 
-// SetupWebhookWithManager will set up the manager to manage the webhooks
-func (r *GithubApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+// SetupGithubAppWebhookWithManager will set up the manager to manage the webhooks
+func SetupGithubAppWebhookWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewWebhookManagedBy(mgr).For(&githubappv1.GithubApp{}).
+		WithValidator(&GithubAppCustomValidator{}).
 		Complete()
 }
 
@@ -52,7 +53,7 @@ var _ webhook.CustomValidator = &GithubAppCustomValidator{}
 // ValidateCreate implements webhook.CustomValidator  so a webhook will be registered for the type
 func (r *GithubAppCustomValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 
-	ghApp, ok := obj.(*GithubApp)
+	ghApp, ok := obj.(*githubappv1.GithubApp)
 	if !ok {
 		return nil, fmt.Errorf("expected a GithubApp object but got %T", obj)
 	}
@@ -71,7 +72,7 @@ func (r *GithubAppCustomValidator) ValidateCreate(_ context.Context, obj runtime
 func (r *GithubAppCustomValidator) ValidateUpdate(_ context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
 
 	// Ensure only one of googlePrivateKeySecret, privateKeySecret, or vaultPrivateKey is specified
-	ghApp, ok := newObj.(*GithubApp)
+	ghApp, ok := newObj.(*githubappv1.GithubApp)
 	if !ok {
 		return nil, fmt.Errorf("expected a GithubApp object but got %T", newObj)
 	}
@@ -88,7 +89,7 @@ func (r *GithubAppCustomValidator) ValidateUpdate(_ context.Context, _, newObj r
 // ValidateDelete implements webhook.CustomValidator  so a webhook will be registered for the type
 func (r *GithubAppCustomValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 
-	ghApp, ok := obj.(*GithubApp)
+	ghApp, ok := obj.(*githubappv1.GithubApp)
 	if !ok {
 		return nil, fmt.Errorf("expected a GithubApp object but got %T", obj)
 	}
@@ -99,7 +100,7 @@ func (r *GithubAppCustomValidator) ValidateDelete(_ context.Context, obj runtime
 }
 
 // validateGithubAppSpec validates that only one of googlePrivateKeySecret, privateKeySecret, or vaultPrivateKey is specified
-func validateGithubAppSpec(r *GithubApp) error {
+func validateGithubAppSpec(r *githubappv1.GithubApp) error {
 	count := 0
 
 	if r.Spec.GcpPrivateKeySecret != "" {
