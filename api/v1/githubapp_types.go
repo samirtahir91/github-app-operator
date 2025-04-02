@@ -39,8 +39,8 @@ type GithubAppStatus struct {
 	Error string `json:"error,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // GithubApp is the Schema for the githubapps API
 // +kubebuilder:printcolumn:name="App ID",type=string,JSONPath=`.spec.appId`
@@ -68,7 +68,7 @@ type VaultPrivateKeySpec struct {
 	SecretKey  string `json:"secretKey"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // GithubAppList contains a list of GithubApp
 type GithubAppList struct {

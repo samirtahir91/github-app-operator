@@ -3,15 +3,14 @@ kind: CustomResourceDefinition
 metadata:
   name: githubapps.githubapp.samir.io
   annotations:
-    {{- if .Values.webhook.enabled -}}
+    {{- if .Values.webhook.enabled }}
     cert-manager.io/inject-ca-from: '{{ .Release.Namespace }}/{{ include "github-app-operator.fullname"
       . }}-serving-cert'
     {{- end }}
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.4
   labels:
   {{- include "github-app-operator.labels" . | nindent 4 }}
 spec:
-  {{- if .Values.webhook.enabled -}}
   conversion:
     strategy: Webhook
     webhook:
@@ -22,7 +21,6 @@ spec:
           path: /convert
       conversionReviewVersions:
       - v1
-    {{- end }}
   group: githubapp.samir.io
   names:
     kind: GithubApp
