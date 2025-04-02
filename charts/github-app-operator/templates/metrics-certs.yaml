@@ -2,7 +2,7 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "github-app-operator.fullname" . }}-serving-cert
+  name: {{ include "github-app-operator.fullname" . }}-metrics-certs
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "2"
@@ -17,5 +17,5 @@ spec:
   issuerRef:
     kind: Issuer
     name: '{{ include "github-app-operator.fullname" . }}-selfsigned-issuer'
-  secretName: webhook-server-cert
+  secretName: metrics-server-cert
 {{- end }}

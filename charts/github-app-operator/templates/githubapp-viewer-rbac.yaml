@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "github-app-operator.fullname" . }}-githubapp-viewer-role
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: github-app-operator
+    app.kubernetes.io/part-of: github-app-operator
+  {{- include "github-app-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - githubapp.samir.io
+  resources:
+  - githubapps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - githubapp.samir.io
+  resources:
+  - githubapps/status
+  verbs:
+  - get

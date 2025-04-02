@@ -1,28 +1,29 @@
 name: Lint
 
-# Trigger the workflow on pull requests and direct pushes to any branch
 on:
   push:
   pull_request:
 
 jobs:
   lint:
-    name: golangci-lint and staticcheck
+    name: Run on Ubuntu
     runs-on: ubuntu-latest
     # Pull requests from the same repository won't trigger this checks as they were already triggered by the push
     if: (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
     steps:
+      - name: Clone the code
+        uses: actions/checkout@v4
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '~1.22'
-      - name: Clone the code
-        uses: actions/checkout@v4
+          go-version: '~1.23'
+
       - name: Run linter
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.54
-          args: --timeout=2m --fix
+          version: v1.61
+
       - name: Run staticcheck
         uses: dominikh/staticcheck-action@v1
         with:
