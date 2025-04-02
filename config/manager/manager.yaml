@@ -69,8 +69,10 @@ spec:
       containers:
       - command:
         - /manager
+        ports: [ ]
         args:
         - --leader-elect
+        - --health-probe-bind-address=:8081
         image: controller
         imagePullPolicy: Never
         name: manager

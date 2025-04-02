@@ -198,11 +198,11 @@ HELMIFY ?= $(LOCALBIN)/helmify
 .PHONY: helmify
 helmify: $(HELMIFY) ## Download helmify locally if necessary.
 $(HELMIFY): $(LOCALBIN)
-	test -s $(LOCALBIN)/helmify || GOBIN=$(LOCALBIN) go install github.com/arttor/helmify/cmd/helmify@v0.4.14
+	test -s $(LOCALBIN)/helmify || GOBIN=$(LOCALBIN) go install github.com/arttor/helmify/cmd/helmify@v0.4.17
 
 helm: manifests kustomize helmify
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | $(HELMIFY) -cert-manager-as-subchart charts/github-app-operator
+	$(KUSTOMIZE) build config/default | $(HELMIFY) -cert-manager-as-subchart -add-webhook-option charts/github-app-operator
 ##################################
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
