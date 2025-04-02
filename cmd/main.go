@@ -24,9 +24,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"strconv"
+
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
-	"strconv"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -47,7 +48,7 @@ import (
 	githubappv1 "github-app-operator/api/v1"
 	"github-app-operator/internal/controller"
 	webhookgithubappv1 "github-app-operator/internal/webhook/v1"
-	//+kubebuilder:scaffold:imports
+	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -59,7 +60,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(githubappv1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
+	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
@@ -278,7 +279,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	//+kubebuilder:scaffold:builder
+	// +kubebuilder:scaffold:builder
 
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")

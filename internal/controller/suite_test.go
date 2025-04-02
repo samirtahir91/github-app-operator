@@ -22,7 +22,6 @@ import (
 	"net/http" // http client
 	"os"
 
-	//"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -47,7 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	githubappv1 "github-app-operator/api/v1"
-	//+kubebuilder:scaffold:imports
+	// +kubebuilder:scaffold:imports
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -106,7 +105,7 @@ var _ = BeforeSuite(func() {
 	err = githubappv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	//+kubebuilder:scaffold:scheme
+	// +kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
