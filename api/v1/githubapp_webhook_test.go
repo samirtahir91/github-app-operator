@@ -55,7 +55,7 @@ func init() {
 var _ = Describe("GithubApp Webhook", func() {
 	var (
 		obj                   *GithubApp
-		validator             GithubApp
+		validator             GithubAppCustomValidator
 		rolloutDeploymentSpec *RolloutDeploymentSpec
 		vaultPrivateKeySpec   *VaultPrivateKeySpec
 		gcpPrivateKeySecret   string
@@ -77,7 +77,7 @@ var _ = Describe("GithubApp Webhook", func() {
 			},
 		}
 
-		validator = GithubApp{}
+		validator = GithubAppCustomValidator{}
 
 		Expect(obj).NotTo(BeNil(), "Expected obj to be initialized")
 	})
@@ -89,7 +89,7 @@ var _ = Describe("GithubApp Webhook", func() {
 	Context("When creating GithubApp under Validating Webhook", func() {
 		It("Should deny creation if more than one of googlePrivateKeySecret, privateKeySecret, or vaultPrivateKey is specified", func() {
 			obj.Spec.GcpPrivateKeySecret = "this-should-fail"
-			Expect(validator.ValidateCreate()).Error().To(
+			Expect(validator.ValidateCreate(ctx, obj)).Error().To(
 				MatchError(ContainSubstring("exactly one of googlePrivateKeySecret, privateKeySecret, or vaultPrivateKey must be specified")),
 				"Private key source validation to fail for more than one option")
 		})

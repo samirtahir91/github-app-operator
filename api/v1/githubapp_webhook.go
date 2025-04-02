@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,7 +30,7 @@ import (
 // log is for logging in this package.
 var githubapplog = logf.Log.WithName("githubapp-resource")
 
-// SetupWebhookWithManager will setup the manager to manage the webhooks
+// SetupWebhookWithManager will set up the manager to manage the webhooks
 func (r *GithubApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
@@ -43,14 +44,22 @@ func (r *GithubApp) SetupWebhookWithManager(mgr ctrl.Manager) error {
 // Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
 // +kubebuilder:webhook:path=/validate-githubapp-samir-io-v1-githubapp,mutating=false,failurePolicy=fail,sideEffects=None,groups=githubapp.samir.io,resources=githubapps,verbs=create;update,versions=v1,name=vgithubapp.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &GithubApp{}
+type GithubAppCustomValidator struct {
+}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *GithubApp) ValidateCreate() (admission.Warnings, error) {
-	githubapplog.Info("validate create", "name", r.Name)
+var _ webhook.CustomValidator = &GithubAppCustomValidator{}
+
+// ValidateCreate implements webhook.CustomValidator  so a webhook will be registered for the type
+func (r *GithubAppCustomValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+
+	ghApp, ok := obj.(*GithubApp)
+	if !ok {
+		return nil, fmt.Errorf("expected a GithubApp object but got %T", obj)
+	}
+	githubapplog.Info("validate create", "name", ghApp.GetName())
 
 	// Ensure only one of googlePrivateKeySecret, privateKeySecret, or vaultPrivateKey is specified
-	err := validateGithubAppSpec(r)
+	err := validateGithubAppSpec(ghApp)
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +67,17 @@ func (r *GithubApp) ValidateCreate() (admission.Warnings, error) {
 	return nil, nil
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *GithubApp) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	githubapplog.Info("validate update", "name", r.Name)
+// ValidateUpdate implements webhook.CustomValidator  so a webhook will be registered for the type
+func (r *GithubAppCustomValidator) ValidateUpdate(_ context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
 
 	// Ensure only one of googlePrivateKeySecret, privateKeySecret, or vaultPrivateKey is specified
-	err := validateGithubAppSpec(r)
+	ghApp, ok := newObj.(*GithubApp)
+	if !ok {
+		return nil, fmt.Errorf("expected a GithubApp object but got %T", newObj)
+	}
+	githubapplog.Info("validate update", "name", ghApp.GetName())
+
+	err := validateGithubAppSpec(ghApp)
 	if err != nil {
 		return nil, err
 	}
@@ -71,11 +85,16 @@ func (r *GithubApp) ValidateUpdate(old runtime.Object) (admission.Warnings, erro
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *GithubApp) ValidateDelete() (admission.Warnings, error) {
-	githubapplog.Info("validate delete", "name", r.Name)
+// ValidateDelete implements webhook.CustomValidator  so a webhook will be registered for the type
+func (r *GithubAppCustomValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 
-	// TODO(user): fill in your validation logic upon object deletion.
+	ghApp, ok := obj.(*GithubApp)
+	if !ok {
+		return nil, fmt.Errorf("expected a GithubApp object but got %T", obj)
+	}
+
+	githubapplog.Info("Validation for GithubApp upon deletion", "name", ghApp.GetName())
+
 	return nil, nil
 }
 
