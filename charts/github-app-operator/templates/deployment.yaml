@@ -78,9 +78,11 @@ spec:
         volumeMounts:
         - mountPath: /var/run/github-app-secrets
           name: github-app-secrets
+        {{- if .Values.webhook.enabled }}
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: webhook-certs
           readOnly: true
+        {{- end }}
       securityContext: {{- toYaml .Values.controllerManager.podSecurityContext | nindent
         8 }}
       serviceAccountName: {{ include "github-app-operator.fullname" . }}-controller-manager
