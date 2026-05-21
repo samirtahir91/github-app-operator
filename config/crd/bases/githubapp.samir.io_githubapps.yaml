@@ -59,6 +59,8 @@ spec:
                 type: string
               appId:
                 type: integer
+              githubHost:
+                type: string
               googlePrivateKeySecret:
                 type: string
               installId:

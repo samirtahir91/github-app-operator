@@ -13,7 +13,7 @@ The `github-app-operator` is a Kubernetes operator that generates an access toke
 
 ### Key Features
 - Uses a custom resource `GithubApp` in your destination namespace.
-- Reads `appId`, `installId`, and either `privateKeySecret`, `googlePrivateKeySecret` or `vaultPrivateKey` defined in a `GithubApp` resource to request an access token from GitHub.
+- Reads `appId`, `installId`, optional `githubHost`, and either `privateKeySecret`, `googlePrivateKeySecret` or `vaultPrivateKey` defined in a `GithubApp` resource to request an access token from GitHub.
 - Stores the access token in a secret specified by `accessTokenSecret`.
 
 ### Private Key Retrieval Options
@@ -102,6 +102,7 @@ metadata:
 spec:
   appId: <your-github-app-id>
   installId: <your-github-app-installation-id>
+  githubHost: <your-github-hostname> # Optional, defaults to github.com
   privateKeySecret: <your-private-key-secret-name> # If using Kubernetes secret
   googlePrivateKeySecret: <your-google-secret-path> # If using GCP Secret Manager
   vaultPrivateKey: # If using Hashicorp Vault

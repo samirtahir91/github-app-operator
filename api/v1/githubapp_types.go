@@ -24,6 +24,7 @@ import (
 type GithubAppSpec struct {
 	AppId               int                    `json:"appId"`
 	InstallId           int                    `json:"installId"`
+	GithubHost          string                 `json:"githubHost,omitempty"`
 	PrivateKeySecret    string                 `json:"privateKeySecret,omitempty"`
 	RolloutDeployment   *RolloutDeploymentSpec `json:"rolloutDeployment,omitempty"`
 	VaultPrivateKey     *VaultPrivateKeySpec   `json:"vaultPrivateKey,omitempty"`
