@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/samirtahir91/github-app-operator/compare/v1.12.1...v1.13.0) (2026-05-21)
+
+
+### Features
+
+* Add support for custom github hosts ([#80](https://github.com/samirtahir91/github-app-operator/issues/80)) ([50300a3](https://github.com/samirtahir91/github-app-operator/commit/50300a32c22277db967bc342b4e57d5e3b884963))
+
 ## [1.12.1](https://github.com/samirtahir91/github-app-operator/compare/v1.12.0...v1.12.1) (2025-04-04)
 
 
