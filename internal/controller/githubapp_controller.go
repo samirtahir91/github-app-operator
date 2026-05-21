@@ -22,9 +22,11 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -94,7 +96,10 @@ var (
 )
 
 const (
-	gitUsername = "not-used"
+	gitUsername            = "not-used"
+	defaultGitHubHost      = "github.com"
+	defaultGitHubAPIHost   = "api.github.com"
+	defaultGitHubAPIScheme = "https"
 )
 
 // +kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -240,6 +245,10 @@ func (r *GithubAppReconciler) updateStatusWithError(ctx context.Context, githubA
 func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 
 	l := log.FromContext(ctx)
+	githubHost, err := resolveGitHubHost(githubApp.Spec.GithubHost)
+	if err != nil {
+		return err
+	}
 
 	// Get the expiresAt status field
 	expiresAt := githubApp.Status.ExpiresAt.Time
@@ -276,7 +285,7 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	username := string(accessTokenSecret.Data["username"])
 
 	// Check if the access token is a valid github token via gh api auth
-	if !r.isAccessTokenValid(ctx, username, accessToken) {
+	if !r.isAccessTokenValid(ctx, username, accessToken, githubHost) {
 		// If accessToken is invalid, generate or update access token
 		return r.createOrUpdateAccessToken(ctx, githubApp)
 	}
@@ -295,8 +304,39 @@ func (r *GithubAppReconciler) checkExpiryAndUpdateAccessToken(ctx context.Contex
 	return nil
 }
 
+// Function to resolve GitHub host from spec and apply default when omitted.
+func resolveGitHubHost(githubHost string) (string, error) {
+	host := strings.TrimSpace(githubHost)
+	if host == "" {
+		return defaultGitHubHost, nil
+	}
+
+	// Accept hostnames with or without a URL scheme.
+	if !strings.Contains(host, "://") {
+		host = fmt.Sprintf("%s://%s", defaultGitHubAPIScheme, host)
+	}
+
+	parsedURL, err := url.Parse(host)
+	if err != nil || parsedURL.Host == "" {
+		return "", fmt.Errorf("invalid githubHost %q: must be a valid hostname", githubHost)
+	}
+	if parsedURL.Path != "" && parsedURL.Path != "/" {
+		return "", fmt.Errorf("invalid githubHost %q: must not include a URL path", githubHost)
+	}
+
+	return parsedURL.Host, nil
+}
+
+// Function to return the REST API base URL from a GitHub host.
+func githubAPIBaseURL(githubHost string) string {
+	if githubHost == defaultGitHubHost || githubHost == defaultGitHubAPIHost {
+		return fmt.Sprintf("%s://%s", defaultGitHubAPIScheme, defaultGitHubAPIHost)
+	}
+	return fmt.Sprintf("%s://%s/api/v3", defaultGitHubAPIScheme, githubHost)
+}
+
 // Function to check if the access token is valid by making a request to GitHub API
-func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username string, accessToken string) bool {
+func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username string, accessToken string, githubHost string) bool {
 	l := log.FromContext(ctx)
 
 	// If username has been modified, renew the secret
@@ -308,10 +348,10 @@ func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username s
 	}
 
 	// GitHub API endpoint for rate limit information
-	url := "https://api.github.com/rate_limit"
+	endpointURL := fmt.Sprintf("%s/rate_limit", githubAPIBaseURL(githubHost))
 
 	// Create a new request
-	ghReq, err := http.NewRequest("GET", url, nil)
+	ghReq, err := http.NewRequest("GET", endpointURL, nil)
 	if err != nil {
 		l.Error(err, "error creating request to GitHub API for rate limit")
 		return false
@@ -663,6 +703,10 @@ func (r *GithubAppReconciler) updateAccessTokenSecret(ctx context.Context, exist
 // Function to get a new access token and create or update a kubernetes secret with it
 func (r *GithubAppReconciler) createOrUpdateAccessToken(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
+	githubHost, err := resolveGitHubHost(githubApp.Spec.GithubHost)
+	if err != nil {
+		return err
+	}
 
 	// Try to get private key from local file system
 	privateKey, privateKeyPath, privateKeyErr := r.getPrivateKey(ctx, githubApp)
@@ -676,6 +720,7 @@ func (r *GithubAppReconciler) createOrUpdateAccessToken(ctx context.Context, git
 		githubApp.Spec.AppId,
 		githubApp.Spec.InstallId,
 		privateKey,
+		githubHost,
 	)
 	// if GitHub API request for access token fails
 	if err != nil {
@@ -753,7 +798,7 @@ func updateGithubAppStatusWithRetry(ctx context.Context, r *GithubAppReconciler,
 }
 
 // Function to generate new access token for gh app
-func (r *GithubAppReconciler) generateAccessToken(ctx context.Context, appID int, installationID int, privateKey []byte) (string, metav1.Time, error) {
+func (r *GithubAppReconciler) generateAccessToken(ctx context.Context, appID int, installationID int, privateKey []byte, githubHost string) (string, metav1.Time, error) {
 
 	l := log.FromContext(ctx)
 
@@ -777,8 +822,8 @@ func (r *GithubAppReconciler) generateAccessToken(ctx context.Context, appID int
 	}
 
 	// Use HTTP client and perform request to get installation token
-	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installationID)
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, nil)
+	endpointURL := fmt.Sprintf("%s/app/installations/%d/access_tokens", githubAPIBaseURL(githubHost), installationID)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, endpointURL, nil)
 	if err != nil {
 		return "", metav1.Time{}, fmt.Errorf("failed to create HTTP request: %v", err)
 	}
