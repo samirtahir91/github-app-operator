@@ -42,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetes "k8s.io/client-go/kubernetes" // k8s client
+	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
@@ -100,6 +101,7 @@ const (
 	defaultGitHubHost      = "github.com"
 	defaultGitHubAPIHost   = "api.github.com"
 	defaultGitHubAPIScheme = "https"
+	configSyncSecretLabel  = "configsync.gke.io/secret"
 )
 
 // +kubebuilder:rbac:groups=githubapp.samir.io,resources=githubapps,verbs=get;list;watch;create;update;patch;delete
@@ -894,62 +896,208 @@ func (r *GithubAppReconciler) generateAccessToken(ctx context.Context, appID int
 
 // Function to upgrade deployments as per `spec.rolloutDeployment.labels` in GithubApp (in the same namespace)
 func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *githubappv1.GithubApp) error {
-	l := log.FromContext(ctx)
-
 	// Check if rolloutDeployment field is defined
 	if githubApp.Spec.RolloutDeployment == nil || len(githubApp.Spec.RolloutDeployment.Labels) == 0 {
 		// No action needed if rolloutDeployment is not defined or no labels are specified
 		return nil
 	}
 
-	// Loop through each label specified in rolloutDeployment.labels and update deployments matching each label
 	for key, value := range githubApp.Spec.RolloutDeployment.Labels {
-		// Create a list options with label selector
-		listOptions := &client.ListOptions{
-			Namespace:     githubApp.Namespace,
-			LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
-		}
-
-		// List Deployments with the label selector
-		deploymentList := &appsv1.DeploymentList{}
-		if err := r.List(ctx, deploymentList, listOptions); err != nil {
-			return fmt.Errorf("failed to list Deployments with label %s=%s: %v", key, value, err)
-		}
-
-		// Trigger rolling upgrade for matching deployments
-		for _, deployment := range deploymentList.Items {
-
-			// Add a timestamp label to trigger a rolling upgrade
-			deployment.Spec.Template.ObjectMeta.Labels["ghApplastUpdateTime"] = time.Now().Format("20060102150405")
-
-			// Patch the Deployment
-			if err := r.Update(ctx, &deployment); err != nil {
-				return fmt.Errorf(
-					"failed to upgrade deployment %s/%s: %v",
-					deployment.Namespace,
-					deployment.Name,
-					err,
-				)
-			}
-
-			// Log deployment upgrade
-			l.Info(
-				"Deployment rolling upgrade triggered",
-				"Name",
-				deployment.Name,
-				"Namespace",
-				deployment.Namespace,
-			)
-			// Raise event
-			r.Recorder.Event(
-				githubApp,
-				"Normal",
-				"Updated",
-				fmt.Sprintf("Updated deployment %s/%s", deployment.Namespace, deployment.Name),
-			)
+		if err := r.rolloutDeploymentsForLabel(ctx, githubApp, key, value); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+func (r *GithubAppReconciler) rolloutDeploymentsForLabel(ctx context.Context, githubApp *githubappv1.GithubApp, key string, value string) error {
+	listOptions := &client.ListOptions{
+		Namespace:     githubApp.Namespace,
+		LabelSelector: labels.SelectorFromSet(map[string]string{key: value}),
+	}
+
+	deploymentList := &appsv1.DeploymentList{}
+	if err := r.List(ctx, deploymentList, listOptions); err != nil {
+		return fmt.Errorf("failed to list Deployments with label %s=%s: %v", key, value, err)
+	}
+
+	for _, deployment := range deploymentList.Items {
+		if err := r.rolloutDeploymentIfMatched(ctx, githubApp, deployment); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *GithubAppReconciler) rolloutDeploymentIfMatched(ctx context.Context, githubApp *githubappv1.GithubApp, deployment appsv1.Deployment) error {
+	l := log.FromContext(ctx)
+	deploymentSecret := getRootReconcilerSecretName(&deployment)
+	if deploymentSecret == "" {
+		l.Info(
+			"Skipping deployment rollout because no root reconciler secret could be determined",
+			"Name", deployment.Name,
+			"Namespace", deployment.Namespace,
+		)
+		return nil
+	}
+
+	if deploymentSecret != githubApp.Spec.AccessTokenSecret {
+		l.Info(
+			"Skipping deployment rollout because deployment secret does not match GithubApp access token secret",
+			"Name", deployment.Name,
+			"Namespace", deployment.Namespace,
+			"DeploymentSecret", deploymentSecret,
+			"GithubAppSecret", githubApp.Spec.AccessTokenSecret,
+		)
+		return nil
+	}
+
+	if err := r.restartDeploymentWithRetry(ctx, deployment.Namespace, deployment.Name, deploymentSecret); err != nil {
+		return err
+	}
+
+	l.Info(
+		"Deployment rolling upgrade triggered",
+		"Name", deployment.Name,
+		"Namespace", deployment.Namespace,
+		"AccessTokenSecret", deploymentSecret,
+	)
+	r.Recorder.Event(
+		githubApp,
+		"Normal",
+		"Updated",
+		fmt.Sprintf("Updated deployment %s/%s", deployment.Namespace, deployment.Name),
+	)
+	return nil
+}
+
+func (r *GithubAppReconciler) restartDeploymentWithRetry(ctx context.Context, namespace string, name string, deploymentSecret string) error {
+	rolloutStamp := time.Now().Format("20060102150405")
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		latest := &appsv1.Deployment{}
+		if err := r.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, latest); err != nil {
+			return err
+		}
+
+		if latest.Spec.Template.ObjectMeta.Labels == nil {
+			latest.Spec.Template.ObjectMeta.Labels = map[string]string{}
+		}
+
+		// Record the secret used by this root reconciler directly on the pod template labels.
+		latest.Spec.Template.ObjectMeta.Labels[configSyncSecretLabel] = deploymentSecret
+		// Add a timestamp label to trigger a rolling upgrade.
+		latest.Spec.Template.ObjectMeta.Labels["ghApplastUpdateTime"] = rolloutStamp
+
+		if err := r.Update(ctx, latest); err != nil {
+			return fmt.Errorf(
+				"failed to upgrade deployment %s/%s: %v",
+				latest.Namespace,
+				latest.Name,
+				err,
+			)
+		}
+		return nil
+	})
+}
+
+func getRootReconcilerSecretName(deployment *appsv1.Deployment) string {
+	if secret := secretFromTemplateLabel(deployment); secret != "" {
+		return secret
+	}
+
+	volumeSecretByName := buildVolumeSecretMap(deployment)
+	if secret := mountedSecretForVolumeName(deployment, volumeSecretByName, "git-creds"); secret != "" {
+		return secret
+	}
+
+	if secret := firstMountedSecret(deployment, volumeSecretByName); secret != "" {
+		return secret
+	}
+
+	return firstSecretVolume(deployment)
+}
+
+func secretFromTemplateLabel(deployment *appsv1.Deployment) string {
+	labels := deployment.Spec.Template.ObjectMeta.Labels
+	if labels == nil {
+		return ""
+	}
+	return strings.TrimSpace(labels[configSyncSecretLabel])
+}
+
+func buildVolumeSecretMap(deployment *appsv1.Deployment) map[string]string {
+	volumeSecretByName := map[string]string{}
+	for _, v := range deployment.Spec.Template.Spec.Volumes {
+		if v.Secret == nil || strings.TrimSpace(v.Secret.SecretName) == "" {
+			continue
+		}
+		volumeSecretByName[v.Name] = v.Secret.SecretName
+	}
+	return volumeSecretByName
+}
+
+func mountedSecretForVolumeName(deployment *appsv1.Deployment, volumeSecretByName map[string]string, volumeName string) string {
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		if secret := secretFromVolumeMounts(c.VolumeMounts, volumeSecretByName, volumeName); secret != "" {
+			return secret
+		}
+	}
+
+	for _, c := range deployment.Spec.Template.Spec.InitContainers {
+		if secret := secretFromVolumeMounts(c.VolumeMounts, volumeSecretByName, volumeName); secret != "" {
+			return secret
+		}
+	}
+	return ""
+}
+
+func firstMountedSecret(deployment *appsv1.Deployment, volumeSecretByName map[string]string) string {
+	for _, c := range deployment.Spec.Template.Spec.Containers {
+		if secret := firstSecretFromVolumeMounts(c.VolumeMounts, volumeSecretByName); secret != "" {
+			return secret
+		}
+	}
+
+	for _, c := range deployment.Spec.Template.Spec.InitContainers {
+		if secret := firstSecretFromVolumeMounts(c.VolumeMounts, volumeSecretByName); secret != "" {
+			return secret
+		}
+	}
+
+	return ""
+}
+
+func secretFromVolumeMounts(volumeMounts []corev1.VolumeMount, volumeSecretByName map[string]string, targetVolumeName string) string {
+	for _, vm := range volumeMounts {
+		if vm.Name != targetVolumeName {
+			continue
+		}
+		if secret := strings.TrimSpace(volumeSecretByName[vm.Name]); secret != "" {
+			return secret
+		}
+	}
+	return ""
+}
+
+func firstSecretFromVolumeMounts(volumeMounts []corev1.VolumeMount, volumeSecretByName map[string]string) string {
+	for _, vm := range volumeMounts {
+		if secret := strings.TrimSpace(volumeSecretByName[vm.Name]); secret != "" {
+			return secret
+		}
+	}
+	return ""
+}
+
+func firstSecretVolume(deployment *appsv1.Deployment) string {
+	for _, v := range deployment.Spec.Template.Spec.Volumes {
+		if v.Secret == nil {
+			continue
+		}
+		if secret := strings.TrimSpace(v.Secret.SecretName); secret != "" {
+			return secret
+		}
+	}
+	return ""
 }
 
 // Define a predicate function to filter create events for access token secrets
