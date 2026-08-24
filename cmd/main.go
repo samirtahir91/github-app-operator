@@ -19,12 +19,14 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"net/http" // http client
 	"net/url"
 	"os"
 	"path/filepath"
 
 	"strconv"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
@@ -61,6 +63,46 @@ func init() {
 
 	utilruntime.Must(githubappv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+}
+
+func parseTimeoutWithDefault(envVar string, defaultTimeout time.Duration) time.Duration {
+	timeout := defaultTimeout
+	timeoutEnv := os.Getenv(envVar)
+	if timeoutEnv == "" {
+		return timeout
+	}
+
+	parsedTimeout, err := time.ParseDuration(timeoutEnv)
+	if err != nil {
+		setupLog.Error(err, fmt.Sprintf("invalid %s, using default %s", envVar, defaultTimeout))
+		return timeout
+	}
+
+	return parsedTimeout
+}
+
+func newGitHubHTTPClient(proxyURL string, timeout time.Duration) (*http.Client, error) {
+	transport := http.DefaultTransport
+	if proxyURL != "" {
+		parsedURL, err := url.Parse(proxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("invalid GITHUB_PROXY: %w", err)
+		}
+
+		defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+		if !ok {
+			return nil, fmt.Errorf("unexpected default HTTP transport type")
+		}
+
+		transportWithProxy := defaultTransport.Clone()
+		transportWithProxy.Proxy = http.ProxyURL(parsedURL)
+		transport = transportWithProxy
+	}
+
+	return &http.Client{
+		Timeout:   timeout,
+		Transport: transport,
+	}, nil
 }
 
 func main() {
@@ -193,26 +235,13 @@ func main() {
 	}
 
 	// Non scaffolded code
-	// http client with optional proxy configured
-	var httpClient *http.Client
-	// Check for GITHUB_PROXY environment variable and add to http client
-	if gitProxy := os.Getenv("GITHUB_PROXY"); gitProxy != "" {
-		// If the environment variable is set, use its value in the http client
-		proxyURL, _ := url.Parse(gitProxy)
-
-		// Add proxy to transport
-		transport := &http.Transport{
-			Proxy: http.ProxyURL(proxyURL),
-		}
-
-		// Add transport to http client
-		httpClient = &http.Client{
-			Transport: transport,
-		}
-
-		// Else create default http client with on proxy
-	} else {
-		httpClient = &http.Client{}
+	// Configure HTTP client used for GitHub API calls.
+	gitProxy := os.Getenv("GITHUB_PROXY")
+	gitHubTimeout := parseTimeoutWithDefault("GITHUB_TIMEOUT", 30*time.Second)
+	httpClient, err := newGitHubHTTPClient(gitProxy, gitHubTimeout)
+	if err != nil {
+		setupLog.Error(err, "unable to configure GitHub HTTP client")
+		os.Exit(1)
 	}
 
 	// Initialise vault client with default config - uses default Vault env vars for config

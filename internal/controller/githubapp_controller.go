@@ -42,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetes "k8s.io/client-go/kubernetes" // k8s client
+	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
@@ -918,12 +919,25 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
 
 		// Trigger rolling upgrade for matching deployments
 		for _, deployment := range deploymentList.Items {
+			// Retry on resource version conflicts while patching deployment template labels.
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				latestDeployment := &appsv1.Deployment{}
+				if getErr := r.Get(
+					ctx,
+					client.ObjectKey{Namespace: deployment.Namespace, Name: deployment.Name},
+					latestDeployment,
+				); getErr != nil {
+					return getErr
+				}
 
-			// Add a timestamp label to trigger a rolling upgrade
-			deployment.Spec.Template.ObjectMeta.Labels["ghApplastUpdateTime"] = time.Now().Format("20060102150405")
+				if latestDeployment.Spec.Template.ObjectMeta.Labels == nil {
+					latestDeployment.Spec.Template.ObjectMeta.Labels = map[string]string{}
+				}
 
-			// Patch the Deployment
-			if err := r.Update(ctx, &deployment); err != nil {
+				latestDeployment.Spec.Template.ObjectMeta.Labels["ghApplastUpdateTime"] = time.Now().Format("20060102150405")
+				return r.Update(ctx, latestDeployment)
+			})
+			if err != nil {
 				return fmt.Errorf(
 					"failed to upgrade deployment %s/%s: %v",
 					deployment.Namespace,
