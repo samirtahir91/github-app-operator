@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.14.0](https://github.com/samirtahir91/github-app-operator/compare/v1.13.0...v1.14.0) (2026-08-25)
+
+
+### Features
+
+* exclude rollout labels ([998044e](https://github.com/samirtahir91/github-app-operator/commit/998044e23b9c95eb3e0ac2480fe3f2b8b5c199f3))
+* exclude rollout labels ([#84](https://github.com/samirtahir91/github-app-operator/issues/84)) ([998044e](https://github.com/samirtahir91/github-app-operator/commit/998044e23b9c95eb3e0ac2480fe3f2b8b5c199f3))
+
 ## [1.13.0](https://github.com/samirtahir91/github-app-operator/compare/v1.12.1...v1.13.0) (2026-05-21)
 
 
