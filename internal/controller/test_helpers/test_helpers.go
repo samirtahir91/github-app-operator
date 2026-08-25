@@ -257,6 +257,21 @@ func CreateDeploymentWithLabel(
 	labelKey string,
 	labelValue string,
 ) (*appsv1.Deployment, *corev1.Pod) {
+	return CreateDeploymentWithLabels(ctx, k8sClient, deploymentName, namespace, map[string]string{labelKey: labelValue})
+}
+
+/*
+Function to create a Deployment with a pod template and an arbitrary set of labels
+This will only work on a real cluster and NOT envtest since
+it requires the Deployment controller
+*/
+func CreateDeploymentWithLabels(
+	ctx context.Context,
+	k8sClient client.Client,
+	deploymentName string,
+	namespace string,
+	deploymentLabels map[string]string,
+) (*appsv1.Deployment, *corev1.Pod) {
 
 	// just create 1 replica
 	replicas := int32(1)
@@ -287,9 +302,7 @@ func CreateDeploymentWithLabel(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
 			Namespace: namespace,
-			Labels: map[string]string{
-				labelKey: labelValue,
-			},
+			Labels:    deploymentLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,

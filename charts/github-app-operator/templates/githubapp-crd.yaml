@@ -86,6 +86,10 @@ spec:
                 description: RolloutDeploymentSpec defines the specification for restarting
                   pods
                 properties:
+                  excludeLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
                   labels:
                     additionalProperties:
                       type: string

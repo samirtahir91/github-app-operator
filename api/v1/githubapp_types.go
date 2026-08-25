@@ -59,7 +59,8 @@ type GithubApp struct {
 
 // RolloutDeploymentSpec defines the specification for restarting pods
 type RolloutDeploymentSpec struct {
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels        map[string]string `json:"labels,omitempty"`
+	ExcludeLabels map[string]string `json:"excludeLabels,omitempty"`
 }
 
 // VaultPrivateKeySpec defines the spec for retrieving the private key from Vault

@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -43,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetes "k8s.io/client-go/kubernetes" // k8s client
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder" // Required for Watching
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -350,21 +352,20 @@ func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username s
 	// GitHub API endpoint for rate limit information
 	endpointURL := fmt.Sprintf("%s/rate_limit", githubAPIBaseURL(githubHost))
 
-	// Create a new request
-	ghReq, err := http.NewRequest("GET", endpointURL, nil)
-	if err != nil {
-		l.Error(err, "error creating request to GitHub API for rate limit")
-		return false
-	}
-
-	// Add the access token to the request header
-	ghReq.Header.Set("Authorization", "token "+accessToken)
-
-	// Get the rate limit from GitHub API
-	// Retry the request if any secondary rate limit error
-	// Return an error if max retries reached
+	// start
 	maxRetries := 5
 	for i := 0; i < maxRetries; i++ {
+		// use context so cancellation can be propagated to the request
+
+		// Create a new request
+		ghReq, err := http.NewRequestWithContext(ctx, "GET", endpointURL, nil)
+		if err != nil {
+			l.Error(err, "error creating request to GitHub API for rate limit")
+			return false
+		}
+		// Add the access token to the request header
+		ghReq.Header.Set("Authorization", "token "+accessToken)
+
 		// Send POST request for access token
 		resp, err := r.HTTPClient.Do(ghReq)
 
@@ -374,20 +375,18 @@ func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username s
 			return false
 		}
 
-		// Defer closing the response body and check for errors
-		defer func() {
-			err := resp.Body.Close()
-			if err != nil {
-				l.Error(err, "error closing response body for api rate lmiit call")
-			}
-		}()
+		// close response
+		closeBody := func() {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+		}
 
 		// Check if the response status code is 200 (OK)
 		if resp.StatusCode == http.StatusOK {
-
 			// Decode the response body into the struct
 			var result RateLimitInfo
 			err = json.NewDecoder(resp.Body).Decode(&result)
+			closeBody()
 			if err != nil {
 				l.Error(err, "error decoding response body for rate limit")
 				return false
@@ -409,8 +408,9 @@ func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username s
 
 		// If response failed due to 403 or 429 (GitHub rate limit errors)
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-			l.Info("Retrying GitHub API rate limit call")
+			closeBody()
 			// Try use retry-after header
+			l.Info("Retrying GitHub API rate limit call")
 			retryAfter, err := strconv.Atoi(resp.Header.Get("retry-after"))
 			if err != nil {
 				// default to 1s if header not present
@@ -424,18 +424,22 @@ func (r *GithubAppReconciler) isAccessTokenValid(ctx context.Context, username s
 			// Add jitter
 			waitTime += time.Duration(rand.Intn(500)) * time.Millisecond
 
-			time.Sleep(waitTime)
+			// respect context cancellation during sleep
+			select {
+			case <-ctx.Done():
+				return false
+			case <-time.After(waitTime):
+			}
 		} else {
-			// access token is invalid, renew it
-			l.Info(
-				"Access token is invalid, will renew",
-				"API Response code", resp.Status,
-			)
+			closeBody()
+			l.Info("Access token is invalid, will renew", "API Response code", resp.Status)
+
 			return false
+
 		}
 	}
 	// max retries reached return error
-	l.Error(nil, "error sending request to GitHub API for rate limit")
+	l.Error(nil, "error sending request to GitHub API for rate limit: max retries reached")
 	return false
 }
 
@@ -893,6 +897,7 @@ func (r *GithubAppReconciler) generateAccessToken(ctx context.Context, appID int
 }
 
 // Function to upgrade deployments as per `spec.rolloutDeployment.labels` in GithubApp (in the same namespace)
+// Deployments matching any label in `spec.rolloutDeployment.excludeLabels` are skipped to avoid conflicting rollout restarts
 func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *githubappv1.GithubApp) error {
 	l := log.FromContext(ctx)
 
@@ -901,6 +906,8 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
 		// No action needed if rolloutDeployment is not defined or no labels are specified
 		return nil
 	}
+
+	excludeLabels := githubApp.Spec.RolloutDeployment.ExcludeLabels
 
 	// Loop through each label specified in rolloutDeployment.labels and update deployments matching each label
 	for key, value := range githubApp.Spec.RolloutDeployment.Labels {
@@ -919,16 +926,31 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
 		// Trigger rolling upgrade for matching deployments
 		for _, deployment := range deploymentList.Items {
 
+			// Skip deployments that carry any excludeLabels to avoid conflicting rollout restarts
+			if hasAnyMatchingLabel(deployment.Labels, excludeLabels) {
+				l.Info(
+					"Skipping deployment rollout, matched excludeLabels",
+					"Name", deployment.Name,
+					"Namespace", deployment.Namespace,
+				)
+				continue
+			}
+
 			// Add a timestamp label to trigger a rolling upgrade
 			deployment.Spec.Template.ObjectMeta.Labels["ghApplastUpdateTime"] = time.Now().Format("20060102150405")
 
-			// Patch the Deployment
-			if err := r.Update(ctx, &deployment); err != nil {
-				return fmt.Errorf(
-					"failed to upgrade deployment %s/%s: %v",
-					deployment.Namespace,
-					deployment.Name,
+			// Patch the Deployment with retry, log errored deployments and continue with the next one
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return r.Update(ctx, &deployment)
+			})
+			if err != nil {
+				l.Error(
 					err,
+					"failed to upgrade deployment",
+					"Namespace",
+					deployment.Namespace,
+					"Name",
+					deployment.Name,
 				)
 			}
 
@@ -950,6 +972,16 @@ func (r *GithubAppReconciler) rolloutDeployment(ctx context.Context, githubApp *
 		}
 	}
 	return nil
+}
+
+// Function to check if labelSet contains any key/value pair present in matchLabels
+func hasAnyMatchingLabel(labelSet map[string]string, matchLabels map[string]string) bool {
+	for key, value := range matchLabels {
+		if v, ok := labelSet[key]; ok && v == value {
+			return true
+		}
+	}
+	return false
 }
 
 // Define a predicate function to filter create events for access token secrets

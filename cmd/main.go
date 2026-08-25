@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
 	"strconv"
 
@@ -208,11 +209,14 @@ func main() {
 		// Add transport to http client
 		httpClient = &http.Client{
 			Transport: transport,
+			Timeout:   30 * time.Second, // Set a timeout for the HTTP client
 		}
 
 		// Else create default http client with on proxy
 	} else {
-		httpClient = &http.Client{}
+		httpClient = &http.Client{
+			Timeout: 30 * time.Second,
+		}
 	}
 
 	// Initialise vault client with default config - uses default Vault env vars for config
