@@ -40,11 +40,13 @@ const (
 	githubAppName2       = "gh-app-test-2"
 	githubAppName3       = "gh-app-test-3"
 	githubAppName4       = "gh-app-test-4"
+	githubAppName5       = "gh-app-test-5"
 	namespace0           = "namespace0"
 	namespace1           = "namespace1"
 	namespace2           = "namespace2"
 	namespace3           = "namespace3"
 	namespace4           = "namespace4"
+	namespace5           = "namespace5"
 	existingClusterValue = "true"
 )
 
@@ -57,7 +59,7 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 			return
 		}
 		By("removing test namespaces")
-		cmd := exec.Command("kubectl", "delete", "ns", namespace1, namespace2, namespace3, namespace4)
+		cmd := exec.Command("kubectl", "delete", "ns", namespace1, namespace2, namespace3, namespace4, namespace5)
 		_, _ = utils.Run(cmd)
 	})
 
@@ -67,7 +69,7 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 			return
 		}
 		By("removing test namespaces")
-		cmd := exec.Command("kubectl", "delete", "ns", namespace0, namespace1, namespace2, namespace3, namespace4)
+		cmd := exec.Command("kubectl", "delete", "ns", namespace0, namespace1, namespace2, namespace3, namespace4, namespace5)
 		_, _ = utils.Run(cmd)
 	})
 
@@ -273,6 +275,71 @@ var _ = Describe("GithubApp controller", Ordered, func() {
 
 			// Delete the GitHubApp after reconciliation
 			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace2, githubAppName2)
+		})
+	})
+
+	Context("When reconciling a GithubApp with spec.rolloutDeployment.excludeLabels set", func() {
+		It("Should skip the rollout of deployments matching an excludeLabel", func() {
+			if os.Getenv("USE_EXISTING_CLUSTER") != existingClusterValue {
+				fmt.Println("Skipping deployment rollout test case as not a real cluster...")
+				return // Skip the test case in envtest since requires deployment controller
+			}
+			ctx := context.Background()
+
+			By("Creating a new namespace")
+			test_helpers.CreateNamespace(ctx, k8sClient, namespace5)
+
+			By("Creating the privateKeySecret in namespace5")
+			test_helpers.CreatePrivateKeySecret(ctx, k8sClient, namespace5, "privateKey")
+
+			By("Creating a deployment with the label foo: bar only")
+			deploy1, pod1 := test_helpers.CreateDeploymentWithLabel(ctx, k8sClient, "foo", namespace5, "foo", "bar")
+
+			By("Creating a deployment with the label foo: bar and the exclude label owner: other-app")
+			deploy2, pod2 := test_helpers.CreateDeploymentWithLabels(ctx, k8sClient, "foo2", namespace5, map[string]string{
+				"foo":   "bar",
+				"owner": "other-app",
+			})
+
+			By("Creating a GithubApp with spec.rolloutDeployment.labels foo: bar and excludeLabels owner: other-app")
+			rolloutDeploymentSpec := &githubappv1.RolloutDeploymentSpec{
+				Labels: map[string]string{
+					"foo": "bar",
+				},
+				ExcludeLabels: map[string]string{
+					"owner": "other-app",
+				},
+			}
+			// Create a GithubApp instance with the RolloutDeployment field initialized
+			test_helpers.CreateGitHubAppAndWait(ctx, k8sClient, namespace5, githubAppName5, rolloutDeploymentSpec, nil)
+
+			By("Waiting for pod1 (no excludeLabels match) to be deleted")
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod1.Name, Namespace: pod1.Namespace}, pod1)
+				return apierrors.IsNotFound(err) // Pod is deleted
+			}, "60s", "5s").Should(BeTrue(), "Failed to delete the pod within timeout")
+
+			By("Checking pod2 (matches excludeLabels) still exists and not marked for deletion")
+			Consistently(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: pod2.Name, Namespace: pod2.Namespace}, pod2)
+				if err != nil && apierrors.IsNotFound(err) {
+					// Pod2 is deleted
+					return false
+				}
+				// Check if pod2 has a deletion timestamp
+				return pod2.DeletionTimestamp == nil
+			}, "10s", "2s").Should(BeTrue(), "Pod2 is marked for deletion")
+
+			// Delete deploy1
+			err := k8sClient.Delete(ctx, deploy1)
+			Expect(err).ToNot(HaveOccurred(), "Failed to delete deploy1: %v", err)
+
+			// Delete deploy2
+			err = k8sClient.Delete(ctx, deploy2)
+			Expect(err).ToNot(HaveOccurred(), "Failed to delete deploy2: %v", err)
+
+			// Delete the GitHubApp after reconciliation
+			test_helpers.DeleteGitHubAppAndWait(ctx, k8sClient, namespace5, githubAppName5)
 		})
 	})
 

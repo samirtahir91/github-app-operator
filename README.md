@@ -71,6 +71,7 @@ The `github-app-operator` is a Kubernetes operator that generates an access toke
 
 ### Rolling Upgrade
 - Optionally enable rolling upgrade to deployments in the same namespace as the `GithubApp` that match any of the labels defined in `spec.rolloutDeployment.labels`.
+- Optionally exclude rollout deploy of any matching deployments of the labels defined in `spec.rolloutDeployment.excludedLabels` (takes presedence over `spec.rolloutDeployment.labels`)
   - Useful for recreating pods to pick up new secret data.
 
 ### Logging and Debugging
@@ -150,6 +151,7 @@ EOF
 - Below example will upgrade deployments in the `team-1` namespace when the github token is modified, matching any of labels:
   - foo: bar
   - foo2: bar2
+- And excludes rollout of deployments with the label foo=bar3
 ```sh
 kubectl apply -f - <<EOF
 apiVersion: githubapp.samir.io/v1
@@ -166,6 +168,8 @@ spec:
     labels:
       foo: bar
       foo2: bar2
+    excludeLabels:
+      foo: bar3
 EOF
 ```
 
